@@ -1,44 +1,62 @@
 import { useState, useEffect } from "react";
-import { X, ArrowUpCircle, ArrowDownCircle, Check, ChevronRight } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, Check, ChevronRight, Building2, CreditCard } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { defaultCategories, paymentMethods, getCategoryById } from "@/data/categories";
-import { Transaction, TransactionType, ExpenseType, PaymentMethod, Category, Subcategory } from "@/types/finance";
+import { useBankAccounts, useCreditCards } from "@/hooks/useBankData";
+import { TransactionType, ExpenseType, PaymentMethod } from "@/types/finance";
 import { cn } from "@/lib/utils";
 
 interface AddTransactionSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (transaction: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  onSubmit: (transaction: {
+    type: TransactionType;
+    expenseType?: ExpenseType;
+    amount: number;
+    category: string;
+    subcategory?: string;
+    date: string;
+    paymentMethod: PaymentMethod;
+    bankAccountId?: string;
+    creditCardId?: string;
+    description?: string;
+  }) => void;
   defaultType?: TransactionType;
 }
 
-export function AddTransactionSheet({ 
-  open, 
-  onOpenChange, 
+export function AddTransactionSheet({
+  open,
+  onOpenChange,
   onSubmit,
-  defaultType = 'expense' 
+  defaultType = "expense",
 }: AddTransactionSheetProps) {
   const [type, setType] = useState<TransactionType>(defaultType);
-  const [expenseType, setExpenseType] = useState<ExpenseType>('variable');
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('');
-  const [subcategory, setSubcategory] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [description, setDescription] = useState('');
+  const [expenseType, setExpenseType] = useState<ExpenseType>("variable");
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("");
+  const [subcategory, setSubcategory] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
+  const [bankAccountId, setBankAccountId] = useState("");
+  const [creditCardId, setCreditCardId] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [description, setDescription] = useState("");
   const [showSubcategories, setShowSubcategories] = useState(false);
 
-  const filteredCategories = defaultCategories.filter(cat => cat.type === type);
+  const { data: bankAccounts = [] } = useBankAccounts();
+  const { data: creditCards = [] } = useCreditCards();
+
+  const filteredCategories = defaultCategories.filter((cat) => cat.type === type);
   const selectedCategory = getCategoryById(category);
 
   // Reset subcategory when category changes
   useEffect(() => {
-    setSubcategory('');
+    setSubcategory("");
     if (category && selectedCategory && selectedCategory.subcategories.length > 0) {
       setShowSubcategories(true);
     }
@@ -46,10 +64,20 @@ export function AddTransactionSheet({
 
   // Reset category when type changes
   useEffect(() => {
-    setCategory('');
-    setSubcategory('');
+    setCategory("");
+    setSubcategory("");
     setShowSubcategories(false);
   }, [type]);
+
+  // Reset bank/card selection when payment method changes
+  useEffect(() => {
+    if (paymentMethod !== "credit") {
+      setCreditCardId("");
+    }
+    if (!["debit", "pix", "transfer"].includes(paymentMethod)) {
+      setBankAccountId("");
+    }
+  }, [paymentMethod]);
 
   const handleCategorySelect = (catId: string) => {
     setCategory(catId);
@@ -61,34 +89,41 @@ export function AddTransactionSheet({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!amount || !category) return;
 
     onSubmit({
       type,
-      expenseType: type === 'expense' ? expenseType : undefined,
-      amount: parseFloat(amount.replace(',', '.')),
+      expenseType: type === "expense" ? expenseType : undefined,
+      amount: parseFloat(amount.replace(",", ".")),
       category,
       subcategory: subcategory || undefined,
       date,
       paymentMethod,
+      bankAccountId: bankAccountId || undefined,
+      creditCardId: creditCardId || undefined,
       description: description || undefined,
     });
 
     // Reset form
-    setAmount('');
-    setCategory('');
-    setSubcategory('');
-    setDescription('');
-    setExpenseType('variable');
+    setAmount("");
+    setCategory("");
+    setSubcategory("");
+    setDescription("");
+    setExpenseType("variable");
+    setBankAccountId("");
+    setCreditCardId("");
     setShowSubcategories(false);
     onOpenChange(false);
   };
 
   const formatAmount = (value: string) => {
-    const cleaned = value.replace(/[^\d,]/g, '');
+    const cleaned = value.replace(/[^\d,]/g, "");
     setAmount(cleaned);
   };
+
+  const needsBankAccount = ["debit", "pix", "transfer"].includes(paymentMethod);
+  const needsCreditCard = paymentMethod === "credit";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -96,7 +131,7 @@ export function AddTransactionSheet({
         <SheetHeader className="pb-4">
           <SheetTitle className="text-center">
             {showSubcategories && selectedCategory ? (
-              <button 
+              <button
                 onClick={() => setShowSubcategories(false)}
                 className="flex items-center gap-2 mx-auto text-muted-foreground hover:text-foreground"
               >
@@ -135,9 +170,7 @@ export function AddTransactionSheet({
                         )}
                       >
                         <span className="font-medium">{sub.name}</span>
-                        {subcategory === sub.id && (
-                          <Check className="w-5 h-5 text-primary" />
-                        )}
+                        {subcategory === sub.id && <Check className="w-5 h-5 text-primary" />}
                       </button>
                     ))}
                   </div>
@@ -148,11 +181,11 @@ export function AddTransactionSheet({
                   <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-xl">
                     <button
                       type="button"
-                      onClick={() => setType('income')}
+                      onClick={() => setType("income")}
                       className={cn(
                         "flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-all",
-                        type === 'income' 
-                          ? "bg-success text-success-foreground shadow-sm" 
+                        type === "income"
+                          ? "bg-success text-success-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
                       )}
                     >
@@ -161,11 +194,11 @@ export function AddTransactionSheet({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setType('expense')}
+                      onClick={() => setType("expense")}
                       className={cn(
                         "flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-all",
-                        type === 'expense' 
-                          ? "bg-destructive text-destructive-foreground shadow-sm" 
+                        type === "expense"
+                          ? "bg-destructive text-destructive-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
                       )}
                     >
@@ -195,16 +228,16 @@ export function AddTransactionSheet({
                   </div>
 
                   {/* Expense Type (only for expenses) */}
-                  {type === 'expense' && (
+                  {type === "expense" && (
                     <div className="space-y-2">
                       <Label>Tipo de Despesa</Label>
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
-                          onClick={() => setExpenseType('fixed')}
+                          onClick={() => setExpenseType("fixed")}
                           className={cn(
                             "py-3 px-4 rounded-xl border-2 font-medium transition-all",
-                            expenseType === 'fixed'
+                            expenseType === "fixed"
                               ? "border-primary bg-primary/5 text-primary"
                               : "border-border text-muted-foreground hover:border-primary/50"
                           )}
@@ -213,10 +246,10 @@ export function AddTransactionSheet({
                         </button>
                         <button
                           type="button"
-                          onClick={() => setExpenseType('variable')}
+                          onClick={() => setExpenseType("variable")}
                           className={cn(
                             "py-3 px-4 rounded-xl border-2 font-medium transition-all",
-                            expenseType === 'variable'
+                            expenseType === "variable"
                               ? "border-primary bg-primary/5 text-primary"
                               : "border-border text-muted-foreground hover:border-primary/50"
                           )}
@@ -272,7 +305,7 @@ export function AddTransactionSheet({
                         className="w-full flex items-center justify-between p-3 rounded-xl border-2 border-primary bg-primary/5"
                       >
                         <span className="font-medium">
-                          {selectedCategory.subcategories.find(s => s.id === subcategory)?.name}
+                          {selectedCategory.subcategories.find((s) => s.id === subcategory)?.name}
                         </span>
                         <ChevronRight className="w-4 h-4 text-primary" />
                       </button>
@@ -301,6 +334,50 @@ export function AddTransactionSheet({
                       ))}
                     </div>
                   </div>
+
+                  {/* Bank Account Selection */}
+                  {needsBankAccount && bankAccounts.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4" />
+                        Conta bancária
+                      </Label>
+                      <Select value={bankAccountId} onValueChange={setBankAccountId}>
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Selecione a conta (opcional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {bankAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.nickname}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Credit Card Selection */}
+                  {needsCreditCard && creditCards.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4" />
+                        Cartão de crédito
+                      </Label>
+                      <Select value={creditCardId} onValueChange={setCreditCardId}>
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Selecione o cartão (opcional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {creditCards.map((card) => (
+                            <SelectItem key={card.id} value={card.id}>
+                              {card.card_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {/* Date */}
                   <div className="space-y-2">
@@ -334,9 +411,9 @@ export function AddTransactionSheet({
           {/* Submit Button - Fixed at bottom */}
           {!showSubcategories && (
             <div className="pt-4 border-t border-border">
-              <Button 
-                type="submit" 
-                size="lg" 
+              <Button
+                type="submit"
+                size="lg"
                 className="w-full h-14 text-base font-semibold"
                 disabled={!amount || !category}
               >

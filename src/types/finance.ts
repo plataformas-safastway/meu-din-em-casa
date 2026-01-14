@@ -38,6 +38,7 @@ export interface Transaction {
 export interface EmergencyFund {
   targetAmount: number;
   currentAmount: number;
+  targetMonths?: number;
   targetDate?: string;
 }
 
@@ -45,13 +46,13 @@ export interface MonthlyBalance {
   month: string;
   income: number;
   expenses: number;
-  balance: number;
+  balance?: number;
 }
 
 export interface CategoryExpense {
   category: string;
   amount: number;
-  percentage: number;
+  percentage?: number;
   color: string;
   previousAmount?: number;
   change?: number;
@@ -64,7 +65,7 @@ export interface Insight {
   message: string;
   category?: string;
   priority: number;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface FamilyFinanceSummary {
