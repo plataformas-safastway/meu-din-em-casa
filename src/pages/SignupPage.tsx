@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, ArrowLeft, ArrowRight, Loader2, Check, Users, Target, Shield } from "lucide-react";
@@ -29,12 +29,12 @@ const objectives = [
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const { signUp, createFamily } = useAuth();
+  const { signUp, createFamily, user, family } = useAuth();
   
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   
-  // Step 1 - Account
+  // Step 1 - Account (or just "display name" when already logged in)
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,9 +50,31 @@ export function SignupPage() {
 
   const [emailAlreadyExists, setEmailAlreadyExists] = useState(false);
 
+  useEffect(() => {
+    // If already fully set up, don't let the user sit on /signup.
+    if (user && family) {
+      navigate("/app", { replace: true });
+    }
+
+    // If logged in but missing a family, this page is for completing setup.
+    if (user && !family) {
+      setEmail(user.email ?? "");
+    }
+  }, [user, family, navigate]);
+
   const handleStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailAlreadyExists(false);
+
+    // If user is already authenticated, Step 1 is only to confirm display name.
+    if (user) {
+      if (!name) {
+        toast.error("Preencha seu nome");
+        return;
+      }
+      setStep(2);
+      return;
+    }
     
     if (!name || !email || !password) {
       toast.error("Preencha todos os campos");
@@ -70,8 +92,12 @@ export function SignupPage() {
 
     if (error) {
       // Check if user already exists
-      const errorMessage = error.message?.toLowerCase() || '';
-      if (errorMessage.includes('already registered') || errorMessage.includes('already exists') || errorMessage.includes('user_already_exists')) {
+      const errorMessage = error.message?.toLowerCase() || "";
+      if (
+        errorMessage.includes("already registered") ||
+        errorMessage.includes("already exists") ||
+        errorMessage.includes("user_already_exists")
+      ) {
         setEmailAlreadyExists(true);
         setLoading(false);
         return;
@@ -179,10 +205,12 @@ export function SignupPage() {
                   <Shield className="w-6 h-6 text-primary" />
                 </div>
                 <h1 className="text-2xl font-bold text-foreground mb-2">
-                  Criar sua conta
+                  {user ? "Completar cadastro" : "Criar sua conta"}
                 </h1>
                 <p className="text-muted-foreground text-sm">
-                  Seus dados são privados e criptografados
+                  {user
+                    ? "Sua conta já existe. Agora vamos configurar sua família."
+                    : "Seus dados são privados e criptografados"}
                 </p>
               </div>
 
@@ -201,53 +229,63 @@ export function SignupPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-12"
-                    autoComplete="email"
-                    required
-                  />
-                </div>
+                {!user && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">E-mail</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="h-12"
+                        autoComplete="email"
+                        required
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Mínimo 6 caracteres"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-12 pr-10"
-                      autoComplete="new-password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Senha</Label>
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Mínimo 6 caracteres"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="h-12 pr-10"
+                          autoComplete="new-password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
 
-                <Button 
-                  type="submit" 
-                  size="lg" 
+                {user && email && (
+                  <p className="text-xs text-muted-foreground">
+                    Conta: <span className="font-medium text-foreground">{email}</span>
+                  </p>
+                )}
+
+                <Button
+                  type="submit"
+                  size="lg"
                   className="w-full h-12 text-base font-semibold"
                   disabled={loading}
                 >
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Criando conta...
+                      {user ? "Continuando..." : "Criando conta..."}
                     </>
                   ) : (
                     <>
@@ -260,14 +298,14 @@ export function SignupPage() {
 
               {/* Email already exists message */}
               <AnimatePresence>
-                {emailAlreadyExists && (
+                {!user && emailAlreadyExists && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-200"
+                    className="mt-6 p-4 rounded-xl bg-muted/40 border border-border"
                   >
-                    <p className="text-amber-800 text-sm font-medium mb-3">
+                    <p className="text-foreground text-sm font-medium mb-3">
                       Já existe uma conta associada a este e-mail.
                     </p>
                     <div className="flex gap-2">
