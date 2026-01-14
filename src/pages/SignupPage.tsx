@@ -48,8 +48,11 @@ export function SignupPage() {
   const [incomeRange, setIncomeRange] = useState("");
   const [primaryObjective, setPrimaryObjective] = useState("");
 
+  const [emailAlreadyExists, setEmailAlreadyExists] = useState(false);
+
   const handleStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
+    setEmailAlreadyExists(false);
     
     if (!name || !email || !password) {
       toast.error("Preencha todos os campos");
@@ -66,6 +69,14 @@ export function SignupPage() {
     const { error } = await signUp(email, password);
 
     if (error) {
+      // Check if user already exists
+      const errorMessage = error.message?.toLowerCase() || '';
+      if (errorMessage.includes('already registered') || errorMessage.includes('already exists') || errorMessage.includes('user_already_exists')) {
+        setEmailAlreadyExists(true);
+        setLoading(false);
+        return;
+      }
+      
       toast.error("Erro ao criar conta", {
         description: error.message || "Tente novamente mais tarde."
       });
@@ -246,6 +257,40 @@ export function SignupPage() {
                   )}
                 </Button>
               </form>
+
+              {/* Email already exists message */}
+              <AnimatePresence>
+                {emailAlreadyExists && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-200"
+                  >
+                    <p className="text-amber-800 text-sm font-medium mb-3">
+                      Já existe uma conta associada a este e-mail.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate("/login")}
+                        className="flex-1"
+                      >
+                        Entrar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate("/login", { state: { forgotPassword: true } })}
+                        className="flex-1"
+                      >
+                        Recuperar senha
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <p className="text-center text-sm text-muted-foreground mt-6">
                 Já tem uma conta?{" "}

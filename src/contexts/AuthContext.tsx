@@ -195,6 +195,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           target_months: 6,
         });
 
+      // Send welcome email (non-blocking)
+      try {
+        await supabase.functions.invoke('send-welcome-email', {
+          body: {
+            email: user.email,
+            familyName: data.name,
+          },
+        });
+      } catch (emailError) {
+        // Don't block signup if email fails
+        console.log('Welcome email could not be sent:', emailError);
+      }
+
       // Refresh family data
       await fetchFamilyData(user.id);
 
