@@ -4,13 +4,21 @@ export type ExpenseType = 'fixed' | 'variable';
 
 export type PaymentMethod = 'debit' | 'credit' | 'pix' | 'cash' | 'transfer';
 
+export interface Subcategory {
+  id: string;
+  name: string;
+  categoryId: string;
+}
+
 export interface Category {
   id: string;
   name: string;
+  code: string; // e.g., "R", "C", "A", etc.
   icon: string;
   color: string;
   type: TransactionType;
   isDefault?: boolean;
+  subcategories: Subcategory[];
 }
 
 export interface Transaction {
