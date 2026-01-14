@@ -4,6 +4,8 @@ import { TransactionsPage } from "./TransactionsPage";
 import { CategoriesPage } from "./CategoriesPage";
 import { GoalsPage } from "./GoalsPage";
 import { SettingsPage } from "./SettingsPage";
+import { BanksPage } from "./BanksPage";
+import { ImportPage } from "./ImportPage";
 import { BottomNavigation } from "@/components/BottomNavigation";
 
 const Index = () => {
@@ -20,7 +22,11 @@ const Index = () => {
       case "goals":
         return <GoalsPage onBack={() => setActiveTab("dashboard")} />;
       case "settings":
-        return <SettingsPage onBack={() => setActiveTab("dashboard")} />;
+        return <SettingsPage onBack={() => setActiveTab("dashboard")} onNavigate={setActiveTab} />;
+      case "banks":
+        return <BanksPage onBack={() => setActiveTab("settings")} />;
+      case "import":
+        return <ImportPage onBack={() => setActiveTab("settings")} />;
       default:
         return <Dashboard />;
     }

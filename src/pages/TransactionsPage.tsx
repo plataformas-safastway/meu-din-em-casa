@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { ArrowLeft, Filter, Search } from "lucide-react";
+import { ArrowLeft, Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Transaction } from "@/types/finance";
 import { getCategoryById } from "@/data/categories";
 import { formatCurrency, formatFullDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { useFinanceStore } from "@/hooks/useFinanceStore";
+import { useAllTransactions } from "@/hooks/useTransactions";
 
 interface TransactionsPageProps {
   onBack: () => void;
@@ -16,7 +16,20 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   
-  const { transactions } = useFinanceStore();
+  const { data: rawTransactions = [], isLoading } = useAllTransactions();
+
+  // Transform database transactions to display format
+  const transactions: Transaction[] = rawTransactions.map(t => ({
+    id: t.id,
+    type: t.type as 'income' | 'expense',
+    amount: Number(t.amount),
+    category: t.category_id,
+    subcategory: t.subcategory_id || undefined,
+    date: t.date,
+    paymentMethod: t.payment_method as any,
+    description: t.description || undefined,
+    createdAt: t.created_at,
+  }));
 
   const filteredTransactions = transactions.filter(t => {
     const matchesSearch = t.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -38,6 +51,14 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   const sortedDates = Object.keys(groupedTransactions).sort((a, b) => 
     new Date(b).getTime() - new Date(a).getTime()
   );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -90,7 +111,11 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
       <main className="container px-4 py-4">
         {sortedDates.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">Nenhum lançamento encontrado.</p>
+            <p className="text-muted-foreground">
+              {transactions.length === 0 
+                ? "Nenhum lançamento registrado ainda." 
+                : "Nenhum lançamento encontrado."}
+            </p>
           </div>
         ) : (
           <div className="space-y-6">

@@ -1,41 +1,27 @@
-import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users } from "lucide-react";
+import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 interface SettingsPageProps {
   onBack: () => void;
+  onNavigate?: (tab: string) => void;
 }
 
-const settingsSections = [
-  {
-    title: "Conta",
-    items: [
-      { id: "profile", label: "Perfil da Família", icon: Users, action: "navigate" },
-      { id: "members", label: "Membros", icon: User, action: "navigate" },
-      { id: "notifications", label: "Notificações", icon: Bell, action: "toggle", enabled: true },
-    ],
-  },
-  {
-    title: "Dados",
-    items: [
-      { id: "export", label: "Exportar Dados (CSV)", icon: Download, action: "action" },
-      { id: "backup", label: "Backup Automático", icon: Shield, action: "toggle", enabled: false },
-    ],
-  },
-  {
-    title: "Suporte",
-    items: [
-      { id: "help", label: "Central de Ajuda", icon: HelpCircle, action: "navigate" },
-    ],
-  },
-];
+export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
+  const { family, familyMember, signOut } = useAuth();
 
-export function SettingsPage({ onBack }: SettingsPageProps) {
   const handleAction = (id: string) => {
     switch (id) {
       case "export":
         toast.success("Exportação iniciada! Em breve você receberá o arquivo.");
+        break;
+      case "banks":
+        onNavigate?.("banks");
+        break;
+      case "import":
+        onNavigate?.("import");
         break;
       case "profile":
       case "members":
@@ -46,6 +32,44 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         break;
     }
   };
+
+  const handleLogout = async () => {
+    await signOut();
+    toast.success("Até logo! 👋");
+  };
+
+  const settingsSections = [
+    {
+      title: "Conta",
+      items: [
+        { id: "profile", label: "Perfil da Família", icon: Users, action: "navigate" },
+        { id: "members", label: "Membros", icon: User, action: "navigate" },
+        { id: "banks", label: "Bancos e Cartões", icon: Building2, action: "navigate" },
+        { id: "notifications", label: "Notificações", icon: Bell, action: "toggle", enabled: true },
+      ],
+    },
+    {
+      title: "Dados",
+      items: [
+        { id: "import", label: "Importar Extrato/Fatura", icon: Upload, action: "navigate" },
+        { id: "export", label: "Exportar Dados (CSV)", icon: Download, action: "action" },
+        { id: "backup", label: "Backup Automático", icon: Shield, action: "toggle", enabled: false },
+      ],
+    },
+    {
+      title: "Suporte",
+      items: [
+        { id: "help", label: "Central de Ajuda", icon: HelpCircle, action: "navigate" },
+      ],
+    },
+  ];
+
+  const initials = family?.name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "FF";
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -66,11 +90,13 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         <div className="p-4 rounded-2xl bg-card border border-border/30">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center text-2xl text-primary-foreground font-bold">
-              FS
+              {initials}
             </div>
             <div>
-              <h2 className="font-semibold text-foreground text-lg">Família Silva</h2>
-              <p className="text-sm text-muted-foreground">4 membros • Desde Jan 2026</p>
+              <h2 className="font-semibold text-foreground text-lg">{family?.name || "Família"}</h2>
+              <p className="text-sm text-muted-foreground">
+                {family?.members_count || 1} membro{(family?.members_count || 1) > 1 ? "s" : ""} • {familyMember?.display_name}
+              </p>
             </div>
           </div>
         </div>
@@ -88,7 +114,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
+                    className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer"
                     onClick={() => item.action !== 'toggle' && handleAction(item.id)}
                     role={item.action !== 'toggle' ? 'button' : undefined}
                   >
@@ -114,7 +140,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         <Button 
           variant="outline" 
           className="w-full gap-2 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
-          onClick={() => toast.info("Funcionalidade em desenvolvimento.")}
+          onClick={handleLogout}
         >
           <LogOut className="w-4 h-4" />
           Sair da Conta
