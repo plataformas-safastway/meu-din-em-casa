@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +30,7 @@ const objectives = [
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const { signUp, createFamily, user, family } = useAuth();
+  const { signUp, signIn, user, family } = useAuth();
   
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
@@ -110,6 +111,9 @@ export function SignupPage() {
       return;
     }
 
+    // Wait a moment for session to be established
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     setLoading(false);
     setStep(2);
   };
@@ -130,26 +134,93 @@ export function SignupPage() {
     
     setLoading(true);
 
-    const { error } = await createFamily({
-      name: familyName,
-      displayName: name,
-      membersCount,
-      incomeRange: incomeRange || undefined,
-      primaryObjective: primaryObjective || undefined,
-    });
+    // Ensure we have a valid session before creating family
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !sessionData?.session) {
+      toast.error("Sessão expirada", {
+        description: "Por favor, faça login novamente."
+      });
+      setLoading(false);
+      navigate("/login");
+      return;
+    }
 
-    if (error) {
+    try {
+      // Create family directly here to ensure we have the right session context
+      const currentUser = sessionData.session.user;
+
+      // Create family
+      const { data: familyData, error: familyError } = await supabase
+        .from('families')
+        .insert({
+          name: familyName,
+          members_count: membersCount,
+          income_range: incomeRange || null,
+          primary_objective: primaryObjective || null,
+        })
+        .select()
+        .single();
+
+      if (familyError) {
+        console.error('Error creating family:', familyError);
+        toast.error("Erro ao criar família", {
+          description: "Tente novamente mais tarde."
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Add user as owner
+      const { error: memberError } = await supabase
+        .from('family_members')
+        .insert({
+          family_id: familyData.id,
+          user_id: currentUser.id,
+          display_name: name,
+          role: 'owner',
+        });
+
+      if (memberError) {
+        console.error('Error adding family member:', memberError);
+        toast.error("Erro ao adicionar membro", {
+          description: "Tente novamente mais tarde."
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Create default emergency fund
+      await supabase
+        .from('emergency_funds')
+        .insert({
+          family_id: familyData.id,
+          target_amount: 0,
+          current_amount: 0,
+          target_months: 6,
+        });
+
+      // Send welcome email (non-blocking)
+      supabase.functions.invoke('send-welcome-email', {
+        body: {
+          email: currentUser.email,
+          familyName: familyName,
+        },
+      }).catch(err => console.log('Welcome email could not be sent:', err));
+
+      toast.success("Conta criada com sucesso! 🎉", {
+        description: "Bem-vindos! Vamos organizar as finanças da família."
+      });
+      
+      // Force refresh to get new family data
+      window.location.href = "/app";
+    } catch (error) {
+      console.error('Error in handleStep3:', error);
       toast.error("Erro ao criar família", {
         description: "Tente novamente mais tarde."
       });
       setLoading(false);
-      return;
     }
-
-    toast.success("Conta criada com sucesso! 🎉", {
-      description: "Bem-vindos! Vamos organizar as finanças da família."
-    });
-    navigate("/app");
   };
 
   const goBack = () => {
@@ -481,13 +552,13 @@ export function SignupPage() {
                 <Button 
                   type="submit" 
                   size="lg" 
-                  className="w-full h-12 text-base font-semibold"
+                  className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90"
                   disabled={loading}
                 >
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Finalizando...
+                      Criando...
                     </>
                   ) : (
                     "Começar a organizar"
