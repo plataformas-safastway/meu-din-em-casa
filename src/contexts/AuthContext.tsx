@@ -148,8 +148,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     incomeRange?: string;
     primaryObjective?: string;
   }) => {
-    if (!user) {
-      return { error: new Error('Usuário não autenticado') };
+    // Buscar sessão diretamente do Supabase para garantir que está atualizada
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const currentUser = sessionData?.session?.user;
+
+    if (sessionError || !currentUser) {
+      console.error('Session error:', sessionError);
+      return { error: new Error('Usuário não autenticado. Por favor, faça login novamente.') };
     }
 
     try {
@@ -175,7 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('family_members')
         .insert({
           family_id: familyData.id,
-          user_id: user.id,
+          user_id: currentUser.id,
           display_name: data.displayName,
           role: 'owner',
         });
@@ -199,7 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await supabase.functions.invoke('send-welcome-email', {
           body: {
-            email: user.email,
+            email: currentUser.email,
             familyName: data.name,
           },
         });
@@ -209,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Refresh family data
-      await fetchFamilyData(user.id);
+      await fetchFamilyData(currentUser.id);
 
       return { error: null };
     } catch (error) {
