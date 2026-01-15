@@ -7,6 +7,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Validation constants
+const MAX_NAME_LENGTH = 100;
+const MAX_FAMILY_NAME_LENGTH = 100;
+const MAX_MEMBERS_COUNT = 50;
+const MAX_INCOME_RANGE_LENGTH = 50;
+const MAX_OBJECTIVE_LENGTH = 200;
+
 type CreateFamilyBody = {
   name: string;
   membersCount: number;
@@ -14,6 +21,54 @@ type CreateFamilyBody = {
   primaryObjective?: string | null;
   displayName: string;
 };
+
+function sanitizeString(value: unknown, maxLength: number): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().slice(0, maxLength);
+  return trimmed.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+}
+
+function validateBody(body: unknown): { valid: true; data: CreateFamilyBody } | { valid: false; error: string } {
+  if (!body || typeof body !== "object") {
+    return { valid: false, error: "Invalid request body" };
+  }
+
+  const b = body as Record<string, unknown>;
+
+  // Validate family name
+  const familyName = sanitizeString(b.name, MAX_FAMILY_NAME_LENGTH);
+  if (!familyName || familyName.length < 1) {
+    return { valid: false, error: "Family name is required (max 100 characters)" };
+  }
+
+  // Validate display name
+  const displayName = sanitizeString(b.displayName, MAX_NAME_LENGTH);
+  if (!displayName || displayName.length < 1) {
+    return { valid: false, error: "Display name is required (max 100 characters)" };
+  }
+
+  // Validate members count
+  const membersCount = Number(b.membersCount);
+  if (!Number.isFinite(membersCount) || membersCount < 1 || membersCount > MAX_MEMBERS_COUNT) {
+    return { valid: false, error: `Members count must be between 1 and ${MAX_MEMBERS_COUNT}` };
+  }
+
+  // Validate optional fields
+  const incomeRange = b.incomeRange ? sanitizeString(b.incomeRange, MAX_INCOME_RANGE_LENGTH) : null;
+  const primaryObjective = b.primaryObjective ? sanitizeString(b.primaryObjective, MAX_OBJECTIVE_LENGTH) : null;
+
+  return {
+    valid: true,
+    data: {
+      name: familyName,
+      displayName,
+      membersCount: Math.floor(membersCount),
+      incomeRange,
+      primaryObjective,
+    },
+  };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -59,23 +114,26 @@ serve(async (req) => {
       });
     }
 
-    const body = (await req.json()) as CreateFamilyBody;
-
-    if (!body?.name?.trim() || !body?.displayName?.trim()) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+    // Parse and validate body
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
         status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    const membersCount = Number(body.membersCount);
-    if (!Number.isFinite(membersCount) || membersCount <= 0) {
-      return new Response(JSON.stringify({ error: "Invalid membersCount" }), {
+    const validation = validateBody(rawBody);
+    if (!validation.valid) {
+      return new Response(JSON.stringify({ error: validation.error }), {
         status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
+    const body = validation.data;
     const familyId = crypto.randomUUID();
 
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -84,10 +142,10 @@ serve(async (req) => {
 
     const { error: familyError } = await adminClient.from("families").insert({
       id: familyId,
-      name: body.name.trim(),
-      members_count: membersCount,
-      income_range: body.incomeRange ?? null,
-      primary_objective: body.primaryObjective ?? null,
+      name: body.name,
+      members_count: body.membersCount,
+      income_range: body.incomeRange,
+      primary_objective: body.primaryObjective,
     });
 
     if (familyError) {
@@ -101,7 +159,7 @@ serve(async (req) => {
     const { error: memberError } = await adminClient.from("family_members").insert({
       family_id: familyId,
       user_id: userData.user.id,
-      display_name: body.displayName.trim(),
+      display_name: body.displayName,
       role: "owner",
     });
 

@@ -6,9 +6,37 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Validation constants
+const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+const MAX_EMAIL_LENGTH = 254;
+const MAX_NAME_LENGTH = 100;
+
 interface WelcomeEmailRequest {
   email: string;
   familyName: string;
+}
+
+function isValidEmail(email: unknown): email is string {
+  if (!email || typeof email !== "string") return false;
+  const trimmed = email.trim();
+  return trimmed.length > 0 && trimmed.length <= MAX_EMAIL_LENGTH && EMAIL_REGEX.test(trimmed);
+}
+
+function sanitizeString(value: unknown, maxLength: number): string {
+  if (!value || typeof value !== "string") return "";
+  const trimmed = value.trim().slice(0, maxLength);
+  return trimmed.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+}
+
+function escapeHtml(text: string): string {
+  const htmlEscapes: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEscapes[char] || char);
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -17,12 +45,23 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const { email, familyName }: WelcomeEmailRequest = await req.json();
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      {
+        status: 405,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
+  }
 
-    if (!email) {
+  try {
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
       return new Response(
-        JSON.stringify({ error: "Email is required" }),
+        JSON.stringify({ error: "Invalid JSON body" }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -30,19 +69,39 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    const body = rawBody as Record<string, unknown>;
+
+    // Validate email
+    if (!isValidEmail(body.email)) {
+      return new Response(
+        JSON.stringify({ error: "Valid email is required (max 254 characters)" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+    const email = (body.email as string).trim();
+
+    // Sanitize family name
+    const familyName = sanitizeString(body.familyName, MAX_NAME_LENGTH);
+
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
-      console.error("RESEND_API_KEY not configured");
+      console.log("RESEND_API_KEY not configured, skipping email");
       return new Response(
-        JSON.stringify({ error: "Email service not configured" }),
+        JSON.stringify({ message: "Email service not configured" }),
         {
-          status: 500,
+          status: 200,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         }
       );
     }
 
     const appUrl = Deno.env.get("APP_URL") || "https://meu-din-em-casa.lovable.app";
+
+    // Escape HTML to prevent XSS in email
+    const safeFamilyName = escapeHtml(familyName);
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -67,7 +126,7 @@ const handler = async (req: Request): Promise<Response> => {
                         Conta criada com sucesso!
                       </h1>
                       <p style="color: #6b7280; font-size: 16px; margin: 0;">
-                        ${familyName ? `Bem-vindos, ${familyName}!` : 'Bem-vindos!'}
+                        ${safeFamilyName ? `Bem-vindos, ${safeFamilyName}!` : 'Bem-vindos!'}
                       </p>
                     </div>
                     
@@ -143,9 +202,9 @@ const handler = async (req: Request): Promise<Response> => {
     const data = await res.json();
 
     if (!res.ok) {
-      console.error("Resend API error:", data);
+      console.error("Resend API error");
       return new Response(
-        JSON.stringify({ error: data.message || "Failed to send email" }),
+        JSON.stringify({ error: "Failed to send email" }),
         {
           status: res.status,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -153,7 +212,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Welcome email sent successfully:", data);
+    console.log("Welcome email sent successfully");
 
     return new Response(JSON.stringify(data), {
       status: 200,
@@ -162,10 +221,10 @@ const handler = async (req: Request): Promise<Response> => {
         ...corsHeaders,
       },
     });
-  } catch (error: any) {
-    console.error("Error in send-welcome-email function:", error);
+  } catch (error: unknown) {
+    console.error("Error in send-welcome-email function");
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "An error occurred while sending the email" }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
