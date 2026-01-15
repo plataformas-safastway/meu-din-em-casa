@@ -1,12 +1,29 @@
 import { useState } from "react";
-import { ArrowLeft, Search, Loader2 } from "lucide-react";
+import { ArrowLeft, Search, Loader2, Trash2, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Transaction } from "@/types/finance";
 import { getCategoryById } from "@/data/categories";
 import { formatCurrency, formatFullDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { useAllTransactions } from "@/hooks/useTransactions";
+import { useAllTransactions, useDeleteTransaction } from "@/hooks/useTransactions";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TransactionsPageProps {
   onBack: () => void;
@@ -15,8 +32,11 @@ interface TransactionsPageProps {
 export function TransactionsPage({ onBack }: TransactionsPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   
   const { data: rawTransactions = [], isLoading } = useAllTransactions();
+  const deleteTransaction = useDeleteTransaction();
 
   // Transform database transactions to display format
   const transactions: Transaction[] = rawTransactions.map(t => ({
@@ -51,6 +71,19 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   const sortedDates = Object.keys(groupedTransactions).sort((a, b) => 
     new Date(b).getTime() - new Date(a).getTime()
   );
+
+  const handleDeleteClick = (id: string) => {
+    setTransactionToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (transactionToDelete) {
+      deleteTransaction.mutate(transactionToDelete);
+    }
+    setDeleteDialogOpen(false);
+    setTransactionToDelete(null);
+  };
 
   if (isLoading) {
     return (
@@ -141,8 +174,8 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
                           {category?.icon || "📦"}
                         </div>
                         
-                        <div className="flex-1">
-                          <p className="font-medium text-foreground">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate">
                             {transaction.description || category?.name}
                           </p>
                           <p className="text-sm text-muted-foreground">
@@ -151,11 +184,28 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
                         </div>
 
                         <span className={cn(
-                          "font-semibold",
+                          "font-semibold whitespace-nowrap",
                           isExpense ? "text-destructive" : "text-success"
                         )}>
                           {isExpense ? "-" : "+"}{formatCurrency(transaction.amount)}
                         </span>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => handleDeleteClick(transaction.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     );
                   })}
@@ -165,6 +215,27 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
           </div>
         )}
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir transação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. A transação será permanentemente excluída.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

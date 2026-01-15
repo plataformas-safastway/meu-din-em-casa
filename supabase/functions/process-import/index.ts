@@ -409,37 +409,92 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Prepare transactions for insertion
-    const transactionsToInsert = parsedTransactions.map(tx => {
-      const category = detectCategory(tx.description)
-      
-      // For credit card invoices, use the invoice month as the transaction date
-      // but keep the original date in original_date field
-      let transactionDate = tx.date
-      let originalDate: string | null = null
-      
-      if (importType === 'credit_card_invoice' && invoiceMonth) {
-        originalDate = tx.date
-        transactionDate = `${invoiceMonth}-01` // First day of invoice month
-      }
-      
-      return {
-        family_id: familyId,
-        type: tx.type,
-        amount: tx.amount,
-        date: transactionDate,
-        original_date: originalDate,
-        description: tx.description.substring(0, 255),
-        notes: tx.memo?.substring(0, 500),
-        category_id: category.categoryId,
-        subcategory_id: category.subcategoryId,
-        payment_method: importType === 'credit_card_invoice' ? 'credit' : 'debit',
-        bank_account_id: importType === 'bank_statement' ? sourceId : null,
-        credit_card_id: importType === 'credit_card_invoice' ? sourceId : null,
-        import_id: importRecord.id,
-        is_recurring: false,
-      }
+    // Check for duplicates in existing transactions
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    
+    const { data: existingTransactions } = await supabaseAdmin
+      .from('transactions')
+      .select('date, amount, type')
+      .eq('family_id', familyId)
+      .gte('date', thirtyDaysAgo.toISOString().split('T')[0])
+
+    const existingSet = new Set<string>()
+    ;(existingTransactions || []).forEach(tx => {
+      const key = `${tx.date}|${tx.amount}|${tx.type}`
+      existingSet.add(key)
     })
+
+    // Filter duplicates and prepare transactions for insertion
+    let duplicatesSkipped = 0
+    const transactionsToInsert = parsedTransactions
+      .map(tx => {
+        const category = detectCategory(tx.description)
+        
+        // For credit card invoices, use the invoice month as the transaction date
+        // but keep the original date in original_date field
+        let transactionDate = tx.date
+        let originalDate: string | null = null
+        
+        if (importType === 'credit_card_invoice' && invoiceMonth) {
+          originalDate = tx.date
+          transactionDate = `${invoiceMonth}-01` // First day of invoice month
+        }
+        
+        // Check for duplicate
+        const key = `${transactionDate}|${tx.amount}|${tx.type}`
+        const isDuplicate = existingSet.has(key)
+        
+        return {
+          data: {
+            family_id: familyId,
+            type: tx.type,
+            amount: tx.amount,
+            date: transactionDate,
+            original_date: originalDate,
+            description: tx.description.substring(0, 255),
+            notes: tx.memo?.substring(0, 500),
+            category_id: category.categoryId,
+            subcategory_id: category.subcategoryId,
+            payment_method: importType === 'credit_card_invoice' ? 'credit' : 'debit',
+            bank_account_id: importType === 'bank_statement' ? sourceId : null,
+            credit_card_id: importType === 'credit_card_invoice' ? sourceId : null,
+            import_id: importRecord.id,
+            is_recurring: false,
+          },
+          isDuplicate,
+        }
+      })
+      .filter(tx => {
+        if (tx.isDuplicate) {
+          duplicatesSkipped++
+          return false
+        }
+        return true
+      })
+      .map(tx => tx.data)
+
+    // Handle case where all transactions were duplicates
+    if (transactionsToInsert.length === 0) {
+      await supabaseAdmin.from('imports').update({
+        status: 'completed',
+        transactions_count: 0,
+        processed_at: new Date().toISOString(),
+        error_message: `Todas as ${duplicatesSkipped} transações já existiam no sistema.`,
+      }).eq('id', importRecord.id)
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          importId: importRecord.id,
+          transactionsCount: 0,
+          duplicatesSkipped,
+          needsReview: false,
+          message: `Nenhuma transação nova encontrada. ${duplicatesSkipped} duplicatas ignoradas.`,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Insert transactions
     const { data: insertedTransactions, error: insertError } = await supabaseAdmin
@@ -461,22 +516,25 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Update import record with success
+    // Update import record - always set to review_needed so user can confirm
     await supabaseAdmin.from('imports').update({
-      status: needsReview ? 'review_needed' : 'completed',
+      status: 'review_needed',
       transactions_count: insertedTransactions?.length || 0,
       processed_at: new Date().toISOString(),
     }).eq('id', importRecord.id)
+
+    const duplicateMessage = duplicatesSkipped > 0 
+      ? ` (${duplicatesSkipped} duplicata(s) ignorada(s))`
+      : ''
 
     return new Response(
       JSON.stringify({
         success: true,
         importId: importRecord.id,
         transactionsCount: insertedTransactions?.length || 0,
-        needsReview,
-        message: needsReview 
-          ? `${insertedTransactions?.length} transações importadas. Recomendamos revisar os dados.`
-          : `${insertedTransactions?.length} transações importadas com sucesso!`,
+        duplicatesSkipped,
+        needsReview: true,
+        message: `${insertedTransactions?.length} transações importadas${duplicateMessage}. Revise antes de confirmar.`,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
