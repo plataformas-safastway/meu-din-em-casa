@@ -314,6 +314,65 @@ export type Database = {
           },
         ]
       }
+      imports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          family_id: string
+          file_name: string
+          file_type: string
+          id: string
+          import_type: string
+          invoice_month: string | null
+          processed_at: string | null
+          source_id: string
+          status: string
+          storage_path: string | null
+          transactions_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          family_id: string
+          file_name: string
+          file_type: string
+          id?: string
+          import_type: string
+          invoice_month?: string | null
+          processed_at?: string | null
+          source_id: string
+          status?: string
+          storage_path?: string | null
+          transactions_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          family_id?: string
+          file_name?: string
+          file_type?: string
+          id?: string
+          import_type?: string
+          invoice_month?: string | null
+          processed_at?: string | null
+          source_id?: string
+          status?: string
+          storage_path?: string | null
+          transactions_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imports_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
@@ -328,6 +387,7 @@ export type Database = {
           import_id: string | null
           is_recurring: boolean
           notes: string | null
+          original_date: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           subcategory_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -346,6 +406,7 @@ export type Database = {
           import_id?: string | null
           is_recurring?: boolean
           notes?: string | null
+          original_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           subcategory_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -364,6 +425,7 @@ export type Database = {
           import_id?: string | null
           is_recurring?: boolean
           notes?: string | null
+          original_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           subcategory_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]

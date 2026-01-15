@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Upload, FileSpreadsheet, File, AlertCircle, Check, Loader2, Lock, CreditCard, Building2, Calendar } from "lucide-react";
+import { ArrowLeft, Upload, FileSpreadsheet, File, AlertCircle, Check, Loader2, Lock, CreditCard, Building2, Calendar, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useBankAccounts, useCreditCards } from "@/hooks/useBankData";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ImportPageProps {
   onBack: () => void;
@@ -37,6 +39,7 @@ const initialUploadState: UploadState = {
 export function ImportPage({ onBack }: ImportPageProps) {
   const [bankUpload, setBankUpload] = useState<UploadState>(initialUploadState);
   const [cardUpload, setCardUpload] = useState<UploadState>(initialUploadState);
+  const queryClient = useQueryClient();
 
   const { data: bankAccounts = [] } = useBankAccounts();
   const { data: creditCards = [] } = useCreditCards();
@@ -67,6 +70,17 @@ export function ImportPage({ onBack }: ImportPageProps) {
     }));
   };
 
+  const clearFile = (type: "bank" | "card") => {
+    const setter = type === "bank" ? setBankUpload : setCardUpload;
+    setter(prev => ({
+      ...prev,
+      file: null,
+      fileType: null,
+      password: "",
+      needsPassword: false,
+    }));
+  };
+
   const handleImport = async (type: "bank" | "card") => {
     const upload = type === "bank" ? bankUpload : cardUpload;
     const setter = type === "bank" ? setBankUpload : setCardUpload;
@@ -83,16 +97,72 @@ export function ImportPage({ onBack }: ImportPageProps) {
 
     setter(prev => ({ ...prev, loading: true }));
 
-    // Simular processamento - a implementação real usaria edge function
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Create form data
+      const formData = new FormData();
+      formData.append('file', upload.file);
+      formData.append('importType', type === "bank" ? 'bank_statement' : 'credit_card_invoice');
+      formData.append('sourceId', upload.sourceId);
+      if (type === "card" && upload.invoiceMonth) {
+        formData.append('invoiceMonth', upload.invoiceMonth);
+      }
 
-    const description = type === "bank" 
-      ? "Processando extrato bancário." 
-      : `Processando fatura. Lançamentos serão registrados em ${formatMonth(upload.invoiceMonth)}.`;
+      // Get session token
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
 
-    toast.success("Importação iniciada! 📂", { description });
+      if (!token) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        setter(prev => ({ ...prev, loading: false }));
+        return;
+      }
 
-    setter(initialUploadState);
+      // Call edge function
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/process-import`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao processar arquivo');
+      }
+
+      // Success!
+      const monthLabel = type === "card" ? formatMonth(upload.invoiceMonth) : '';
+      
+      toast.success("Importação concluída! 🎉", {
+        description: result.message,
+      });
+
+      if (result.needsReview) {
+        toast.info("Recomendamos revisar", {
+          description: `Arquivos ${upload.fileType?.toUpperCase()} podem ter imprecisões. Verifique as transações.`,
+          duration: 5000,
+        });
+      }
+
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+
+      setter(initialUploadState);
+      
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error("Erro na importação", {
+        description: error instanceof Error ? error.message : 'Tente novamente ou use outro formato de arquivo.',
+      });
+    } finally {
+      setter(prev => ({ ...prev, loading: false }));
+    }
   };
 
   const getConfidenceLevel = (type: FileType | null) => {
@@ -116,7 +186,7 @@ export function ImportPage({ onBack }: ImportPageProps) {
     const options = [];
     const now = new Date();
     
-    // Próximos 3 meses e mês atual
+    // Último mês, mês atual e próximos 3 meses
     for (let i = -1; i <= 3; i++) {
       const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
       const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -221,7 +291,7 @@ export function ImportPage({ onBack }: ImportPageProps) {
         <div className="space-y-2">
           <Label className="text-sm">Arquivo</Label>
           <label className={cn(
-            "flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all",
+            "flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all relative",
             upload.file 
               ? "border-primary bg-primary/5" 
               : "border-border hover:border-primary/50"
@@ -234,6 +304,17 @@ export function ImportPage({ onBack }: ImportPageProps) {
             />
             {upload.file ? (
               <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    clearFile(type);
+                  }}
+                  className="absolute top-2 right-2 p-1 rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                >
+                  <X className="w-4 h-4 text-muted-foreground" />
+                </button>
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
                   {upload.fileType === 'pdf' ? (
                     <File className="w-5 h-5 text-primary" />
@@ -285,7 +366,7 @@ export function ImportPage({ onBack }: ImportPageProps) {
           <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
             <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
             <p className="text-xs text-muted-foreground">
-              PDF requer revisão manual. Recomendamos OFX.
+              PDF requer revisão manual. Recomendamos OFX para maior precisão.
             </p>
           </div>
         )}
@@ -295,6 +376,15 @@ export function ImportPage({ onBack }: ImportPageProps) {
             <Check className="w-4 h-4 text-success shrink-0 mt-0.5" />
             <p className="text-xs text-muted-foreground">
               OFX oferece a melhor precisão na importação.
+            </p>
+          </div>
+        )}
+
+        {(upload.fileType === 'xls' || upload.fileType === 'xlsx') && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
+            <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground">
+              Arquivos Excel podem variar. Verifique as transações após importar.
             </p>
           </div>
         )}
