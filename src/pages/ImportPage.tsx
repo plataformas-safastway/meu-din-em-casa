@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { ArrowLeft, Upload, FileSpreadsheet, File, AlertCircle, Check, Loader2, Lock } from "lucide-react";
+import { ArrowLeft, Upload, FileSpreadsheet, File, AlertCircle, Check, Loader2, Lock, CreditCard, Building2, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBankAccounts, useCreditCards } from "@/hooks/useBankData";
 import { toast } from "sonner";
@@ -13,22 +12,39 @@ interface ImportPageProps {
   onBack: () => void;
 }
 
-type ImportType = "statement" | "invoice";
 type FileType = "ofx" | "xls" | "xlsx" | "pdf";
 
+interface UploadState {
+  file: File | null;
+  fileType: FileType | null;
+  sourceId: string;
+  password: string;
+  needsPassword: boolean;
+  loading: boolean;
+  invoiceMonth: string;
+}
+
+const initialUploadState: UploadState = {
+  file: null,
+  fileType: null,
+  sourceId: "",
+  password: "",
+  needsPassword: false,
+  loading: false,
+  invoiceMonth: "",
+};
+
 export function ImportPage({ onBack }: ImportPageProps) {
-  const [importType, setImportType] = useState<ImportType>("statement");
-  const [sourceId, setSourceId] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [fileType, setFileType] = useState<FileType | null>(null);
-  const [password, setPassword] = useState("");
-  const [needsPassword, setNeedsPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [bankUpload, setBankUpload] = useState<UploadState>(initialUploadState);
+  const [cardUpload, setCardUpload] = useState<UploadState>(initialUploadState);
 
   const { data: bankAccounts = [] } = useBankAccounts();
   const { data: creditCards = [] } = useCreditCards();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "bank" | "card"
+  ) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
@@ -41,31 +57,42 @@ export function ImportPage({ onBack }: ImportPageProps) {
       return;
     }
 
-    setFile(selectedFile);
-    setFileType(extension as FileType);
-    setNeedsPassword(false);
-    setPassword("");
+    const setter = type === "bank" ? setBankUpload : setCardUpload;
+    setter(prev => ({
+      ...prev,
+      file: selectedFile,
+      fileType: extension as FileType,
+      needsPassword: false,
+      password: "",
+    }));
   };
 
-  const handleImport = async () => {
-    if (!file || !sourceId) {
+  const handleImport = async (type: "bank" | "card") => {
+    const upload = type === "bank" ? bankUpload : cardUpload;
+    const setter = type === "bank" ? setBankUpload : setCardUpload;
+
+    if (!upload.file || !upload.sourceId) {
       toast.error("Selecione o arquivo e a origem");
       return;
     }
 
-    setLoading(true);
+    if (type === "card" && !upload.invoiceMonth) {
+      toast.error("Selecione o mês de pagamento da fatura");
+      return;
+    }
+
+    setter(prev => ({ ...prev, loading: true }));
 
     // Simular processamento - a implementação real usaria edge function
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    toast.success("Importação iniciada! 📂", {
-      description: "Processando o arquivo. Você receberá um aviso quando terminar."
-    });
+    const description = type === "bank" 
+      ? "Processando extrato bancário." 
+      : `Processando fatura. Lançamentos serão registrados em ${formatMonth(upload.invoiceMonth)}.`;
 
-    setLoading(false);
-    setFile(null);
-    setSourceId("");
-    onBack();
+    toast.success("Importação iniciada! 📂", { description });
+
+    setter(initialUploadState);
   };
 
   const getConfidenceLevel = (type: FileType | null) => {
@@ -78,7 +105,221 @@ export function ImportPage({ onBack }: ImportPageProps) {
     }
   };
 
-  const confidence = getConfidenceLevel(fileType);
+  const formatMonth = (monthStr: string) => {
+    if (!monthStr) return "";
+    const [year, month] = monthStr.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  };
+
+  const getMonthOptions = () => {
+    const options = [];
+    const now = new Date();
+    
+    // Próximos 3 meses e mês atual
+    for (let i = -1; i <= 3; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      options.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
+    }
+    return options;
+  };
+
+  const renderUploadSection = (
+    type: "bank" | "card",
+    upload: UploadState,
+    setter: React.Dispatch<React.SetStateAction<UploadState>>
+  ) => {
+    const confidence = getConfidenceLevel(upload.fileType);
+    const isBank = type === "bank";
+    const items = isBank ? bankAccounts : creditCards;
+    const emptyMessage = isBank ? "Nenhuma conta cadastrada" : "Nenhum cartão cadastrado";
+    const placeholder = isBank ? "Escolha uma conta bancária" : "Escolha um cartão de crédito";
+    const Icon = isBank ? Building2 : CreditCard;
+
+    return (
+      <div className="space-y-4 p-4 rounded-2xl bg-card border border-border">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "w-10 h-10 rounded-xl flex items-center justify-center",
+            isBank ? "bg-blue-500/10" : "bg-purple-500/10"
+          )}>
+            <Icon className={cn("w-5 h-5", isBank ? "text-blue-500" : "text-purple-500")} />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">
+              {isBank ? "Extrato Bancário" : "Fatura de Cartão"}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {isBank ? "Conta corrente ou poupança" : "Cartão de crédito"}
+            </p>
+          </div>
+        </div>
+
+        {/* Source Selection */}
+        <div className="space-y-2">
+          <Label className="text-sm">
+            {isBank ? "Conta" : "Cartão"}
+          </Label>
+          <Select 
+            value={upload.sourceId} 
+            onValueChange={(v) => setter(prev => ({ ...prev, sourceId: v }))}
+          >
+            <SelectTrigger className="h-11">
+              <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {items.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground">
+                  <p className="text-sm">{emptyMessage}</p>
+                </div>
+              ) : (
+                items.map((item: any) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {isBank 
+                      ? `${item.nickname} (${item.banks?.name || item.custom_bank_name})`
+                      : item.card_name
+                    }
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Invoice Month - Only for credit cards */}
+        {!isBank && (
+          <div className="space-y-2">
+            <Label className="text-sm flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-muted-foreground" />
+              Mês de pagamento da fatura
+            </Label>
+            <Select 
+              value={upload.invoiceMonth} 
+              onValueChange={(v) => setter(prev => ({ ...prev, invoiceMonth: v }))}
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Selecione o mês de vencimento" />
+              </SelectTrigger>
+              <SelectContent>
+                {getMonthOptions().map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              💡 Todas as compras serão lançadas neste mês, mesmo que tenham sido feitas antes.
+            </p>
+          </div>
+        )}
+
+        {/* File Upload */}
+        <div className="space-y-2">
+          <Label className="text-sm">Arquivo</Label>
+          <label className={cn(
+            "flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all",
+            upload.file 
+              ? "border-primary bg-primary/5" 
+              : "border-border hover:border-primary/50"
+          )}>
+            <input
+              type="file"
+              accept=".ofx,.xls,.xlsx,.pdf"
+              onChange={(e) => handleFileChange(e, type)}
+              className="hidden"
+            />
+            {upload.file ? (
+              <>
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
+                  {upload.fileType === 'pdf' ? (
+                    <File className="w-5 h-5 text-primary" />
+                  ) : (
+                    <FileSpreadsheet className="w-5 h-5 text-primary" />
+                  )}
+                </div>
+                <p className="font-medium text-foreground text-sm">{upload.file.name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {(upload.file.size / 1024).toFixed(1)} KB
+                </p>
+                {confidence && (
+                  <p className={cn("text-xs mt-1", confidence.color)}>
+                    Confiança: {confidence.level}
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                <p className="font-medium text-foreground text-sm">Clique para enviar</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  OFX, XLS, XLSX ou PDF
+                </p>
+              </>
+            )}
+          </label>
+        </div>
+
+        {/* Password field for protected files */}
+        {upload.needsPassword && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Lock className="w-4 h-4 text-muted-foreground" />
+              <Label className="text-sm">Arquivo protegido</Label>
+            </div>
+            <Input
+              type="password"
+              placeholder="Digite a senha do arquivo"
+              value={upload.password}
+              onChange={(e) => setter(prev => ({ ...prev, password: e.target.value }))}
+              className="h-11"
+            />
+          </div>
+        )}
+
+        {/* Info boxes */}
+        {upload.fileType === 'pdf' && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/10 border border-warning/20">
+            <AlertCircle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground">
+              PDF requer revisão manual. Recomendamos OFX.
+            </p>
+          </div>
+        )}
+
+        {upload.fileType === 'ofx' && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-success/10 border border-success/20">
+            <Check className="w-4 h-4 text-success shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground">
+              OFX oferece a melhor precisão na importação.
+            </p>
+          </div>
+        )}
+
+        {/* Submit */}
+        <Button
+          className="w-full h-11"
+          disabled={!upload.file || !upload.sourceId || upload.loading || (!isBank && !upload.invoiceMonth)}
+          onClick={() => handleImport(type)}
+        >
+          {upload.loading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Processando...
+            </>
+          ) : (
+            <>
+              <Upload className="w-4 h-4 mr-2" />
+              Importar {isBank ? "extrato" : "fatura"}
+            </>
+          )}
+        </Button>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -91,213 +332,28 @@ export function ImportPage({ onBack }: ImportPageProps) {
           <div>
             <h1 className="text-xl font-bold">Importar</h1>
             <p className="text-sm text-muted-foreground">
-              Importe extratos ou faturas
+              Extratos bancários e faturas de cartão
             </p>
           </div>
         </div>
       </header>
 
-      <main className="container px-4 py-6 space-y-6">
-        {/* Import Type */}
-        <div className="space-y-3">
-          <Label>Tipo de importação</Label>
-          <RadioGroup 
-            value={importType} 
-            onValueChange={(v) => {
-              setImportType(v as ImportType);
-              setSourceId("");
-            }}
-            className="grid grid-cols-2 gap-3"
-          >
-            <Label
-              htmlFor="statement"
-              className={cn(
-                "flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all",
-                importType === "statement"
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/50"
-              )}
-            >
-              <RadioGroupItem value="statement" id="statement" />
-              <div>
-                <p className="font-medium">Extrato bancário</p>
-                <p className="text-xs text-muted-foreground">Conta corrente ou poupança</p>
-              </div>
-            </Label>
-            <Label
-              htmlFor="invoice"
-              className={cn(
-                "flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all",
-                importType === "invoice"
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/50"
-              )}
-            >
-              <RadioGroupItem value="invoice" id="invoice" />
-              <div>
-                <p className="font-medium">Fatura de cartão</p>
-                <p className="text-xs text-muted-foreground">Cartão de crédito</p>
-              </div>
-            </Label>
-          </RadioGroup>
+      <main className="container px-4 py-6 space-y-4">
+        {/* Bank Statement Section */}
+        {renderUploadSection("bank", bankUpload, setBankUpload)}
+
+        {/* Divider */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-xs text-muted-foreground font-medium">OU</span>
+          <div className="flex-1 h-px bg-border" />
         </div>
 
-        {/* Source Selection */}
-        <div className="space-y-3">
-          <Label>
-            {importType === "statement" ? "Selecione a conta" : "Selecione o cartão"}
-          </Label>
-          <Select value={sourceId} onValueChange={setSourceId}>
-            <SelectTrigger className="h-12">
-              <SelectValue placeholder={
-                importType === "statement" 
-                  ? "Escolha uma conta bancária" 
-                  : "Escolha um cartão de crédito"
-              } />
-            </SelectTrigger>
-            <SelectContent>
-              {importType === "statement" ? (
-                bankAccounts.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    <p className="text-sm">Nenhuma conta cadastrada</p>
-                  </div>
-                ) : (
-                  bankAccounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.nickname} ({account.banks?.name || account.custom_bank_name})
-                    </SelectItem>
-                  ))
-                )
-              ) : (
-                creditCards.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    <p className="text-sm">Nenhum cartão cadastrado</p>
-                  </div>
-                ) : (
-                  creditCards.map((card) => (
-                    <SelectItem key={card.id} value={card.id}>
-                      {card.card_name}
-                    </SelectItem>
-                  ))
-                )
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* File Upload */}
-        <div className="space-y-3">
-          <Label>Arquivo</Label>
-          <label className={cn(
-            "flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed cursor-pointer transition-all",
-            file 
-              ? "border-primary bg-primary/5" 
-              : "border-border hover:border-primary/50"
-          )}>
-            <input
-              type="file"
-              accept=".ofx,.xls,.xlsx,.pdf"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            {file ? (
-              <>
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
-                  {fileType === 'pdf' ? (
-                    <File className="w-6 h-6 text-primary" />
-                  ) : (
-                    <FileSpreadsheet className="w-6 h-6 text-primary" />
-                  )}
-                </div>
-                <p className="font-medium text-foreground">{file.name}</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {(file.size / 1024).toFixed(1)} KB
-                </p>
-                {confidence && (
-                  <p className={cn("text-sm mt-2", confidence.color)}>
-                    Confiança: {confidence.level}
-                  </p>
-                )}
-              </>
-            ) : (
-              <>
-                <Upload className="w-10 h-10 text-muted-foreground mb-3" />
-                <p className="font-medium text-foreground">Clique para enviar</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  OFX, XLS, XLSX ou PDF
-                </p>
-              </>
-            )}
-          </label>
-        </div>
-
-        {/* Password field for protected files */}
-        {needsPassword && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-muted-foreground" />
-              <Label>Arquivo protegido por senha</Label>
-            </div>
-            <Input
-              type="password"
-              placeholder="Digite a senha do arquivo"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-12"
-            />
-            <p className="text-xs text-muted-foreground">
-              A senha geralmente é definida pelo banco ao exportar o arquivo.
-            </p>
-          </div>
-        )}
-
-        {/* Info boxes */}
-        {fileType === 'pdf' && (
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-warning/10 border border-warning/20">
-            <AlertCircle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium text-warning">PDF requer revisão</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Arquivos PDF podem exigir mais revisão manual. Recomendamos usar OFX quando possível.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {fileType === 'ofx' && (
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-success/10 border border-success/20">
-            <Check className="w-5 h-5 text-success shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium text-success">Formato recomendado!</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                OFX oferece a melhor precisão na importação dos lançamentos.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Submit */}
-        <Button
-          size="lg"
-          className="w-full h-14 text-base font-semibold"
-          disabled={!file || !sourceId || loading}
-          onClick={handleImport}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Processando...
-            </>
-          ) : (
-            <>
-              <Upload className="w-4 h-4 mr-2" />
-              Importar arquivo
-            </>
-          )}
-        </Button>
+        {/* Credit Card Invoice Section */}
+        {renderUploadSection("card", cardUpload, setCardUpload)}
 
         {/* Privacy note */}
-        <p className="text-center text-xs text-muted-foreground">
+        <p className="text-center text-xs text-muted-foreground pt-2">
           Seus arquivos são privados e vinculados apenas à sua família
         </p>
       </main>
