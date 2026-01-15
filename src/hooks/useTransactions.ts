@@ -98,6 +98,32 @@ export function useCreateTransaction() {
   });
 }
 
+export interface TransactionUpdate {
+  category_id?: string;
+  subcategory_id?: string | null;
+  description?: string | null;
+  amount?: number;
+  date?: string;
+}
+
+export function useUpdateTransaction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: TransactionUpdate }) => {
+      const { error } = await supabase
+        .from("transactions")
+        .update(data)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+    },
+  });
+}
+
 export function useDeleteTransaction() {
   const queryClient = useQueryClient();
 

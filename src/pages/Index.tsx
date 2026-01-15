@@ -39,7 +39,13 @@ const Index = () => {
       case "goals":
         return <GoalsPage onBack={() => setActiveTab("dashboard")} />;
       case "settings":
-        return <SettingsPage onBack={() => setActiveTab("dashboard")} onNavigate={setActiveTab} />;
+        return (
+          <SettingsPage 
+            onBack={() => setActiveTab("dashboard")} 
+            onNavigate={setActiveTab}
+            onReviewImport={handleReviewImport}
+          />
+        );
       case "banks":
         return <BanksPage onBack={() => setActiveTab("settings")} />;
       case "import":
