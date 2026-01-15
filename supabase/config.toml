@@ -1,1 +1,7 @@
 project_id = "wnagybpurqweowmievji"
+
+[functions.create-family]
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = false
