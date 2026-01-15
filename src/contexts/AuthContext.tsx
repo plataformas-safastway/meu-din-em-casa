@@ -36,6 +36,8 @@ interface AuthContextType {
     incomeRange?: string;
     primaryObjective?: string;
   }) => Promise<{ error: Error | null }>;
+  joinFamily: (familyId: string, displayName: string) => Promise<{ error: Error | null }>;
+  deleteAccount: () => Promise<{ error: Error | null }>;
   refreshFamily: () => Promise<void>;
 }
 
@@ -157,6 +159,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
+  const getAuthenticatedUser = async () => {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const currentUser = sessionData?.session?.user ?? null;
+
+    if (sessionError || !currentUser) {
+      console.error('Session error:', sessionError);
+      return { user: null, error: new Error('Usuário não autenticado. Por favor, faça login novamente.') };
+    }
+
+    return { user: currentUser, error: null as Error | null };
+  };
+
   const createFamily = async (data: {
     name: string;
     displayName: string;
@@ -164,77 +178,119 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     incomeRange?: string;
     primaryObjective?: string;
   }) => {
-    // Buscar sessão diretamente do Supabase para garantir que está atualizada
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    const currentUser = sessionData?.session?.user;
+    const { user: currentUser, error: authError } = await getAuthenticatedUser();
 
-    if (sessionError || !currentUser) {
-      console.error('Session error:', sessionError);
-      return { error: new Error('Usuário não autenticado. Por favor, faça login novamente.') };
+    if (authError || !currentUser) {
+      return { error: authError };
     }
 
     try {
-      // Create family
-      const { data: familyData, error: familyError } = await supabase
-        .from('families')
-        .insert({
-          name: data.name,
-          members_count: data.membersCount,
-          income_range: data.incomeRange || null,
-          primary_objective: data.primaryObjective || null,
-        })
-        .select()
-        .single();
+      // IMPORTANT: we cannot use `.select()` here because SELECT policies on `families`
+      // require membership, which only exists after inserting into `family_members`.
+      // So we generate the UUID on the client and insert without RETURNING.
+      const familyId = crypto.randomUUID();
+
+      const { error: familyError } = await supabase.from('families').insert({
+        id: familyId,
+        name: data.name,
+        members_count: data.membersCount,
+        income_range: data.incomeRange || null,
+        primary_objective: data.primaryObjective || null,
+      });
 
       if (familyError) {
         console.error('Error creating family:', familyError);
         return { error: familyError as Error };
       }
 
-      // Add user as owner
-      const { error: memberError } = await supabase
-        .from('family_members')
-        .insert({
-          family_id: familyData.id,
-          user_id: currentUser.id,
-          display_name: data.displayName,
-          role: 'owner',
-        });
+      const { error: memberError } = await supabase.from('family_members').insert({
+        family_id: familyId,
+        user_id: currentUser.id,
+        display_name: data.displayName,
+        role: 'owner',
+      });
 
       if (memberError) {
         console.error('Error adding family member:', memberError);
         return { error: memberError as Error };
       }
 
-      // Create default emergency fund
-      await supabase
-        .from('emergency_funds')
-        .insert({
-          family_id: familyData.id,
-          target_amount: 0,
-          current_amount: 0,
-          target_months: 6,
-        });
+      const { error: emergencyError } = await supabase.from('emergency_funds').insert({
+        family_id: familyId,
+        target_amount: 0,
+        current_amount: 0,
+        target_months: 6,
+      });
+
+      if (emergencyError) {
+        console.error('Error creating emergency fund:', emergencyError);
+        // Not fatal for onboarding
+      }
 
       // Send welcome email (non-blocking)
-      try {
-        await supabase.functions.invoke('send-welcome-email', {
+      supabase.functions
+        .invoke('send-welcome-email', {
           body: {
             email: currentUser.email,
             familyName: data.name,
           },
-        });
-      } catch (emailError) {
-        // Don't block signup if email fails
-        console.log('Welcome email could not be sent:', emailError);
-      }
+        })
+        .catch((emailError) => console.log('Welcome email could not be sent:', emailError));
 
-      // Refresh family data
       await fetchFamilyData(currentUser.id);
-
       return { error: null };
     } catch (error) {
       console.error('Error in createFamily:', error);
+      return { error: error as Error };
+    }
+  };
+
+  const joinFamily = async (familyId: string, displayName: string) => {
+    const { user: currentUser, error: authError } = await getAuthenticatedUser();
+
+    if (authError || !currentUser) {
+      return { error: authError };
+    }
+
+    try {
+      const { error: memberError } = await supabase.from('family_members').insert({
+        family_id: familyId,
+        user_id: currentUser.id,
+        display_name: displayName,
+        role: 'member',
+      });
+
+      if (memberError) {
+        console.error('Error joining family:', memberError);
+        return { error: memberError as Error };
+      }
+
+      await fetchFamilyData(currentUser.id);
+      return { error: null };
+    } catch (error) {
+      console.error('Error in joinFamily:', error);
+      return { error: error as Error };
+    }
+  };
+
+  const deleteAccount = async () => {
+    try {
+      const { error } = await supabase.functions.invoke('delete-account');
+
+      if (error) {
+        console.error('Error deleting account:', error);
+        return { error: error as Error };
+      }
+
+      await supabase.auth.signOut();
+      setFamily(null);
+      setFamilyMember(null);
+      setUser(null);
+      setSession(null);
+
+      return { error: null };
+    } catch (error) {
+      console.error('Error in deleteAccount:', error);
       return { error: error as Error };
     }
   };
@@ -259,6 +315,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resetPassword,
         updatePassword,
         createFamily,
+        joinFamily,
+        deleteAccount,
         refreshFamily,
       }}
     >

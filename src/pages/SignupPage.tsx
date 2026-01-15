@@ -131,15 +131,15 @@ export function SignupPage() {
 
   const handleStep3 = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     setLoading(true);
 
     // Ensure we have a valid session before creating family
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    
+
     if (sessionError || !sessionData?.session) {
       toast.error("Sessão expirada", {
-        description: "Por favor, faça login novamente."
+        description: "Por favor, faça login novamente.",
       });
       setLoading(false);
       navigate("/login");
@@ -147,77 +147,76 @@ export function SignupPage() {
     }
 
     try {
-      // Create family directly here to ensure we have the right session context
       const currentUser = sessionData.session.user;
 
-      // Create family
-      const { data: familyData, error: familyError } = await supabase
-        .from('families')
-        .insert({
-          name: familyName,
-          members_count: membersCount,
-          income_range: incomeRange || null,
-          primary_objective: primaryObjective || null,
-        })
-        .select()
-        .single();
+      // IMPORTANT: we cannot use `.select()` on families right after insert because
+      // SELECT policies require membership (which is created in the next step).
+      // So we generate the UUID on the client.
+      const familyId = crypto.randomUUID();
+
+      const { error: familyError } = await supabase.from("families").insert({
+        id: familyId,
+        name: familyName,
+        members_count: membersCount,
+        income_range: incomeRange || null,
+        primary_objective: primaryObjective || null,
+      });
 
       if (familyError) {
-        console.error('Error creating family:', familyError);
+        console.error("Error creating family:", familyError);
         toast.error("Erro ao criar família", {
-          description: "Tente novamente mais tarde."
+          description: "Tente novamente mais tarde.",
         });
         setLoading(false);
         return;
       }
 
-      // Add user as owner
-      const { error: memberError } = await supabase
-        .from('family_members')
-        .insert({
-          family_id: familyData.id,
-          user_id: currentUser.id,
-          display_name: name,
-          role: 'owner',
-        });
+      const { error: memberError } = await supabase.from("family_members").insert({
+        family_id: familyId,
+        user_id: currentUser.id,
+        display_name: name,
+        role: "owner",
+      });
 
       if (memberError) {
-        console.error('Error adding family member:', memberError);
+        console.error("Error adding family member:", memberError);
         toast.error("Erro ao adicionar membro", {
-          description: "Tente novamente mais tarde."
+          description: "Tente novamente mais tarde.",
         });
         setLoading(false);
         return;
       }
 
-      // Create default emergency fund
-      await supabase
-        .from('emergency_funds')
+      // Create default emergency fund (non-blocking)
+      supabase
+        .from("emergency_funds")
         .insert({
-          family_id: familyData.id,
+          family_id: familyId,
           target_amount: 0,
           current_amount: 0,
           target_months: 6,
-        });
+        })
+        .catch((err) => console.log("Emergency fund could not be created:", err));
 
       // Send welcome email (non-blocking)
-      supabase.functions.invoke('send-welcome-email', {
-        body: {
-          email: currentUser.email,
-          familyName: familyName,
-        },
-      }).catch(err => console.log('Welcome email could not be sent:', err));
+      supabase.functions
+        .invoke("send-welcome-email", {
+          body: {
+            email: currentUser.email,
+            familyName: familyName,
+          },
+        })
+        .catch((err) => console.log("Welcome email could not be sent:", err));
 
       toast.success("Conta criada com sucesso! 🎉", {
-        description: "Bem-vindos! Vamos organizar as finanças da família."
+        description: "Bem-vindos! Vamos organizar as finanças da família.",
       });
-      
-      // Force refresh to get new family data
+
       window.location.href = "/app";
     } catch (error) {
-      console.error('Error in handleStep3:', error);
+      console.error("Error in handleStep3:", error);
       toast.error("Erro ao criar família", {
-        description: "Tente novamente mais tarde."
+        description: "Tente novamente mais tarde.",
       });
       setLoading(false);
     }
