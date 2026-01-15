@@ -1,15 +1,17 @@
-import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload } from "lucide-react";
+import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { ImportHistory } from "@/components/ImportHistory";
 
 interface SettingsPageProps {
   onBack: () => void;
   onNavigate?: (tab: string) => void;
+  onReviewImport?: (importId: string) => void;
 }
 
-export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
+export function SettingsPage({ onBack, onNavigate, onReviewImport }: SettingsPageProps) {
   const { family, familyMember, signOut } = useAuth();
 
   const handleAction = (id: string) => {
@@ -52,6 +54,7 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
       title: "Dados",
       items: [
         { id: "import", label: "Importar Extrato/Fatura", icon: Upload, action: "navigate" },
+        { id: "history", label: "Histórico de Importações", icon: History, action: "expand" },
         { id: "export", label: "Exportar Dados (CSV)", icon: Download, action: "action" },
         { id: "backup", label: "Backup Automático", icon: Shield, action: "toggle", enabled: false },
       ],
@@ -110,6 +113,22 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
             <div className="bg-card rounded-2xl border border-border/30 overflow-hidden divide-y divide-border/30">
               {section.items.map((item) => {
                 const Icon = item.icon;
+                
+                if (item.action === 'expand' && item.id === 'history') {
+                  return (
+                    <div key={item.id} className="p-4">
+                      <div className="flex items-center gap-4 mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                          <Icon className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <span className="flex-1 font-medium text-foreground">
+                          {item.label}
+                        </span>
+                      </div>
+                      <ImportHistory onReviewImport={onReviewImport} />
+                    </div>
+                  );
+                }
                 
                 return (
                   <div

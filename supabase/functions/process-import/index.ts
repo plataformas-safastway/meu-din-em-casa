@@ -106,8 +106,98 @@ function parseXLS(content: string): ParsedTransaction[] {
   return transactions
 }
 
-// Parse PDF text content (requires text extraction beforehand)
-function parsePDFText(content: string): ParsedTransaction[] {
+// Parse PDF using AI for complex Brazilian bank statements
+async function parsePDFWithAI(content: string): Promise<ParsedTransaction[]> {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
+  
+  if (!LOVABLE_API_KEY) {
+    console.log('LOVABLE_API_KEY not available, falling back to regex parsing')
+    return parsePDFTextFallback(content)
+  }
+
+  try {
+    const prompt = `Você é um especialista em extrair transações de extratos bancários brasileiros.
+
+Analise o seguinte texto de um extrato bancário ou fatura de cartão de crédito e extraia TODAS as transações encontradas.
+
+IMPORTANTE:
+- Data deve estar no formato YYYY-MM-DD
+- Valor deve ser um número positivo (sem símbolo de moeda)
+- Tipo: "expense" para débitos/saídas, "income" para créditos/entradas
+- Descrição: texto limpo da transação (sem data ou valor)
+
+Retorne APENAS um JSON válido no formato:
+{
+  "transactions": [
+    {
+      "date": "2024-01-15",
+      "amount": 150.50,
+      "type": "expense",
+      "description": "SUPERMERCADO CARREFOUR"
+    }
+  ]
+}
+
+Se não encontrar transações, retorne: {"transactions": []}
+
+Texto do extrato:
+${content.substring(0, 15000)}`
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-3-flash-preview',
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.1,
+      }),
+    })
+
+    if (!response.ok) {
+      console.error('AI API error:', response.status)
+      return parsePDFTextFallback(content)
+    }
+
+    const data = await response.json()
+    const aiResponse = data.choices?.[0]?.message?.content || ''
+    
+    // Extract JSON from response
+    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      console.log('No JSON found in AI response, falling back to regex')
+      return parsePDFTextFallback(content)
+    }
+
+    const parsed = JSON.parse(jsonMatch[0])
+    const transactions: ParsedTransaction[] = []
+
+    for (const tx of (parsed.transactions || [])) {
+      if (tx.date && tx.amount && tx.type) {
+        transactions.push({
+          date: tx.date,
+          amount: Math.abs(Number(tx.amount)),
+          type: tx.type === 'income' ? 'income' : 'expense',
+          description: String(tx.description || 'Transação importada').substring(0, 200),
+        })
+      }
+    }
+
+    console.log(`AI extracted ${transactions.length} transactions from PDF`)
+    return transactions
+
+  } catch (error) {
+    console.error('Error parsing PDF with AI:', error)
+    return parsePDFTextFallback(content)
+  }
+}
+
+// Fallback regex-based PDF parser
+function parsePDFTextFallback(content: string): ParsedTransaction[] {
   const transactions: ParsedTransaction[] = []
   const lines = content.split('\n')
   
@@ -372,8 +462,8 @@ Deno.serve(async (req) => {
         parsedTransactions = parseXLS(content)
         needsReview = true
       } else if (fileType === 'pdf') {
-        // PDF parsing is limited without proper OCR
-        parsedTransactions = parsePDFText(content)
+        // Use AI-powered PDF parsing for better accuracy
+        parsedTransactions = await parsePDFWithAI(content)
         needsReview = true
       }
     } catch (parseError) {

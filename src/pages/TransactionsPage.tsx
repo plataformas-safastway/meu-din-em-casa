@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Search, Loader2, Trash2, MoreVertical } from "lucide-react";
+import { ArrowLeft, Search, Loader2, Trash2, Edit2, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Transaction } from "@/types/finance";
@@ -7,7 +7,7 @@ import { getCategoryById } from "@/data/categories";
 import { formatCurrency, formatFullDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useAllTransactions, useDeleteTransaction } from "@/hooks/useTransactions";
-import { toast } from "sonner";
+import { EditTransactionSheet } from "@/components/EditTransactionSheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +34,8 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   
   const { data: rawTransactions = [], isLoading } = useAllTransactions();
   const deleteTransaction = useDeleteTransaction();
@@ -75,6 +77,11 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   const handleDeleteClick = (id: string) => {
     setTransactionToDelete(id);
     setDeleteDialogOpen(true);
+  };
+
+  const handleEditClick = (transaction: Transaction) => {
+    setTransactionToEdit(transaction);
+    setEditSheetOpen(true);
   };
 
   const confirmDelete = () => {
@@ -198,6 +205,12 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem 
+                              onClick={() => handleEditClick(transaction)}
+                            >
+                              <Edit2 className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
                               className="text-destructive focus:text-destructive"
                               onClick={() => handleDeleteClick(transaction.id)}
                             >
@@ -236,6 +249,13 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Transaction Sheet */}
+      <EditTransactionSheet
+        open={editSheetOpen}
+        onOpenChange={setEditSheetOpen}
+        transaction={transactionToEdit}
+      />
     </div>
   );
 }
