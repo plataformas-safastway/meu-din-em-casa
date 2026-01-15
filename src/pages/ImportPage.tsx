@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 interface ImportPageProps {
   onBack: () => void;
+  onReviewImport?: (importId: string) => void;
 }
 
 type FileType = "ofx" | "xls" | "xlsx" | "pdf";
@@ -36,7 +37,7 @@ const initialUploadState: UploadState = {
   invoiceMonth: "",
 };
 
-export function ImportPage({ onBack }: ImportPageProps) {
+export function ImportPage({ onBack, onReviewImport }: ImportPageProps) {
   const [bankUpload, setBankUpload] = useState<UploadState>(initialUploadState);
   const [cardUpload, setCardUpload] = useState<UploadState>(initialUploadState);
   const queryClient = useQueryClient();
@@ -135,25 +136,31 @@ export function ImportPage({ onBack }: ImportPageProps) {
         throw new Error(result.error || 'Erro ao processar arquivo');
       }
 
-      // Success!
-      const monthLabel = type === "card" ? formatMonth(upload.invoiceMonth) : '';
-      
-      toast.success("Importação concluída! 🎉", {
-        description: result.message,
-      });
-
-      if (result.needsReview) {
-        toast.info("Recomendamos revisar", {
-          description: `Arquivos ${upload.fileType?.toUpperCase()} podem ter imprecisões. Verifique as transações.`,
-          duration: 5000,
-        });
-      }
-
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['imports'] });
 
       setter(initialUploadState);
+      
+      // Navigate to review page
+      if (onReviewImport && result.importId) {
+        toast.success("Arquivo processado!", {
+          description: `${result.transactionsCount} transações prontas para revisão`,
+        });
+        onReviewImport(result.importId);
+      } else {
+        toast.success("Importação concluída! 🎉", {
+          description: result.message,
+        });
+        
+        if (result.needsReview) {
+          toast.info("Recomendamos revisar", {
+            description: `Arquivos ${upload.fileType?.toUpperCase()} podem ter imprecisões. Verifique as transações.`,
+            duration: 5000,
+          });
+        }
+      }
       
     } catch (error) {
       console.error('Import error:', error);
