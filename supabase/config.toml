@@ -1,5 +1,8 @@
 project_id = "wnagybpurqweowmievji"
 
+[functions.process-import]
+verify_jwt = false
+
 [functions.create-family]
 verify_jwt = false
 
