@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, ArrowLeft, ArrowRight, Loader2, Check, Users, Target, Shield } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, ArrowRight, Loader2, Users, Target, Shield, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -30,21 +29,26 @@ const objectives = [
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const { signUp, signIn, user, family } = useAuth();
-  
+  const [searchParams] = useSearchParams();
+  const inviteFamilyId = searchParams.get("invite");
+
+  const { signUp, signIn, user, family, joinFamily, createFamily, deleteAccount } = useAuth();
+
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
-  
+
+  const isInviteFlow = useMemo(() => Boolean(inviteFamilyId), [inviteFamilyId]);
+
   // Step 1 - Account (or just "display name" when already logged in)
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // Step 2 - Family
   const [familyName, setFamilyName] = useState("");
   const [membersCount, setMembersCount] = useState(2);
-  
+
   // Step 3 - Context
   const [incomeRange, setIncomeRange] = useState("");
   const [primaryObjective, setPrimaryObjective] = useState("");
@@ -61,23 +65,106 @@ export function SignupPage() {
     if (user && !family) {
       setEmail(user.email ?? "");
     }
-  }, [user, family, navigate]);
+
+    // In invite mode, keep the user on step 1.
+    if (isInviteFlow) {
+      setStep(1);
+    }
+  }, [user, family, navigate, isInviteFlow]);
 
   const handleStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailAlreadyExists(false);
 
+    if (!name) {
+      toast.error("Preencha seu nome");
+      return;
+    }
+
+    // INVITE FLOW: accept invite right after authentication
+    if (isInviteFlow && inviteFamilyId) {
+      setLoading(true);
+
+      try {
+        // If user is not authenticated yet, create/sign in.
+        if (!user) {
+          if (!email || !password) {
+            toast.error("Preencha todos os campos");
+            setLoading(false);
+            return;
+          }
+
+          if (password.length < 6) {
+            toast.error("A senha deve ter pelo menos 6 caracteres");
+            setLoading(false);
+            return;
+          }
+
+          const { error: signUpError } = await signUp(email, password);
+
+          if (signUpError) {
+            const errorMessage = signUpError.message?.toLowerCase() || "";
+            if (
+              errorMessage.includes("already registered") ||
+              errorMessage.includes("already exists") ||
+              errorMessage.includes("user_already_exists")
+            ) {
+              setEmailAlreadyExists(true);
+              setLoading(false);
+              return;
+            }
+
+            toast.error("Erro ao criar conta", {
+              description: signUpError.message || "Tente novamente mais tarde.",
+            });
+            setLoading(false);
+            return;
+          }
+
+          // Ensure session exists (covers cases where signup returns user but no session)
+          const { error: signInError } = await signIn(email, password);
+          if (signInError) {
+            toast.error("Erro ao entrar", {
+              description: "Tente fazer login com seu e-mail e senha.",
+            });
+            setLoading(false);
+            return;
+          }
+        }
+
+        const { error: joinError } = await joinFamily(inviteFamilyId, name);
+        if (joinError) {
+          toast.error("Erro ao entrar na família", {
+            description: "Tente novamente mais tarde.",
+          });
+          setLoading(false);
+          return;
+        }
+
+        toast.success("Convite aceito! 🎉", {
+          description: "Você já faz parte da família.",
+        });
+
+        window.location.href = "/app";
+      } catch (err) {
+        console.error('Invite flow error:', err);
+        toast.error("Erro ao aceitar convite", {
+          description: "Tente novamente mais tarde.",
+        });
+        setLoading(false);
+      }
+
+      return;
+    }
+
+    // NORMAL FLOW
     // If user is already authenticated, Step 1 is only to confirm display name.
     if (user) {
-      if (!name) {
-        toast.error("Preencha seu nome");
-        return;
-      }
       setStep(2);
       return;
     }
-    
-    if (!name || !email || !password) {
+
+    if (!email || !password) {
       toast.error("Preencha todos os campos");
       return;
     }
@@ -89,11 +176,10 @@ export function SignupPage() {
 
     setLoading(true);
 
-    const { error } = await signUp(email, password);
+    const { error: signUpError } = await signUp(email, password);
 
-    if (error) {
-      // Check if user already exists
-      const errorMessage = error.message?.toLowerCase() || "";
+    if (signUpError) {
+      const errorMessage = signUpError.message?.toLowerCase() || "";
       if (
         errorMessage.includes("already registered") ||
         errorMessage.includes("already exists") ||
@@ -103,24 +189,31 @@ export function SignupPage() {
         setLoading(false);
         return;
       }
-      
+
       toast.error("Erro ao criar conta", {
-        description: error.message || "Tente novamente mais tarde."
+        description: signUpError.message || "Tente novamente mais tarde.",
       });
       setLoading(false);
       return;
     }
 
-    // Wait a moment for session to be established
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    // Ensure session exists
+    const { error: signInError } = await signIn(email, password);
+    if (signInError) {
+      toast.error("Erro ao entrar", {
+        description: "Tente fazer login com seu e-mail e senha.",
+      });
+      setLoading(false);
+      return;
+    }
+
     setLoading(false);
     setStep(2);
   };
 
   const handleStep2 = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!familyName) {
       toast.error("Dê um nome para sua família");
       return;
@@ -134,92 +227,28 @@ export function SignupPage() {
 
     setLoading(true);
 
-    // Ensure we have a valid session before creating family
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const { error } = await createFamily({
+      name: familyName,
+      displayName: name,
+      membersCount: membersCount,
+      incomeRange: incomeRange || undefined,
+      primaryObjective: primaryObjective || undefined,
+    });
 
-    if (sessionError || !sessionData?.session) {
-      toast.error("Sessão expirada", {
-        description: "Por favor, faça login novamente.",
-      });
-      setLoading(false);
-      navigate("/login");
-      return;
-    }
-
-    try {
-      const currentUser = sessionData.session.user;
-
-      // IMPORTANT: we cannot use `.select()` on families right after insert because
-      // SELECT policies require membership (which is created in the next step).
-      // So we generate the UUID on the client.
-      const familyId = crypto.randomUUID();
-
-      const { error: familyError } = await supabase.from("families").insert({
-        id: familyId,
-        name: familyName,
-        members_count: membersCount,
-        income_range: incomeRange || null,
-        primary_objective: primaryObjective || null,
-      });
-
-      if (familyError) {
-        console.error("Error creating family:", familyError);
-        toast.error("Erro ao criar família", {
-          description: "Tente novamente mais tarde.",
-        });
-        setLoading(false);
-        return;
-      }
-
-      const { error: memberError } = await supabase.from("family_members").insert({
-        family_id: familyId,
-        user_id: currentUser.id,
-        display_name: name,
-        role: "owner",
-      });
-
-      if (memberError) {
-        console.error("Error adding family member:", memberError);
-        toast.error("Erro ao adicionar membro", {
-          description: "Tente novamente mais tarde.",
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Create default emergency fund (non-blocking)
-      supabase
-        .from("emergency_funds")
-        .insert({
-          family_id: familyId,
-          target_amount: 0,
-          current_amount: 0,
-          target_months: 6,
-        })
-        .catch((err) => console.log("Emergency fund could not be created:", err));
-
-      // Send welcome email (non-blocking)
-      supabase.functions
-        .invoke("send-welcome-email", {
-          body: {
-            email: currentUser.email,
-            familyName: familyName,
-          },
-        })
-        .catch((err) => console.log("Welcome email could not be sent:", err));
-
-      toast.success("Conta criada com sucesso! 🎉", {
-        description: "Bem-vindos! Vamos organizar as finanças da família.",
-      });
-
-      window.location.href = "/app";
-    } catch (error) {
-      console.error("Error in handleStep3:", error);
+    if (error) {
+      console.error('Error creating family:', error);
       toast.error("Erro ao criar família", {
         description: "Tente novamente mais tarde.",
       });
       setLoading(false);
+      return;
     }
+
+    toast.success("Conta criada com sucesso! 🎉", {
+      description: "Bem-vindos! Vamos organizar as finanças da família.",
+    });
+
+    window.location.href = "/app";
   };
 
   const goBack = () => {

@@ -185,57 +185,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // IMPORTANT: we cannot use `.select()` here because SELECT policies on `families`
-      // require membership, which only exists after inserting into `family_members`.
-      // So we generate the UUID on the client and insert without RETURNING.
-      const familyId = crypto.randomUUID();
-
-      const { error: familyError } = await supabase.from('families').insert({
-        id: familyId,
-        name: data.name,
-        members_count: data.membersCount,
-        income_range: data.incomeRange || null,
-        primary_objective: data.primaryObjective || null,
+      const { data: resp, error } = await supabase.functions.invoke('create-family', {
+        body: {
+          name: data.name,
+          membersCount: data.membersCount,
+          incomeRange: data.incomeRange || null,
+          primaryObjective: data.primaryObjective || null,
+          displayName: data.displayName,
+        },
       });
 
-      if (familyError) {
-        console.error('Error creating family:', familyError);
-        return { error: familyError as Error };
+      if (error) {
+        console.error('Error creating family (function):', error);
+        return { error: error as Error };
       }
 
-      const { error: memberError } = await supabase.from('family_members').insert({
-        family_id: familyId,
-        user_id: currentUser.id,
-        display_name: data.displayName,
-        role: 'owner',
-      });
-
-      if (memberError) {
-        console.error('Error adding family member:', memberError);
-        return { error: memberError as Error };
+      const familyId = (resp as any)?.familyId as string | undefined;
+      if (!familyId) {
+        console.warn('create-family did not return familyId');
       }
-
-      const { error: emergencyError } = await supabase.from('emergency_funds').insert({
-        family_id: familyId,
-        target_amount: 0,
-        current_amount: 0,
-        target_months: 6,
-      });
-
-      if (emergencyError) {
-        console.error('Error creating emergency fund:', emergencyError);
-        // Not fatal for onboarding
-      }
-
-      // Send welcome email (non-blocking)
-      supabase.functions
-        .invoke('send-welcome-email', {
-          body: {
-            email: currentUser.email,
-            familyName: data.name,
-          },
-        })
-        .catch((emailError) => console.log('Welcome email could not be sent:', emailError));
 
       await fetchFamilyData(currentUser.id);
       return { error: null };
