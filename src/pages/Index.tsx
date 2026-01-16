@@ -7,11 +7,15 @@ import { SettingsPage } from "./SettingsPage";
 import { BanksPage } from "./BanksPage";
 import { ImportPage } from "./ImportPage";
 import { ImportReviewPage } from "./ImportReviewPage";
+import { ReportsPage } from "./ReportsPage";
+import { CategoryReportPage } from "./CategoryReportPage";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { WhatsAppCTA } from "@/components/WhatsAppCTA";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [reviewImportId, setReviewImportId] = useState<string | null>(null);
+  const [reportCategoryId, setReportCategoryId] = useState<string | null>(null);
 
   const handleReviewImport = (importId: string) => {
     setReviewImportId(importId);
@@ -28,6 +32,11 @@ const Index = () => {
     setActiveTab("import");
   };
 
+  const handleCategoryReport = (categoryId: string) => {
+    setReportCategoryId(categoryId);
+    setActiveTab("category-report");
+  };
+
   const renderPage = () => {
     switch (activeTab) {
       case "dashboard":
@@ -38,6 +47,23 @@ const Index = () => {
         return <CategoriesPage onBack={() => setActiveTab("dashboard")} />;
       case "goals":
         return <GoalsPage onBack={() => setActiveTab("dashboard")} />;
+      case "reports":
+        return (
+          <ReportsPage 
+            onBack={() => setActiveTab("dashboard")} 
+            onCategoryReport={handleCategoryReport}
+          />
+        );
+      case "category-report":
+        if (reportCategoryId) {
+          return (
+            <CategoryReportPage 
+              categoryId={reportCategoryId} 
+              onBack={() => setActiveTab("reports")} 
+            />
+          );
+        }
+        return <ReportsPage onBack={() => setActiveTab("dashboard")} onCategoryReport={handleCategoryReport} />;
       case "settings":
         return (
           <SettingsPage 
@@ -74,6 +100,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {renderPage()}
+      <WhatsAppCTA />
       <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
