@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      alerts: {
+        Row: {
+          action_url: string | null
+          alert_type: string
+          category_id: string | null
+          created_at: string
+          family_id: string
+          id: string
+          is_read: boolean
+          message: string
+          severity: string
+          title: string
+        }
+        Insert: {
+          action_url?: string | null
+          alert_type: string
+          category_id?: string | null
+          created_at?: string
+          family_id: string
+          id?: string
+          is_read?: boolean
+          message: string
+          severity?: string
+          title: string
+        }
+        Update: {
+          action_url?: string | null
+          alert_type?: string
+          category_id?: string | null
+          created_at?: string
+          family_id?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alerts_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bank_accounts: {
         Row: {
           account_type: Database["public"]["Enums"]["bank_account_type"]
@@ -94,34 +141,40 @@ export type Database = {
       }
       budgets: {
         Row: {
+          average_spending: number | null
           category_id: string
           created_at: string
           family_id: string
           id: string
           is_active: boolean
           monthly_limit: number
+          projected_amount: number | null
           subcategory_id: string | null
           updated_at: string
           use_income_reference: boolean
         }
         Insert: {
+          average_spending?: number | null
           category_id: string
           created_at?: string
           family_id: string
           id?: string
           is_active?: boolean
           monthly_limit: number
+          projected_amount?: number | null
           subcategory_id?: string | null
           updated_at?: string
           use_income_reference?: boolean
         }
         Update: {
+          average_spending?: number | null
           category_id?: string
           created_at?: string
           family_id?: string
           id?: string
           is_active?: boolean
           monthly_limit?: number
+          projected_amount?: number | null
           subcategory_id?: string | null
           updated_at?: string
           use_income_reference?: boolean
@@ -129,6 +182,88 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "budgets_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cashflow_forecasts: {
+        Row: {
+          alert_level: string | null
+          created_at: string
+          family_id: string
+          forecast_date: string
+          id: string
+          projected_balance: number
+          projected_expenses: number
+          projected_income: number
+          projected_installments: number
+        }
+        Insert: {
+          alert_level?: string | null
+          created_at?: string
+          family_id: string
+          forecast_date: string
+          id?: string
+          projected_balance?: number
+          projected_expenses?: number
+          projected_income?: number
+          projected_installments?: number
+        }
+        Update: {
+          alert_level?: string | null
+          created_at?: string
+          family_id?: string
+          forecast_date?: string
+          id?: string
+          projected_balance?: number
+          projected_expenses?: number
+          projected_income?: number
+          projected_installments?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cashflow_forecasts_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      category_import_mappings: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          imported_limit: number | null
+          imported_name: string
+          mapped_category_id: string
+          mapped_subcategory_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          imported_limit?: number | null
+          imported_name: string
+          mapped_category_id: string
+          mapped_subcategory_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          imported_limit?: number | null
+          imported_name?: string
+          mapped_category_id?: string
+          mapped_subcategory_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_import_mappings_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
@@ -314,6 +449,9 @@ export type Database = {
       families: {
         Row: {
           created_at: string
+          email_report_day: number | null
+          email_report_enabled: boolean
+          email_report_recipient: string | null
           id: string
           income_range: string | null
           members_count: number
@@ -323,6 +461,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          email_report_day?: number | null
+          email_report_enabled?: boolean
+          email_report_recipient?: string | null
           id?: string
           income_range?: string | null
           members_count?: number
@@ -332,6 +473,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          email_report_day?: number | null
+          email_report_enabled?: boolean
+          email_report_recipient?: string | null
           id?: string
           income_range?: string | null
           members_count?: number
@@ -487,6 +631,113 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "imports_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      installments: {
+        Row: {
+          category_id: string
+          created_at: string
+          credit_card_id: string | null
+          current_installment: number
+          description: string
+          family_id: string
+          id: string
+          installment_amount: number
+          is_active: boolean
+          start_date: string
+          subcategory_id: string | null
+          total_amount: number
+          total_installments: number
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          credit_card_id?: string | null
+          current_installment?: number
+          description: string
+          family_id: string
+          id?: string
+          installment_amount: number
+          is_active?: boolean
+          start_date: string
+          subcategory_id?: string | null
+          total_amount: number
+          total_installments: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          credit_card_id?: string | null
+          current_installment?: number
+          description?: string
+          family_id?: string
+          id?: string
+          installment_amount?: number
+          is_active?: boolean
+          start_date?: string
+          subcategory_id?: string | null
+          total_amount?: number
+          total_installments?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installments_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installments_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monthly_ai_reports: {
+        Row: {
+          created_at: string
+          email_recipient: string | null
+          email_sent_at: string | null
+          family_id: string
+          id: string
+          month: number
+          report_content: Json
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          email_recipient?: string | null
+          email_sent_at?: string | null
+          family_id: string
+          id?: string
+          month: number
+          report_content: Json
+          year: number
+        }
+        Update: {
+          created_at?: string
+          email_recipient?: string | null
+          email_sent_at?: string | null
+          family_id?: string
+          id?: string
+          month?: number
+          report_content?: Json
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_ai_reports_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"

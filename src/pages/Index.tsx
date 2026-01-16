@@ -9,6 +9,8 @@ import { ImportPage } from "./ImportPage";
 import { ImportReviewPage } from "./ImportReviewPage";
 import { ReportsPage } from "./ReportsPage";
 import { CategoryReportPage } from "./CategoryReportPage";
+import { BudgetsPage } from "./BudgetsPage";
+import { CashflowPage } from "./CashflowPage";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { WhatsAppCTA } from "@/components/WhatsAppCTA";
 
@@ -46,7 +48,9 @@ const Index = () => {
       case "categories":
         return <CategoriesPage onBack={() => setActiveTab("dashboard")} />;
       case "goals":
-        return <GoalsPage onBack={() => setActiveTab("dashboard")} />;
+        return <BudgetsPage onBack={() => setActiveTab("dashboard")} />;
+      case "cashflow":
+        return <CashflowPage onBack={() => setActiveTab("dashboard")} />;
       case "reports":
         return (
           <ReportsPage 

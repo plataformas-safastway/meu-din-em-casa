@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation, useSearchParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, ArrowLeft, Loader2, Mail, KeyRound, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -27,11 +25,9 @@ export function LoginPage() {
   const [passwordReset, setPasswordReset] = useState(false);
 
   useEffect(() => {
-    // Check if coming from password reset link
     if (searchParams.get('reset') === 'true') {
       setMode("reset");
     }
-    // Check if coming from signup page with forgotPassword state
     if (location.state?.forgotPassword) {
       setMode("forgot");
     }
@@ -46,18 +42,15 @@ export function LoginPage() {
     }
 
     setLoading(true);
-
     const { error } = await signIn(email, password);
 
     if (error) {
-      toast.error("Erro ao entrar", {
-        description: "E-mail ou senha incorretos. Tente novamente."
-      });
+      toast.error("E-mail ou senha incorretos");
       setLoading(false);
       return;
     }
 
-    toast.success("Bem-vindo de volta! 👋");
+    toast.success("Bem-vindos de volta! 👋");
     navigate("/app");
   };
 
@@ -70,13 +63,10 @@ export function LoginPage() {
     }
 
     setLoading(true);
-
     const { error } = await resetPassword(email);
 
     if (error) {
-      toast.error("Erro ao enviar e-mail", {
-        description: "Verifique se o e-mail está correto e tente novamente."
-      });
+      toast.error("Verifique se o e-mail está correto");
       setLoading(false);
       return;
     }
@@ -104,13 +94,10 @@ export function LoginPage() {
     }
 
     setLoading(true);
-
     const { error } = await updatePassword(newPassword);
 
     if (error) {
-      toast.error("Erro ao redefinir senha", {
-        description: "Tente novamente ou solicite um novo link."
-      });
+      toast.error("Erro ao redefinir senha. Tente novamente.");
       setLoading(false);
       return;
     }
@@ -119,336 +106,258 @@ export function LoginPage() {
     setLoading(false);
   };
 
-  const goBack = () => {
-    if (mode === "forgot" || mode === "reset") {
-      setMode("login");
-      setEmailSent(false);
-      setPasswordReset(false);
-    } else {
-      navigate("/");
-    }
-  };
+  // Forgot Password View
+  if (mode === "forgot") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+        <div className="w-full max-w-sm space-y-8">
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-semibold text-foreground">
+              Recuperar senha
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Enviaremos um link para redefinir sua senha
+            </p>
+          </div>
 
+          {!emailSent ? (
+            <form onSubmit={handleForgotPassword} className="space-y-6">
+              <Input
+                type="email"
+                placeholder="E-mail"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-12"
+                autoComplete="email"
+                required
+              />
+
+              <Button 
+                type="submit" 
+                className="w-full h-12"
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Enviar link"
+                )}
+              </Button>
+            </form>
+          ) : (
+            <div className="text-center space-y-4">
+              <p className="text-sm text-muted-foreground">
+                E-mail enviado para <strong>{email}</strong>. Verifique sua caixa de entrada.
+              </p>
+              <Button 
+                variant="outline"
+                className="w-full h-12"
+                onClick={() => {
+                  setEmailSent(false);
+                  setEmail("");
+                }}
+              >
+                Enviar novamente
+              </Button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode("login");
+              setEmailSent(false);
+            }}
+            className="block w-full text-center text-sm text-muted-foreground hover:text-foreground"
+          >
+            Voltar ao login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Reset Password View
+  if (mode === "reset") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+        <div className="w-full max-w-sm space-y-8">
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-semibold text-foreground">
+              Nova senha
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Crie uma nova senha para sua conta
+            </p>
+          </div>
+
+          {!passwordReset ? (
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Nova senha"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="h-12 pr-10"
+                  autoComplete="new-password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="Confirmar senha"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="h-12"
+                autoComplete="new-password"
+                required
+              />
+
+              <Button 
+                type="submit" 
+                className="w-full h-12"
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Redefinir senha"
+                )}
+              </Button>
+            </form>
+          ) : (
+            <div className="text-center space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Senha alterada com sucesso!
+              </p>
+              <Button 
+                className="w-full h-12"
+                onClick={() => {
+                  setMode("login");
+                  setPasswordReset(false);
+                }}
+              >
+                Ir para o login
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Main Login View - CLEAN
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="p-4">
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={goBack}
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-      </header>
+      {/* Main Content - Centered */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6">
+        <div className="w-full max-w-sm space-y-10">
+          {/* App Name & Slogan */}
+          <div className="text-center space-y-3">
+            <h1 className="text-3xl font-semibold text-foreground">
+              Finanças em Família
+            </h1>
+            <p className="text-muted-foreground text-base leading-relaxed">
+              Organizando o dinheiro da família com clareza e tranquilidade.
+            </p>
+          </div>
 
-      {/* Content */}
-      <main className="flex-1 flex flex-col justify-center px-6 pb-8">
-        <AnimatePresence mode="wait">
-          {/* Login Mode */}
-          {mode === "login" && (
-            <motion.div
-              key="login"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="max-w-sm mx-auto w-full"
+          {/* Login Form */}
+          <form onSubmit={handleLogin} className="space-y-4">
+            <Input
+              type="email"
+              placeholder="E-mail"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-12"
+              autoComplete="email"
+              required
+            />
+
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="Senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-12 pr-10"
+                autoComplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+
+            <Button 
+              type="submit" 
+              className="w-full h-12 font-medium"
+              disabled={loading}
             >
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl">💰</span>
-                </div>
-                <h1 className="text-2xl font-bold text-foreground mb-2">
-                  Entrar na conta
-                </h1>
-                <p className="text-muted-foreground">
-                  Acesse as finanças da sua família
-                </p>
-              </div>
-
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-12"
-                    autoComplete="email"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Senha</Label>
-                    <button
-                      type="button"
-                      onClick={() => setMode("forgot")}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Esqueceu a senha?
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-12 pr-10"
-                      autoComplete="current-password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <Button 
-                  type="submit" 
-                  size="lg" 
-                  className="w-full h-12 text-base font-semibold"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Entrando...
-                    </>
-                  ) : (
-                    "Entrar"
-                  )}
-                </Button>
-              </form>
-
-              <p className="text-center text-sm text-muted-foreground mt-6">
-                Não tem uma conta?{" "}
-                <Link to="/signup" className="text-primary font-medium hover:underline">
-                  Criar conta
-                </Link>
-              </p>
-            </motion.div>
-          )}
-
-          {/* Forgot Password Mode */}
-          {mode === "forgot" && (
-            <motion.div
-              key="forgot"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="max-w-sm mx-auto w-full"
-            >
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <Mail className="w-8 h-8 text-primary" />
-                </div>
-                <h1 className="text-2xl font-bold text-foreground mb-2">
-                  {emailSent ? "E-mail enviado!" : "Recuperar senha"}
-                </h1>
-                <p className="text-muted-foreground">
-                  {emailSent 
-                    ? "Verifique sua caixa de entrada e spam"
-                    : "Enviaremos um link para redefinir sua senha"}
-                </p>
-              </div>
-
-              {!emailSent ? (
-                <form onSubmit={handleForgotPassword} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="reset-email">E-mail</Label>
-                    <Input
-                      id="reset-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="h-12"
-                      autoComplete="email"
-                      required
-                    />
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    size="lg" 
-                    className="w-full h-12 text-base font-semibold"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Enviando...
-                      </>
-                    ) : (
-                      "Enviar link de recuperação"
-                    )}
-                  </Button>
-                </form>
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          E-mail enviado para {email}
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Clique no link do e-mail para criar uma nova senha.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    variant="outline"
-                    size="lg" 
-                    className="w-full h-12"
-                    onClick={() => {
-                      setEmailSent(false);
-                      setEmail("");
-                    }}
-                  >
-                    Enviar novamente
-                  </Button>
-                </div>
+                "Entrar"
               )}
+            </Button>
+          </form>
 
-              <p className="text-center text-sm text-muted-foreground mt-6">
-                Lembrou a senha?{" "}
-                <button 
-                  onClick={() => setMode("login")}
-                  className="text-primary font-medium hover:underline"
-                >
-                  Voltar ao login
-                </button>
-              </p>
-            </motion.div>
-          )}
-
-          {/* Reset Password Mode */}
-          {mode === "reset" && (
-            <motion.div
-              key="reset"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="max-w-sm mx-auto w-full"
+          {/* Secondary Actions */}
+          <div className="text-center space-y-3">
+            <Link 
+              to="/signup" 
+              className="block text-sm text-muted-foreground hover:text-foreground"
             >
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <KeyRound className="w-8 h-8 text-primary" />
-                </div>
-                <h1 className="text-2xl font-bold text-foreground mb-2">
-                  {passwordReset ? "Senha redefinida!" : "Nova senha"}
-                </h1>
-                <p className="text-muted-foreground">
-                  {passwordReset 
-                    ? "Você já pode acessar sua conta"
-                    : "Crie uma nova senha segura"}
-                </p>
-              </div>
-
-              {!passwordReset ? (
-                <form onSubmit={handleResetPassword} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="new-password">Nova senha</Label>
-                    <div className="relative">
-                      <Input
-                        id="new-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Mínimo 6 caracteres"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="h-12 pr-10"
-                        autoComplete="new-password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirmar senha</Label>
-                    <Input
-                      id="confirm-password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Digite novamente"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="h-12"
-                      autoComplete="new-password"
-                      required
-                    />
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    size="lg" 
-                    className="w-full h-12 text-base font-semibold"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Redefinindo...
-                      </>
-                    ) : (
-                      "Redefinir senha"
-                    )}
-                  </Button>
-                </form>
-              ) : (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          Senha alterada com sucesso!
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Use sua nova senha para acessar sua conta.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    size="lg" 
-                    className="w-full h-12 text-base font-semibold"
-                    onClick={() => {
-                      setMode("login");
-                      setPasswordReset(false);
-                    }}
-                  >
-                    Ir para o login
-                  </Button>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+              Criar conta
+            </Link>
+            <button
+              type="button"
+              onClick={() => setMode("forgot")}
+              className="block w-full text-sm text-muted-foreground hover:text-foreground"
+            >
+              Esqueci minha senha
+            </button>
+          </div>
+        </div>
       </main>
+
+      {/* Footer - Policies */}
+      <footer className="pb-8 px-6 text-center">
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Ao entrar, vocês concordam com nossos{" "}
+          <a 
+            href="/termos" 
+            className="underline hover:text-foreground"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Termos de Uso
+          </a>{" "}
+          e{" "}
+          <a 
+            href="/privacidade" 
+            className="underline hover:text-foreground"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Política de Privacidade
+          </a>
+          .
+        </p>
+      </footer>
     </div>
   );
 }
