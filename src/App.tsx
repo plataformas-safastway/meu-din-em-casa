@@ -7,6 +7,8 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
+import { TermosPage } from "./pages/TermosPage";
+import { PrivacidadePage } from "./pages/PrivacidadePage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -51,6 +53,8 @@ function AppRoutes() {
       <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/termos" element={<TermosPage />} />
+      <Route path="/privacidade" element={<PrivacidadePage />} />
       <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
