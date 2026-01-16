@@ -275,33 +275,45 @@ export function LoginPage() {
 
           {/* 3. Login Form */}
           <form onSubmit={handleLogin} className="space-y-4">
-            <Input
-              type="email"
-              placeholder="E-mail"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-12 rounded-xl"
-              autoComplete="email"
-              required
-            />
-
-            <div className="relative">
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium text-foreground">
+                E-mail
+              </label>
               <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="Senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-12 pr-10 rounded-xl"
-                autoComplete="current-password"
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-12 rounded-xl"
+                autoComplete="email"
                 required
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium text-foreground">
+                Senha
+              </label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 pr-10 rounded-xl"
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <Button 
@@ -317,18 +329,18 @@ export function LoginPage() {
             </Button>
           </form>
 
-          {/* 4. Secondary Actions */}
-          <div className="text-center space-y-4">
+          {/* 4. Secondary Actions - Side by Side */}
+          <div className="flex items-center justify-between">
             <Link 
               to="/signup" 
-              className="block text-base text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Criar conta
             </Link>
             <button
               type="button"
               onClick={() => setMode("forgot")}
-              className="block w-full text-base text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Recuperar senha
             </button>
@@ -336,22 +348,24 @@ export function LoginPage() {
         </div>
       </main>
 
-      {/* 5. Footer - Legal Links */}
+      {/* 5. Footer - Consent and Legal Links */}
       <footer className="pb-8 px-6 text-center">
-        <p className="text-sm text-muted-foreground/70">
+        <p className="text-xs text-muted-foreground/70 leading-relaxed">
+          Ao continuar, vocês concordam com nossos{" "}
           <Link 
             to="/termos" 
-            className="hover:text-foreground transition-colors"
+            className="underline hover:text-foreground transition-colors"
           >
             Termos de Uso
           </Link>
-          {" · "}
+          {" e "}
           <Link 
             to="/privacidade" 
-            className="hover:text-foreground transition-colors"
+            className="underline hover:text-foreground transition-colors"
           >
             Política de Privacidade
           </Link>
+          .
         </p>
       </footer>
     </div>

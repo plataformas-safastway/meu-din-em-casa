@@ -9,8 +9,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { OnboardingCategoriesPage } from "./OnboardingCategoriesPage";
+import { OnboardingImportStep } from "@/components/OnboardingImportStep";
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3 | 4 | 5;
 
 const incomeRanges = [
   { value: "5000-10000", label: "R$ 5.000 a R$ 10.000" },
@@ -245,13 +246,20 @@ export function SignupPage() {
       return;
     }
 
-    toast.success("Conta criada com sucesso! 🎉", {
-      description: "Bem-vindos! Agora vocês podem importar suas categorias.",
-    });
+    toast.success("Conta criada com sucesso! 🎉");
 
-    // Go to step 4 - category import
+    // Go to step 4 - optional import
     setLoading(false);
     setStep(4);
+  };
+
+  const handleImportNow = () => {
+    // Go to step 5 - category import
+    setStep(5);
+  };
+
+  const handleImportSkip = () => {
+    window.location.href = "/app";
   };
 
   const handleCategoryImportComplete = () => {
@@ -265,21 +273,31 @@ export function SignupPage() {
   const goBack = () => {
     if (step === 1) {
       navigate("/");
-    } else if (step === 4) {
-      // Can't go back from category import after family is created
+    } else if (step === 4 || step === 5) {
+      // Can't go back from import steps after family is created
       return;
     } else {
       setStep((step - 1) as Step);
     }
   };
 
-  // Step 4 - Category Import (optional onboarding step)
+  // Step 4 - Optional Import Decision
   if (step === 4) {
+    return (
+      <OnboardingImportStep
+        onImport={handleImportNow}
+        onSkip={handleImportSkip}
+      />
+    );
+  }
+
+  // Step 5 - Category Import (if user chose to import)
+  if (step === 5) {
     return (
       <OnboardingCategoriesPage
         onComplete={handleCategoryImportComplete}
         onSkip={handleCategoryImportSkip}
-        onBack={() => {}} // No back from this step
+        onBack={() => setStep(4)}
       />
     );
   }
