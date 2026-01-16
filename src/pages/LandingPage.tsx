@@ -1,132 +1,72 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowRight, Shield, Heart, TrendingUp, Users } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 export function LandingPage() {
   const navigate = useNavigate();
 
-  const features = [
-    {
-      icon: Heart,
-      title: "Acolhimento",
-      description: "Sem julgamentos. Apenas clareza e orientação para a família."
-    },
-    {
-      icon: TrendingUp,
-      title: "Clareza Financeira",
-      description: "Visualize para onde vai o dinheiro e tome decisões conscientes."
-    },
-    {
-      icon: Users,
-      title: "Feito para Famílias",
-      description: "Organizem juntos as finanças e reduzam conflitos sobre dinheiro."
-    },
-    {
-      icon: Shield,
-      title: "Privacidade Total",
-      description: "Seus dados são privados e pertencem apenas à sua família."
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-      {/* Header */}
-      <header className="container mx-auto px-4 py-6 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <span className="text-xl">💰</span>
-          </div>
-        </div>
-        <Button variant="ghost" onClick={() => navigate("/login")}>
-          Entrar
-        </Button>
-      </header>
-
-      {/* Hero Section */}
-      <main className="container mx-auto px-4 py-12 md:py-20">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center max-w-2xl mx-auto"
-        >
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight mb-6">
-            Organizem as finanças da família com{" "}
-            <span className="text-primary">clareza e tranquilidade</span>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Main Content - Centered */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+        <div className="w-full max-w-sm text-center space-y-10">
+          {/* 1. App Name */}
+          <h1 className="text-3xl font-semibold text-foreground tracking-tight">
+            Nome do APP
           </h1>
-          
-          <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-            Um app pensado para famílias que querem entender suas finanças, 
-            reduzir a ansiedade sobre dinheiro e tomar decisões melhores juntos.
+
+          {/* 2. Slogan / Purpose */}
+          <p className="text-lg text-muted-foreground leading-relaxed">
+            Organizando o dinheiro da família com clareza e tranquilidade.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          {/* 3. Complementary Text */}
+          <p className="text-base text-muted-foreground/80 leading-relaxed">
+            Sem julgamentos. Sem complicação.
+            <br />
+            Apenas informação clara para decisões melhores.
+          </p>
+
+          {/* 4. Primary CTA */}
+          <div className="pt-4">
             <Button 
               size="lg" 
-              className="h-14 px-8 text-base font-semibold"
+              className="w-full h-14 text-base font-medium rounded-xl"
               onClick={() => navigate("/signup")}
             >
-              Começar agora
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline"
-              className="h-14 px-8 text-base"
-              onClick={() => navigate("/login")}
-            >
-              Já tenho conta
+              Criar conta
             </Button>
           </div>
 
-          <p className="text-sm text-muted-foreground mt-6">
-            ✓ Gratuito para começar &nbsp;&nbsp; ✓ Sem cartão de crédito
-          </p>
-        </motion.div>
-
-        {/* Features */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-20"
-        >
-          {features.map((feature, index) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.4 + index * 0.1 }}
-              className="p-6 rounded-2xl bg-card border border-border hover:shadow-lg transition-shadow"
-            >
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                <feature.icon className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground">{feature.description}</p>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Trust Section */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
-          className="mt-20 text-center"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-success/10 text-success text-sm font-medium">
-            <Shield className="w-4 h-4" />
-            Seus dados são criptografados e seguros
-          </div>
-        </motion.div>
+          {/* 5. Secondary Action */}
+          <button
+            onClick={() => navigate("/login")}
+            className="text-base text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Já tenho conta
+          </button>
+        </div>
       </main>
 
-      {/* Footer */}
-      <footer className="container mx-auto px-4 py-8 text-center text-sm text-muted-foreground">
-        <p>Feito com 💚 para famílias brasileiras</p>
+      {/* 6. Footer with Policies */}
+      <footer className="px-6 pb-8 pt-4">
+        <p className="text-center text-sm text-muted-foreground/70 leading-relaxed">
+          Ao continuar, vocês concordam com nossos
+          <br />
+          <Link 
+            to="/termos" 
+            className="text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+          >
+            Termos de Uso
+          </Link>
+          {" e "}
+          <Link 
+            to="/privacidade" 
+            className="text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+          >
+            Política de Privacidade
+          </Link>
+          .
+        </p>
       </footer>
     </div>
   );
