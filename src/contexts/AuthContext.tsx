@@ -52,15 +52,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchFamilyData = async (userId: string) => {
     try {
-      // Get family member record
+      // Get family member record - use .limit(1) to handle potential duplicates
       const { data: memberData, error: memberError } = await supabase
         .from('family_members')
         .select('*')
         .eq('user_id', userId)
+        .limit(1)
         .maybeSingle();
 
       if (memberError) {
         console.error('Error fetching family member:', memberError);
+        setFamilyMember(null);
+        setFamily(null);
         return;
       }
 
@@ -76,13 +79,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (familyError) {
           console.error('Error fetching family:', familyError);
+          setFamily(null);
           return;
         }
 
         setFamily(familyData as Family);
+      } else {
+        setFamilyMember(null);
+        setFamily(null);
       }
     } catch (error) {
       console.error('Error in fetchFamilyData:', error);
+      setFamilyMember(null);
+      setFamily(null);
     }
   };
 
