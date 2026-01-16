@@ -92,6 +92,85 @@ export type Database = {
         }
         Relationships: []
       }
+      budgets: {
+        Row: {
+          category_id: string
+          created_at: string
+          family_id: string
+          id: string
+          is_active: boolean
+          monthly_limit: number
+          subcategory_id: string | null
+          updated_at: string
+          use_income_reference: boolean
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          family_id: string
+          id?: string
+          is_active?: boolean
+          monthly_limit: number
+          subcategory_id?: string | null
+          updated_at?: string
+          use_income_reference?: boolean
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          is_active?: boolean
+          monthly_limit?: number
+          subcategory_id?: string | null
+          updated_at?: string
+          use_income_reference?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budgets_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      category_rules: {
+        Row: {
+          category_id: string
+          created_at: string
+          family_id: string
+          id: string
+          keyword: string
+          subcategory_id: string | null
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          family_id: string
+          id?: string
+          keyword: string
+          subcategory_id?: string | null
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          keyword?: string
+          subcategory_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_rules_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_cards: {
         Row: {
           bank_account_id: string | null
@@ -151,6 +230,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ebook_ctas: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          cta_link: string
+          cta_text: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          theme: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          cta_link: string
+          cta_text?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          theme?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          cta_link?: string
+          cta_text?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          theme?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       emergency_funds: {
         Row: {
@@ -373,6 +494,156 @@ export type Database = {
           },
         ]
       }
+      notifications_log: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          family_id: string
+          id: string
+          message: string | null
+          notification_type: string
+          place_id: string | null
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          family_id: string
+          id?: string
+          message?: string | null
+          notification_type: string
+          place_id?: string | null
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          family_id?: string
+          id?: string
+          message?: string | null
+          notification_type?: string
+          place_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_log_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      place_category_mapping: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          place_type: string
+          subcategory_id: string | null
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          place_type: string
+          subcategory_id?: string | null
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          place_type?: string
+          subcategory_id?: string | null
+        }
+        Relationships: []
+      }
+      recurring_transactions: {
+        Row: {
+          amount: number
+          bank_account_id: string | null
+          category_id: string
+          created_at: string
+          credit_card_id: string | null
+          day_of_month: number | null
+          description: string
+          end_date: string | null
+          family_id: string
+          frequency: string
+          id: string
+          is_active: boolean
+          last_generated_at: string | null
+          payment_method: string
+          start_date: string
+          subcategory_id: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          bank_account_id?: string | null
+          category_id: string
+          created_at?: string
+          credit_card_id?: string | null
+          day_of_month?: number | null
+          description: string
+          end_date?: string | null
+          family_id: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_generated_at?: string | null
+          payment_method?: string
+          start_date: string
+          subcategory_id?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string | null
+          category_id?: string
+          created_at?: string
+          credit_card_id?: string | null
+          day_of_month?: number | null
+          description?: string
+          end_date?: string | null
+          family_id?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_generated_at?: string | null
+          payment_method?: string
+          start_date?: string
+          subcategory_id?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_transactions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
@@ -385,10 +656,12 @@ export type Database = {
           family_id: string
           id: string
           import_id: string | null
+          is_auto_generated: boolean
           is_recurring: boolean
           notes: string | null
           original_date: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
+          recurring_transaction_id: string | null
           subcategory_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
@@ -404,10 +677,12 @@ export type Database = {
           family_id: string
           id?: string
           import_id?: string | null
+          is_auto_generated?: boolean
           is_recurring?: boolean
           notes?: string | null
           original_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          recurring_transaction_id?: string | null
           subcategory_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
@@ -423,10 +698,12 @@ export type Database = {
           family_id?: string
           id?: string
           import_id?: string | null
+          is_auto_generated?: boolean
           is_recurring?: boolean
           notes?: string | null
           original_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          recurring_transaction_id?: string | null
           subcategory_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
@@ -451,6 +728,13 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_recurring_transaction_id_fkey"
+            columns: ["recurring_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_transactions"
             referencedColumns: ["id"]
           },
         ]
