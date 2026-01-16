@@ -168,7 +168,7 @@ export function LoginPage() {
               setMode("login");
               setEmailSent(false);
             }}
-            className="block w-full text-center text-sm text-muted-foreground hover:text-foreground"
+            className="block w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Voltar ao login
           </button>
@@ -255,30 +255,32 @@ export function LoginPage() {
     );
   }
 
-  // Main Login View - CLEAN
+  // Main Login View - ULTRA CLEAN
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Main Content - Centered */}
       <main className="flex-1 flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-sm space-y-10">
-          {/* App Name & Slogan */}
-          <div className="text-center space-y-3">
-            <h1 className="text-3xl font-semibold text-foreground">
-              Finanças em Família
-            </h1>
-            <p className="text-muted-foreground text-base leading-relaxed">
-              Organizando o dinheiro da família com clareza e tranquilidade.
-            </p>
-          </div>
+          {/* 1. App Name */}
+          <h1 className="text-center text-3xl font-medium text-foreground tracking-tight">
+            Nome do APP
+          </h1>
 
-          {/* Login Form */}
+          {/* 2. Fixed Institutional Text */}
+          <p className="text-center text-base text-muted-foreground leading-relaxed">
+            Sem julgamentos. Sem complicação.
+            <br />
+            Apenas informação clara para decisões melhores.
+          </p>
+
+          {/* 3. Login Form */}
           <form onSubmit={handleLogin} className="space-y-4">
             <Input
               type="email"
               placeholder="E-mail"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-12"
+              className="h-12 rounded-xl"
               autoComplete="email"
               required
             />
@@ -289,14 +291,14 @@ export function LoginPage() {
                 placeholder="Senha"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-12 pr-10"
+                className="h-12 pr-10 rounded-xl"
                 autoComplete="current-password"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -304,7 +306,7 @@ export function LoginPage() {
 
             <Button 
               type="submit" 
-              className="w-full h-12 font-medium"
+              className="w-full h-12 font-medium rounded-xl"
               disabled={loading}
             >
               {loading ? (
@@ -315,47 +317,41 @@ export function LoginPage() {
             </Button>
           </form>
 
-          {/* Secondary Actions */}
-          <div className="text-center space-y-3">
+          {/* 4. Secondary Actions */}
+          <div className="text-center space-y-4">
             <Link 
               to="/signup" 
-              className="block text-sm text-muted-foreground hover:text-foreground"
+              className="block text-base text-muted-foreground hover:text-foreground transition-colors"
             >
               Criar conta
             </Link>
             <button
               type="button"
               onClick={() => setMode("forgot")}
-              className="block w-full text-sm text-muted-foreground hover:text-foreground"
+              className="block w-full text-base text-muted-foreground hover:text-foreground transition-colors"
             >
-              Esqueci minha senha
+              Recuperar senha
             </button>
           </div>
         </div>
       </main>
 
-      {/* Footer - Policies */}
+      {/* 5. Footer - Legal Links */}
       <footer className="pb-8 px-6 text-center">
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Ao entrar, vocês concordam com nossos{" "}
-          <a 
-            href="/termos" 
-            className="underline hover:text-foreground"
-            target="_blank"
-            rel="noopener noreferrer"
+        <p className="text-sm text-muted-foreground/70">
+          <Link 
+            to="/termos" 
+            className="hover:text-foreground transition-colors"
           >
             Termos de Uso
-          </a>{" "}
-          e{" "}
-          <a 
-            href="/privacidade" 
-            className="underline hover:text-foreground"
-            target="_blank"
-            rel="noopener noreferrer"
+          </Link>
+          {" · "}
+          <Link 
+            to="/privacidade" 
+            className="hover:text-foreground transition-colors"
           >
             Política de Privacidade
-          </a>
-          .
+          </Link>
         </p>
       </footer>
     </div>
