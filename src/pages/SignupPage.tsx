@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { OnboardingCategoriesPage } from "./OnboardingCategoriesPage";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 const incomeRanges = [
   { value: "5000-10000", label: "R$ 5.000 a R$ 10.000" },
@@ -245,19 +246,43 @@ export function SignupPage() {
     }
 
     toast.success("Conta criada com sucesso! 🎉", {
-      description: "Bem-vindos! Vamos organizar as finanças da família.",
+      description: "Bem-vindos! Agora vocês podem importar suas categorias.",
     });
 
+    // Go to step 4 - category import
+    setLoading(false);
+    setStep(4);
+  };
+
+  const handleCategoryImportComplete = () => {
+    window.location.href = "/app";
+  };
+
+  const handleCategoryImportSkip = () => {
     window.location.href = "/app";
   };
 
   const goBack = () => {
     if (step === 1) {
       navigate("/");
+    } else if (step === 4) {
+      // Can't go back from category import after family is created
+      return;
     } else {
       setStep((step - 1) as Step);
     }
   };
+
+  // Step 4 - Category Import (optional onboarding step)
+  if (step === 4) {
+    return (
+      <OnboardingCategoriesPage
+        onComplete={handleCategoryImportComplete}
+        onSkip={handleCategoryImportSkip}
+        onBack={() => {}} // No back from this step
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -273,11 +298,11 @@ export function SignupPage() {
         
         {/* Progress */}
         <div className="flex gap-2">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4].map((s) => (
             <div
               key={s}
               className={cn(
-                "h-2 w-8 rounded-full transition-colors",
+                "h-2 w-6 rounded-full transition-colors",
                 s <= step ? "bg-primary" : "bg-muted"
               )}
             />
