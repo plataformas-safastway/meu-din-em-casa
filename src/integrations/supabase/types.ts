@@ -786,6 +786,289 @@ export type Database = {
           },
         ]
       }
+      openfinance_accounts: {
+        Row: {
+          account_type: string
+          available_balance: number | null
+          connection_id: string
+          created_at: string
+          currency: string | null
+          current_balance: number | null
+          external_account_id: string
+          id: string
+          is_active: boolean
+          last_sync_at: string | null
+          nickname: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_type: string
+          available_balance?: number | null
+          connection_id: string
+          created_at?: string
+          currency?: string | null
+          current_balance?: number | null
+          external_account_id: string
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          nickname?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_type?: string
+          available_balance?: number | null
+          connection_id?: string
+          created_at?: string
+          currency?: string | null
+          current_balance?: number | null
+          external_account_id?: string
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          nickname?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openfinance_accounts_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "openfinance_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      openfinance_cards: {
+        Row: {
+          available_limit: number | null
+          brand: string | null
+          connection_id: string
+          created_at: string
+          credit_limit: number | null
+          display_name: string | null
+          due_day: number | null
+          external_card_id: string
+          id: string
+          is_active: boolean
+          last_sync_at: string | null
+          last4: string | null
+          statement_close_day: number | null
+          updated_at: string
+        }
+        Insert: {
+          available_limit?: number | null
+          brand?: string | null
+          connection_id: string
+          created_at?: string
+          credit_limit?: number | null
+          display_name?: string | null
+          due_day?: number | null
+          external_card_id: string
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          last4?: string | null
+          statement_close_day?: number | null
+          updated_at?: string
+        }
+        Update: {
+          available_limit?: number | null
+          brand?: string | null
+          connection_id?: string
+          created_at?: string
+          credit_limit?: number | null
+          display_name?: string | null
+          due_day?: number | null
+          external_card_id?: string
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          last4?: string | null
+          statement_close_day?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openfinance_cards_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "openfinance_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      openfinance_connections: {
+        Row: {
+          consent_created_at: string | null
+          consent_expires_at: string | null
+          consent_scopes: string[] | null
+          created_at: string
+          error_message: string | null
+          external_item_id: string | null
+          family_id: string
+          id: string
+          institution_id: string
+          institution_logo_url: string | null
+          institution_name: string
+          last_sync_at: string | null
+          next_sync_at: string | null
+          provider_name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          consent_created_at?: string | null
+          consent_expires_at?: string | null
+          consent_scopes?: string[] | null
+          created_at?: string
+          error_message?: string | null
+          external_item_id?: string | null
+          family_id: string
+          id?: string
+          institution_id: string
+          institution_logo_url?: string | null
+          institution_name: string
+          last_sync_at?: string | null
+          next_sync_at?: string | null
+          provider_name?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          consent_created_at?: string | null
+          consent_expires_at?: string | null
+          consent_scopes?: string[] | null
+          created_at?: string
+          error_message?: string | null
+          external_item_id?: string | null
+          family_id?: string
+          id?: string
+          institution_id?: string
+          institution_logo_url?: string | null
+          institution_name?: string
+          last_sync_at?: string | null
+          next_sync_at?: string | null
+          provider_name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openfinance_connections_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      openfinance_sync_logs: {
+        Row: {
+          accounts_synced: number | null
+          cards_synced: number | null
+          completed_at: string | null
+          connection_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          started_at: string
+          status: string
+          sync_type: string
+          transactions_imported: number | null
+        }
+        Insert: {
+          accounts_synced?: number | null
+          cards_synced?: number | null
+          completed_at?: string | null
+          connection_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          started_at?: string
+          status: string
+          sync_type: string
+          transactions_imported?: number | null
+        }
+        Update: {
+          accounts_synced?: number | null
+          cards_synced?: number | null
+          completed_at?: string | null
+          connection_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          sync_type?: string
+          transactions_imported?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openfinance_sync_logs_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "openfinance_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      openfinance_transactions_raw: {
+        Row: {
+          amount: number
+          category_hint: string | null
+          currency: string | null
+          date: string
+          description: string | null
+          external_transaction_id: string | null
+          family_id: string
+          id: string
+          imported_at: string
+          merchant: string | null
+          raw_payload: Json | null
+          source_id: string
+          source_type: string
+        }
+        Insert: {
+          amount: number
+          category_hint?: string | null
+          currency?: string | null
+          date: string
+          description?: string | null
+          external_transaction_id?: string | null
+          family_id: string
+          id?: string
+          imported_at?: string
+          merchant?: string | null
+          raw_payload?: Json | null
+          source_id: string
+          source_type: string
+        }
+        Update: {
+          amount?: number
+          category_hint?: string | null
+          currency?: string | null
+          date?: string
+          description?: string | null
+          external_transaction_id?: string | null
+          family_id?: string
+          id?: string
+          imported_at?: string
+          merchant?: string | null
+          raw_payload?: Json | null
+          source_id?: string
+          source_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "openfinance_transactions_raw_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       place_category_mapping: {
         Row: {
           category_id: string
@@ -913,6 +1196,9 @@ export type Database = {
           original_date: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           recurring_transaction_id: string | null
+          review_status: string | null
+          source: string | null
+          source_ref_id: string | null
           subcategory_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
@@ -934,6 +1220,9 @@ export type Database = {
           original_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           recurring_transaction_id?: string | null
+          review_status?: string | null
+          source?: string | null
+          source_ref_id?: string | null
           subcategory_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
@@ -955,6 +1244,9 @@ export type Database = {
           original_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           recurring_transaction_id?: string | null
+          review_status?: string | null
+          source?: string | null
+          source_ref_id?: string | null
           subcategory_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
