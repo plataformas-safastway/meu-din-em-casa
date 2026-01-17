@@ -3,6 +3,9 @@
  * Helpers para simulação de usuário, validações e evidências
  */
 
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { vi } from "vitest";
+
 // ===== TIPOS =====
 export interface TestResult {
   testName: string;

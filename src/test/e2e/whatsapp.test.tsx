@@ -4,7 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { WHATSAPP_CONFIG } from "./testData";
 import { TestRunner, setMobileViewport } from "./testUtils";
 
