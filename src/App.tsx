@@ -9,6 +9,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { TermosPage } from "./pages/TermosPage";
 import { PrivacidadePage } from "./pages/PrivacidadePage";
+import { QAReportPage } from "./pages/QAReportPage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -55,6 +56,7 @@ function AppRoutes() {
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/termos" element={<TermosPage />} />
       <Route path="/privacidade" element={<PrivacidadePage />} />
+      <Route path="/qa-report" element={<QAReportPage />} />
       <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
