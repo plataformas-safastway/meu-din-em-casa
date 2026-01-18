@@ -34,10 +34,19 @@ function ProtectedRoute({
   const { user, family, loading } = useAuth();
   const location = useLocation();
 
+  const next = encodeURIComponent(`${location.pathname}${location.search ?? ""}`);
+
   if (loading) return <LoadingSpinner />;
-  if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
+  if (!user)
+    return (
+      <Navigate
+        to={`/login?next=${next}`}
+        replace
+        state={{ from: { pathname: location.pathname, search: location.search } }}
+      />
+    );
   if (requireFamily && !family)
-    return <Navigate to="/signup" replace state={{ from: location }} />;
+    return <Navigate to="/signup" replace state={{ from: { pathname: location.pathname, search: location.search } }} />;
 
   return <>{children}</>;
 }
@@ -47,9 +56,19 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   const { data: role, isLoading: roleLoading } = useUserRole();
   const location = useLocation();
 
+  const next = encodeURIComponent(`${location.pathname}${location.search ?? ""}`);
+
   if (loading || roleLoading) return <LoadingSpinner />;
-  if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
-  if (!family) return <Navigate to="/signup" replace state={{ from: location }} />;
+  if (!user)
+    return (
+      <Navigate
+        to={`/login?next=${next}`}
+        replace
+        state={{ from: { pathname: location.pathname, search: location.search } }}
+      />
+    );
+  if (!family)
+    return <Navigate to="/signup" replace state={{ from: { pathname: location.pathname, search: location.search } }} />;
 
   // Check if user has admin or CS role
   if (role !== "admin" && role !== "cs") {
