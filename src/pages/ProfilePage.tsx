@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUpdateProfile, profileSchema, ProfileFormData } from "@/hooks/useProfile";
+import { AvatarUpload } from "@/components/profile/AvatarUpload";
 import { ChangePasswordSheet } from "@/components/profile/ChangePasswordSheet";
 import { ExportDataSheet } from "@/components/profile/ExportDataSheet";
 import { DeleteAccountSheet } from "@/components/profile/DeleteAccountSheet";
@@ -51,13 +52,6 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
     });
   };
 
-  const initials = familyMember?.display_name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) || "U";
-
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -75,9 +69,11 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
       <main className="container px-4 py-6 space-y-6">
         {/* Avatar & User Info */}
         <div className="flex flex-col items-center gap-4 py-4">
-          <div className="w-20 h-20 rounded-full gradient-primary flex items-center justify-center text-3xl text-primary-foreground font-bold">
-            {initials}
-          </div>
+          <AvatarUpload
+            avatarUrl={familyMember?.avatar_url}
+            displayName={familyMember?.display_name || "Usuário"}
+            size="lg"
+          />
           <div className="text-center">
             <p className="font-semibold text-lg">{familyMember?.display_name}</p>
             <p className="text-sm text-muted-foreground">{user?.email}</p>

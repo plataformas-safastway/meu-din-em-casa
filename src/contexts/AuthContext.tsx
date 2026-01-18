@@ -16,6 +16,7 @@ interface FamilyMember {
   user_id: string;
   display_name: string;
   role: 'owner' | 'member';
+  avatar_url?: string | null;
 }
 
 interface AuthContextType {

@@ -61,6 +61,48 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          family_id: string | null
+          id: string
+          ip_address: string | null
+          new_value: Json | null
+          old_value: Json | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          family_id?: string | null
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          family_id?: string | null
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       bank_accounts: {
         Row: {
           account_type: Database["public"]["Enums"]["bank_account_type"]
@@ -449,6 +491,7 @@ export type Database = {
       }
       family_members: {
         Row: {
+          avatar_url: string | null
           birth_date: string | null
           cpf: string | null
           created_at: string
@@ -459,6 +502,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           birth_date?: string | null
           cpf?: string | null
           created_at?: string
@@ -469,6 +513,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           birth_date?: string | null
           cpf?: string | null
           created_at?: string
