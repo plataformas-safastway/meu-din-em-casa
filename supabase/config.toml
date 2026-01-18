@@ -47,3 +47,9 @@ verify_jwt = false
 
 [functions.send-welcome-email]
 verify_jwt = false
+
+[functions.home-summary]
+verify_jwt = false
+
+[functions.accounts-cards-insights]
+verify_jwt = false
