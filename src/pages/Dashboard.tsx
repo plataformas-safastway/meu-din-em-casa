@@ -17,7 +17,11 @@ import { TransactionType } from "@/types/finance";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-export function Dashboard() {
+interface DashboardProps {
+  onSettingsClick?: () => void;
+}
+
+export function Dashboard({ onSettingsClick }: DashboardProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
 
@@ -118,7 +122,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <Header familyName={family?.name || "Família"} />
+      <Header familyName={family?.name || "Família"} onSettingsClick={onSettingsClick} />
 
       <main className="container px-4 space-y-6 py-4">
         {/* Balance Card */}

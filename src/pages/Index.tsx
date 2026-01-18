@@ -11,6 +11,7 @@ import { ReportsPage } from "./ReportsPage";
 import { CategoryReportPage } from "./CategoryReportPage";
 import { BudgetsPage } from "./BudgetsPage";
 import { CashflowPage } from "./CashflowPage";
+import { EducationPage } from "./EducationPage";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { WhatsAppCTA } from "@/components/WhatsAppCTA";
 
@@ -42,7 +43,7 @@ const Index = () => {
   const renderPage = () => {
     switch (activeTab) {
       case "dashboard":
-        return <Dashboard />;
+        return <Dashboard onSettingsClick={() => setActiveTab("settings")} />;
       case "transactions":
         return <TransactionsPage onBack={() => setActiveTab("dashboard")} />;
       case "categories":
@@ -96,6 +97,8 @@ const Index = () => {
           );
         }
         return <Dashboard />;
+      case "education":
+        return <EducationPage onBack={() => setActiveTab("dashboard")} />;
       default:
         return <Dashboard />;
     }
