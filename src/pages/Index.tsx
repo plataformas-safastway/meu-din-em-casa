@@ -16,6 +16,7 @@ import { HelpCenterPage } from "./HelpCenterPage";
 import { EducationPage } from "./EducationPage";
 import { LearnMorePage } from "./LearnMorePage";
 import EbooksAdminPage from "./EbooksAdminPage";
+import { OpenFinancePage } from "./OpenFinancePage";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { WhatsAppCTA } from "@/components/WhatsAppCTA";
 
@@ -84,6 +85,8 @@ const Index = () => {
         );
       case "banks":
         return <BanksPage onBack={() => setActiveTab("settings")} />;
+      case "openfinance":
+        return <OpenFinancePage onBack={() => setActiveTab("settings")} />;
       case "learn-more":
         return <LearnMorePage onBack={() => setActiveTab("dashboard")} initialTab={learnMoreTab} />;
       case "profile":
