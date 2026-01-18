@@ -1,11 +1,12 @@
 import { useMemo } from "react";
-import { useFinanceSummary, useEmergencyFund } from "./useTransactions";
+import { useFinanceSummary } from "./useTransactions";
+import { useActiveGoals } from "./useGoals";
 import { getCategoryById } from "@/data/categories";
 import { Insight } from "@/types/finance";
 
 export function useInsights() {
   const { data: summary } = useFinanceSummary();
-  const { data: emergencyFund } = useEmergencyFund();
+  const { data: goals } = useActiveGoals();
 
   const insights = useMemo(() => {
     const result: Insight[] = [];
@@ -84,37 +85,45 @@ export function useInsights() {
       }
     }
 
-    // Check emergency fund progress
-    if (emergencyFund) {
-      const fundProgress = emergencyFund.target_amount > 0 
-        ? (Number(emergencyFund.current_amount) / Number(emergencyFund.target_amount)) * 100 
-        : 0;
-
-      if (fundProgress >= 100) {
+    // Check goals progress
+    if (goals && goals.length > 0) {
+      const completedGoals = goals.filter(g => g.status === "COMPLETED").length;
+      const activeGoals = goals.filter(g => g.status === "ACTIVE");
+      
+      // Check for goals with high progress
+      for (const goal of activeGoals) {
+        if (goal.target_amount && goal.current_amount) {
+          const progress = (Number(goal.current_amount) / Number(goal.target_amount)) * 100;
+          if (progress >= 80 && progress < 100) {
+            result.push({
+              id: `goal-almost-${goal.id}`,
+              type: "success",
+              title: `"${goal.title}" quase lá!`,
+              message: `Vocês já completaram ${progress.toFixed(0)}% deste objetivo. Falta pouco!`,
+              priority: 3,
+            });
+            break; // Only show one goal insight
+          }
+        }
+      }
+      
+      if (completedGoals > 0) {
         result.push({
-          id: "fund-complete",
+          id: "goals-completed",
           type: "success",
-          title: "Meta da reserva atingida! 🎉",
-          message: "Parabéns! A família atingiu a meta da reserva de emergência. Isso traz muita tranquilidade.",
-          priority: 3,
-        });
-      } else if (fundProgress >= 50) {
-        result.push({
-          id: "fund-progress",
-          type: "success",
-          title: "Reserva crescendo",
-          message: `Vocês já completaram ${fundProgress.toFixed(0)}% da reserva de emergência. Continuem!`,
+          title: "Objetivos alcançados! 🎉",
+          message: `A família já completou ${completedGoals} objetivo${completedGoals > 1 ? 's' : ''}. Parabéns!`,
           priority: 4,
         });
-      } else if (emergencyFund.target_amount > 0 && Number(emergencyFund.current_amount) === 0) {
-        result.push({
-          id: "fund-empty",
-          type: "tip",
-          title: "Reserva zerada",
-          message: "Começar uma reserva de emergência, mesmo com pouco, já traz mais segurança para a família.",
-          priority: 2,
-        });
       }
+    } else if (goals && goals.length === 0) {
+      result.push({
+        id: "no-goals",
+        type: "tip",
+        title: "Definam objetivos",
+        message: "Criar objetivos ajuda a família a se manter focada e motivada. Que tal definir o primeiro?",
+        priority: 3,
+      });
     }
 
     // Welcome message if no transactions
@@ -130,7 +139,7 @@ export function useInsights() {
 
     // Sort by priority
     return result.sort((a, b) => a.priority - b.priority);
-  }, [summary, emergencyFund]);
+  }, [summary, goals]);
 
   return { insights, isLoading: !summary };
 }

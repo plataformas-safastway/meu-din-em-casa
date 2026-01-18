@@ -114,8 +114,8 @@ export const mockInsights: Insight[] = [
   {
     id: "2",
     type: "success",
-    title: "Reserva financeira crescendo",
-    message: "Vocês já alcançaram 35% da meta de reserva de emergência! Cada passo conta para a tranquilidade financeira da família. 💪",
+    title: "Objetivos em progresso",
+    message: "Vocês estão no caminho certo! Cada passo conta para realizar os sonhos da família. 💪",
     priority: 1,
     createdAt: "2026-01-13T10:00:00Z"
   },
@@ -153,11 +153,6 @@ export const mockFinanceSummary: FamilyFinanceSummary = {
   monthlyIncome: 12500,
   monthlyExpenses: 8990,
   savingsRate: 28.1,
-  emergencyFund: {
-    targetAmount: 37500,
-    currentAmount: 13125,
-    targetDate: "2026-12-31"
-  },
   topCategories: mockCategoryExpenses,
   insights: mockInsights,
 };

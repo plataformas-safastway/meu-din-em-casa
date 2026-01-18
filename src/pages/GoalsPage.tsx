@@ -1,45 +1,113 @@
-import { ArrowLeft, Plus, Target, Plane, GraduationCap, Car, Home } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Plus, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { EmergencyFundProgress } from "@/components/EmergencyFundProgress";
-import { formatCurrency, formatPercentage } from "@/lib/formatters";
-import { mockFinanceSummary } from "@/data/mockData";
+import { Goal, GoalInput, useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal } from "@/hooks/useGoals";
+import { GoalCard } from "@/components/goals/GoalCard";
+import { GoalForm } from "@/components/goals/GoalForm";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface GoalsPageProps {
   onBack: () => void;
 }
 
-const sampleGoals = [
-  {
-    id: "1",
-    name: "Férias em Família",
-    icon: Plane,
-    target: 8000,
-    current: 3200,
-    color: "hsl(var(--info))",
-    deadline: "Dez 2026",
-  },
-  {
-    id: "2",
-    name: "Faculdade dos Filhos",
-    icon: GraduationCap,
-    target: 50000,
-    current: 12500,
-    color: "hsl(var(--chart-5))",
-    deadline: "2030",
-  },
-  {
-    id: "3",
-    name: "Troca do Carro",
-    icon: Car,
-    target: 45000,
-    current: 8000,
-    color: "hsl(var(--chart-3))",
-    deadline: "2027",
-  },
-];
-
 export function GoalsPage({ onBack }: GoalsPageProps) {
+  const { data: goals = [], isLoading } = useGoals();
+  const createGoal = useCreateGoal();
+  const updateGoal = useUpdateGoal();
+  const deleteGoal = useDeleteGoal();
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [deletingGoal, setDeletingGoal] = useState<Goal | null>(null);
+
+  const activeGoals = goals.filter(g => g.status === "ACTIVE");
+  const pausedGoals = goals.filter(g => g.status === "PAUSED");
+  const completedGoals = goals.filter(g => g.status === "COMPLETED");
+
+  const handleCreate = async (data: GoalInput) => {
+    try {
+      await createGoal.mutateAsync(data);
+      toast.success("Objetivo criado.");
+      setIsFormOpen(false);
+    } catch (error) {
+      toast.error("Erro ao criar objetivo.");
+    }
+  };
+
+  const handleUpdate = async (data: GoalInput) => {
+    if (!editingGoal) return;
+    try {
+      await updateGoal.mutateAsync({ id: editingGoal.id, data });
+      toast.success("Objetivo atualizado.");
+      setEditingGoal(null);
+    } catch (error) {
+      toast.error("Erro ao atualizar objetivo.");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deletingGoal) return;
+    try {
+      await deleteGoal.mutateAsync(deletingGoal.id);
+      toast.success("Objetivo excluído.");
+      setDeletingGoal(null);
+    } catch (error) {
+      toast.error("Erro ao excluir objetivo.");
+    }
+  };
+
+  const handleStatusChange = async (goal: Goal, status: "ACTIVE" | "PAUSED" | "COMPLETED") => {
+    try {
+      await updateGoal.mutateAsync({ id: goal.id, data: { status } });
+      const messages = {
+        ACTIVE: "Objetivo reativado.",
+        PAUSED: "Objetivo pausado.",
+        COMPLETED: "Objetivo concluído! 🎉",
+      };
+      toast.success(messages[status]);
+    } catch (error) {
+      toast.error("Erro ao atualizar status.");
+    }
+  };
+
+  const renderGoalsList = (goalsList: Goal[]) => {
+    if (goalsList.length === 0) {
+      return (
+        <div className="text-center py-8">
+          <Target className="w-10 h-10 text-muted-foreground/50 mx-auto mb-3" />
+          <p className="text-muted-foreground text-sm">
+            Nenhum objetivo nesta categoria.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {goalsList.map((goal) => (
+          <GoalCard
+            key={goal.id}
+            goal={goal}
+            onEdit={setEditingGoal}
+            onDelete={setDeletingGoal}
+            onStatusChange={handleStatusChange}
+          />
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -50,96 +118,102 @@ export function GoalsPage({ onBack }: GoalsPageProps) {
               <Button variant="ghost" size="icon" onClick={onBack}>
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              <h1 className="text-lg font-semibold">Metas Financeiras</h1>
+              <h1 className="text-lg font-semibold">Objetivos</h1>
             </div>
             <Button 
               size="sm" 
               variant="outline" 
               className="gap-2"
-              onClick={() => toast.info("Em breve! Crie metas personalizadas.")}
+              onClick={() => setIsFormOpen(true)}
             >
               <Plus className="w-4 h-4" />
-              Nova
+              Novo
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container px-4 py-4 space-y-6">
-        {/* Emergency Fund - Priority */}
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground mb-3">PRIORIDADE</h2>
-          <EmergencyFundProgress 
-            fund={mockFinanceSummary.emergencyFund}
-            onAddFund={() => toast.info("Em breve!")}
-          />
-        </div>
-
-        {/* Other Goals */}
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground mb-3">OUTRAS METAS</h2>
+      <main className="container px-4 py-4 space-y-4">
+        {isLoading ? (
           <div className="space-y-3">
-            {sampleGoals.map((goal) => {
-              const Icon = goal.icon;
-              const percentage = (goal.current / goal.target) * 100;
-              
-              return (
-                <div
-                  key={goal.id}
-                  className="p-4 rounded-2xl bg-card border border-border/30"
-                >
-                  <div className="flex items-center gap-4 mb-3">
-                    <div 
-                      className="w-12 h-12 rounded-xl flex items-center justify-center"
-                      style={{ backgroundColor: `${goal.color}20` }}
-                    >
-                      <Icon className="w-6 h-6" style={{ color: goal.color }} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground">{goal.name}</p>
-                      <p className="text-sm text-muted-foreground">Meta: {goal.deadline}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-foreground">
-                        {formatPercentage(percentage)}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Progress bar */}
-                  <div className="relative h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="absolute left-0 top-0 h-full rounded-full transition-all duration-500"
-                      style={{ 
-                        width: `${Math.min(percentage, 100)}%`,
-                        backgroundColor: goal.color 
-                      }}
-                    />
-                  </div>
-                  
-                  <div className="flex justify-between mt-2 text-sm">
-                    <span className="text-muted-foreground">
-                      {formatCurrency(goal.current)}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {formatCurrency(goal.target)}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />
+            ))}
           </div>
-        </div>
+        ) : (
+          <Tabs defaultValue="active" className="w-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="active" className="flex-1">
+                Ativos ({activeGoals.length})
+              </TabsTrigger>
+              <TabsTrigger value="paused" className="flex-1">
+                Pausados ({pausedGoals.length})
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="flex-1">
+                Concluídos ({completedGoals.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="active" className="mt-4">
+              {renderGoalsList(activeGoals)}
+            </TabsContent>
+
+            <TabsContent value="paused" className="mt-4">
+              {renderGoalsList(pausedGoals)}
+            </TabsContent>
+
+            <TabsContent value="completed" className="mt-4">
+              {renderGoalsList(completedGoals)}
+            </TabsContent>
+          </Tabs>
+        )}
 
         {/* Tip */}
-        <div className="p-4 rounded-2xl bg-success/10 border border-success/20">
-          <p className="text-sm text-success leading-relaxed">
-            🎯 <strong>Vocês estão construindo o futuro!</strong> Cada meta definida é um passo 
-            para realizar os sonhos da família. Lembrem-se: metas financeiras claras reduzem 
-            a ansiedade e fortalecem a união familiar.
+        <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
+          <p className="text-sm text-primary leading-relaxed">
+            🎯 <strong>Dica:</strong> Objetivos claros ajudam a família a se manter focada. 
+            Vocês podem criar quantos objetivos quiserem e acompanhar o progresso de cada um.
           </p>
         </div>
       </main>
+
+      {/* Create Form */}
+      <GoalForm
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        onSubmit={handleCreate}
+        isLoading={createGoal.isPending}
+      />
+
+      {/* Edit Form */}
+      <GoalForm
+        open={!!editingGoal}
+        onOpenChange={(open) => !open && setEditingGoal(null)}
+        goal={editingGoal}
+        onSubmit={handleUpdate}
+        isLoading={updateGoal.isPending}
+      />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deletingGoal} onOpenChange={(open) => !open && setDeletingGoal(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir objetivo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o objetivo "{deletingGoal?.title}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
