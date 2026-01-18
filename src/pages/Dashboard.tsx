@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Header } from "@/components/Header";
 import { BalanceCard } from "@/components/BalanceCard";
+import { MonthSelector } from "@/components/MonthSelector";
+import { CreditCardInvoiceCard } from "@/components/CreditCardInvoiceCard";
 import { QuickActions } from "@/components/QuickActions";
 import { InsightList } from "@/components/InsightCard";
 import { CategoryChart } from "@/components/CategoryChart";
@@ -16,6 +18,7 @@ import { getCategoryById } from "@/data/categories";
 import { TransactionType } from "@/types/finance";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
 
 interface DashboardProps {
   onSettingsClick?: () => void;
@@ -25,12 +28,39 @@ interface DashboardProps {
 export function Dashboard({ onSettingsClick, onGoalsClick }: DashboardProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
-  const { family } = useAuth();
-  const { data: transactions = [], isLoading: loadingTransactions } = useTransactions();
-  const { data: summary, isLoading: loadingSummary } = useFinanceSummary();
+  const selectedMonth = selectedDate.getMonth() + 1;
+  const selectedYear = selectedDate.getFullYear();
+
+  const { family, user } = useAuth();
+  const { data: transactions = [], isLoading: loadingTransactions } = useTransactions(selectedMonth, selectedYear);
+  const { data: summary, isLoading: loadingSummary } = useFinanceSummary(selectedMonth, selectedYear);
   const { insights } = useInsights();
   const createTransaction = useCreateTransaction();
+
+  // Calculate credit card invoice total
+  const creditCardData = useMemo(() => {
+    const creditTransactions = transactions.filter(
+      (t) => t.type === "expense" && (t.credit_card_id || t.payment_method === "credit")
+    );
+    const total = creditTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
+    return {
+      total,
+      count: creditTransactions.length,
+    };
+  }, [transactions]);
+
+  // Get user's first name for greeting
+  const userName = useMemo(() => {
+    if (user?.user_metadata?.display_name) {
+      return user.user_metadata.display_name.split(" ")[0];
+    }
+    if (family?.name) {
+      return family.name;
+    }
+    return "Usuário";
+  }, [user, family]);
 
   const handleAddIncome = () => {
     setDefaultTransactionType("income");
@@ -52,13 +82,23 @@ export function Dashboard({ onSettingsClick, onGoalsClick }: DashboardProps) {
 
   const handleSubmitTransaction = async (transaction: any) => {
     try {
+      // If user is viewing a different month, confirm or use selected month's date
+      let transactionDate = transaction.date;
+      const transactionMonth = new Date(transactionDate).getMonth() + 1;
+      const transactionYear = new Date(transactionDate).getFullYear();
+
+      if (transactionMonth !== selectedMonth || transactionYear !== selectedYear) {
+        // Use the first day of the selected month if different
+        transactionDate = format(selectedDate, "yyyy-MM-01");
+      }
+
       await createTransaction.mutateAsync({
         type: transaction.type,
         amount: transaction.amount,
         category_id: transaction.category,
         subcategory_id: transaction.subcategory,
         description: transaction.description,
-        date: transaction.date,
+        date: transactionDate,
         payment_method: transaction.paymentMethod,
         bank_account_id: transaction.bankAccountId,
         credit_card_id: transaction.creditCardId,
@@ -122,15 +162,24 @@ export function Dashboard({ onSettingsClick, onGoalsClick }: DashboardProps) {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <Header familyName={family?.name || "Família"} onSettingsClick={onSettingsClick} />
+      <Header userName={userName} onSettingsClick={onSettingsClick} />
 
-      <main className="container px-4 space-y-6 py-4">
+      <main className="container px-4 space-y-4 py-4">
+        {/* Month Selector */}
+        <MonthSelector selectedDate={selectedDate} onMonthChange={setSelectedDate} />
+
         {/* Balance Card */}
         <BalanceCard
           balance={summary?.balance || 0}
           income={summary?.income || 0}
           expenses={summary?.expenses || 0}
           savingsRate={summary?.savingsRate || 0}
+        />
+
+        {/* Credit Card Invoice Card */}
+        <CreditCardInvoiceCard 
+          total={creditCardData.total} 
+          transactionCount={creditCardData.count} 
         />
 
         {/* Quick Actions */}
