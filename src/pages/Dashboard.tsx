@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { Header } from "@/components/Header";
-import { BalanceCard } from "@/components/BalanceCard";
 import { MonthSelector } from "@/components/MonthSelector";
-import { CreditCardInvoiceCard } from "@/components/CreditCardInvoiceCard";
+import { GlobalBalanceCard } from "@/components/home/GlobalBalanceCard";
+import { CreditCardsPreviewCard } from "@/components/home/CreditCardsPreviewCard";
 import { QuickActions } from "@/components/QuickActions";
 import { InsightList } from "@/components/InsightCard";
 import { CategoryChart } from "@/components/CategoryChart";
@@ -12,10 +12,11 @@ import { MonthlyChart } from "@/components/MonthlyChart";
 import { AddTransactionSheet } from "@/components/AddTransactionSheet";
 import { FabButton } from "@/components/QuickActions";
 import { BudgetAlertsWidget } from "@/components/budget/BudgetAlertsWidget";
-import { ScreenLoader, SkeletonHome } from "@/components/ui/money-loader";
+import { SkeletonHome } from "@/components/ui/money-loader";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions, useFinanceSummary, useCreateTransaction } from "@/hooks/useTransactions";
 import { useInsights } from "@/hooks/useInsights";
+import { useHomeSummary } from "@/hooks/useHomeSummary";
 import { useDebouncedLoading } from "@/hooks/useLoading";
 import { getCategoryById } from "@/data/categories";
 import { TransactionType } from "@/types/finance";
@@ -26,9 +27,17 @@ interface DashboardProps {
   onSettingsClick?: () => void;
   onGoalsClick?: () => void;
   onBudgetsClick?: () => void;
+  onLearnMore?: (tab?: "accounts" | "cards") => void;
+  onBanksClick?: () => void;
 }
 
-export function Dashboard({ onSettingsClick, onGoalsClick, onBudgetsClick }: DashboardProps) {
+export function Dashboard({ 
+  onSettingsClick, 
+  onGoalsClick, 
+  onBudgetsClick,
+  onLearnMore,
+  onBanksClick,
+}: DashboardProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -39,23 +48,15 @@ export function Dashboard({ onSettingsClick, onGoalsClick, onBudgetsClick }: Das
   const { family, user } = useAuth();
   const { data: transactions = [], isLoading: loadingTransactions } = useTransactions(selectedMonth, selectedYear);
   const { data: summary, isLoading: loadingSummary } = useFinanceSummary(selectedMonth, selectedYear);
+  const { data: homeSummary, isLoading: loadingHomeSummary } = useHomeSummary(selectedMonth, selectedYear);
   const { insights } = useInsights();
   const createTransaction = useCreateTransaction();
 
-  // Calculate credit card invoice total
-  const creditCardData = useMemo(() => {
-    const creditTransactions = transactions.filter(
-      (t) => t.type === "expense" && (t.credit_card_id || t.payment_method === "credit")
-    );
-    const total = creditTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
-    return {
-      total,
-      count: creditTransactions.length,
-    };
-  }, [transactions]);
-
   // Get user's first name for greeting
   const userName = useMemo(() => {
+    if (homeSummary?.greeting?.firstName) {
+      return homeSummary.greeting.firstName;
+    }
     if (user?.user_metadata?.display_name) {
       return user.user_metadata.display_name.split(" ")[0];
     }
@@ -63,7 +64,7 @@ export function Dashboard({ onSettingsClick, onGoalsClick, onBudgetsClick }: Das
       return family.name;
     }
     return "Usuário";
-  }, [user, family]);
+  }, [homeSummary, user, family]);
 
   const handleAddIncome = () => {
     setDefaultTransactionType("income");
@@ -85,13 +86,11 @@ export function Dashboard({ onSettingsClick, onGoalsClick, onBudgetsClick }: Das
 
   const handleSubmitTransaction = async (transaction: any) => {
     try {
-      // If user is viewing a different month, confirm or use selected month's date
       let transactionDate = transaction.date;
       const transactionMonth = new Date(transactionDate).getMonth() + 1;
       const transactionYear = new Date(transactionDate).getFullYear();
 
       if (transactionMonth !== selectedMonth || transactionYear !== selectedYear) {
-        // Use the first day of the selected month if different
         transactionDate = format(selectedDate, "yyyy-MM-01");
       }
 
@@ -143,7 +142,7 @@ export function Dashboard({ onSettingsClick, onGoalsClick, onBudgetsClick }: Das
       })
     : [];
 
-  // Mock monthly data (will be implemented with historical query later)
+  // Monthly data placeholder
   const monthlyData = [
     { month: "Jan", income: 0, expenses: 0 },
     { month: "Fev", income: 0, expenses: 0 },
@@ -153,10 +152,9 @@ export function Dashboard({ onSettingsClick, onGoalsClick, onBudgetsClick }: Das
     { month: "Jun", income: summary?.income || 0, expenses: summary?.expenses || 0 },
   ];
 
-  const isLoading = loadingTransactions || loadingSummary;
+  const isLoading = loadingTransactions || loadingSummary || loadingHomeSummary;
   const showLoading = useDebouncedLoading(isLoading, { delay: 300, minDuration: 500 });
 
-  // Show skeleton on first load, not on subsequent month changes
   if (showLoading && transactions.length === 0) {
     return (
       <div className="min-h-screen bg-background">
@@ -174,18 +172,27 @@ export function Dashboard({ onSettingsClick, onGoalsClick, onBudgetsClick }: Das
         {/* Month Selector */}
         <MonthSelector selectedDate={selectedDate} onMonthChange={setSelectedDate} />
 
-        {/* Balance Card */}
-        <BalanceCard
-          balance={summary?.balance || 0}
-          income={summary?.income || 0}
-          expenses={summary?.expenses || 0}
-          savingsRate={summary?.savingsRate || 0}
+        {/* Global Balance Card with Accounts Preview */}
+        <GlobalBalanceCard
+          balance={homeSummary?.balanceGlobal ?? summary?.balance ?? 0}
+          income={homeSummary?.income ?? summary?.income ?? 0}
+          expenses={homeSummary?.expenses ?? summary?.expenses ?? 0}
+          savingsRate={homeSummary?.savingsRate ?? summary?.savingsRate ?? 0}
+          accounts={homeSummary?.accountsPreview ?? []}
+          hasMoreAccounts={homeSummary?.hasMoreAccounts ?? false}
+          totalAccounts={homeSummary?.totalAccounts ?? 0}
+          onLearnMore={() => onLearnMore?.("accounts")}
         />
 
-        {/* Credit Card Invoice Card */}
-        <CreditCardInvoiceCard 
-          total={creditCardData.total} 
-          transactionCount={creditCardData.count} 
+        {/* Credit Cards Preview Card */}
+        <CreditCardsPreviewCard
+          cards={homeSummary?.creditCardsPreview ?? []}
+          hasMoreCards={homeSummary?.hasMoreCreditCards ?? false}
+          totalCards={homeSummary?.totalCreditCards ?? 0}
+          totalBill={homeSummary?.totalCreditCardBill ?? 0}
+          bestCardSuggestion={homeSummary?.bestCardSuggestion ?? null}
+          onLearnMore={() => onLearnMore?.("cards")}
+          onAddCard={onBanksClick}
         />
 
         {/* Quick Actions */}
@@ -206,7 +213,7 @@ export function Dashboard({ onSettingsClick, onGoalsClick, onBudgetsClick }: Das
           onViewAll={onBudgetsClick}
         />
 
-        {/* Goals Widget - Always visible */}
+        {/* Goals Widget */}
         <GoalsWidget onViewAll={onGoalsClick} />
 
         {/* Charts Grid */}

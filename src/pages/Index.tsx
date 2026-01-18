@@ -14,6 +14,7 @@ import { CashflowPage } from "./CashflowPage";
 import { ProjectionPage } from "./ProjectionPage";
 import { HelpCenterPage } from "./HelpCenterPage";
 import { EducationPage } from "./EducationPage";
+import { LearnMorePage } from "./LearnMorePage";
 import EbooksAdminPage from "./EbooksAdminPage";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { WhatsAppCTA } from "@/components/WhatsAppCTA";
@@ -21,10 +22,16 @@ import { WhatsAppCTA } from "@/components/WhatsAppCTA";
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [reportCategoryId, setReportCategoryId] = useState<string | null>(null);
+  const [learnMoreTab, setLearnMoreTab] = useState<"accounts" | "cards">("accounts");
 
   const handleCategoryReport = (categoryId: string) => {
     setReportCategoryId(categoryId);
     setActiveTab("category-report");
+  };
+
+  const handleLearnMore = (tab?: "accounts" | "cards") => {
+    setLearnMoreTab(tab || "accounts");
+    setActiveTab("learn-more");
   };
 
   const renderPage = () => {
@@ -35,6 +42,8 @@ const Index = () => {
             onSettingsClick={() => setActiveTab("settings")} 
             onGoalsClick={() => setActiveTab("objectives")}
             onBudgetsClick={() => setActiveTab("goals")}
+            onLearnMore={handleLearnMore}
+            onBanksClick={() => setActiveTab("banks")}
           />
         );
       case "transactions":
@@ -75,6 +84,8 @@ const Index = () => {
         );
       case "banks":
         return <BanksPage onBack={() => setActiveTab("settings")} />;
+      case "learn-more":
+        return <LearnMorePage onBack={() => setActiveTab("dashboard")} initialTab={learnMoreTab} />;
       case "profile":
         return <ProfilePage onBack={() => setActiveTab("settings")} />;
       case "import":
