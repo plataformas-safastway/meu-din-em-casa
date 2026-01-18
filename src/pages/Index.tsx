@@ -5,8 +5,7 @@ import { CategoriesPage } from "./CategoriesPage";
 import { GoalsPage } from "./GoalsPage";
 import { SettingsPage } from "./SettingsPage";
 import { BanksPage } from "./BanksPage";
-import { ImportPage } from "./ImportPage";
-import { ImportReviewPage } from "./ImportReviewPage";
+import { ImportFlowPage } from "./import";
 import { ReportsPage } from "./ReportsPage";
 import { CategoryReportPage } from "./CategoryReportPage";
 import { BudgetsPage } from "./BudgetsPage";
@@ -18,23 +17,7 @@ import { WhatsAppCTA } from "@/components/WhatsAppCTA";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [reviewImportId, setReviewImportId] = useState<string | null>(null);
   const [reportCategoryId, setReportCategoryId] = useState<string | null>(null);
-
-  const handleReviewImport = (importId: string) => {
-    setReviewImportId(importId);
-    setActiveTab("import-review");
-  };
-
-  const handleReviewComplete = () => {
-    setReviewImportId(null);
-    setActiveTab("transactions");
-  };
-
-  const handleReviewBack = () => {
-    setReviewImportId(null);
-    setActiveTab("import");
-  };
 
   const handleCategoryReport = (categoryId: string) => {
     setReportCategoryId(categoryId);
@@ -82,29 +65,17 @@ const Index = () => {
           <SettingsPage 
             onBack={() => setActiveTab("dashboard")} 
             onNavigate={setActiveTab}
-            onReviewImport={handleReviewImport}
           />
         );
       case "banks":
         return <BanksPage onBack={() => setActiveTab("settings")} />;
       case "import":
         return (
-          <ImportPage 
+          <ImportFlowPage 
             onBack={() => setActiveTab("settings")} 
-            onReviewImport={handleReviewImport}
+            onComplete={() => setActiveTab("transactions")}
           />
         );
-      case "import-review":
-        if (reviewImportId) {
-          return (
-            <ImportReviewPage 
-              importId={reviewImportId} 
-              onBack={handleReviewBack}
-              onComplete={handleReviewComplete}
-            />
-          );
-        }
-        return <Dashboard />;
       case "education":
         return (
           <EducationPage 
