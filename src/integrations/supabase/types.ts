@@ -449,6 +449,8 @@ export type Database = {
       }
       family_members: {
         Row: {
+          birth_date: string | null
+          cpf: string | null
           created_at: string
           display_name: string
           family_id: string
@@ -457,6 +459,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          birth_date?: string | null
+          cpf?: string | null
           created_at?: string
           display_name: string
           family_id: string
@@ -465,6 +469,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          birth_date?: string | null
+          cpf?: string | null
           created_at?: string
           display_name?: string
           family_id?: string
@@ -529,6 +535,47 @@ export type Database = {
           },
         ]
       }
+      import_category_rules: {
+        Row: {
+          category_id: string
+          created_at: string
+          family_id: string
+          id: string
+          keyword: string
+          match_count: number
+          subcategory_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          family_id: string
+          id?: string
+          keyword: string
+          match_count?: number
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          keyword?: string
+          match_count?: number
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_category_rules_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_history: {
         Row: {
           created_at: string
@@ -584,6 +631,81 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_pending_transactions: {
+        Row: {
+          amount: number
+          category_id: string
+          confidence_score: number | null
+          created_at: string
+          date: string
+          description: string | null
+          duplicate_transaction_id: string | null
+          family_id: string
+          id: string
+          import_id: string
+          is_duplicate: boolean
+          needs_review: boolean
+          original_date: string | null
+          raw_data: Json | null
+          subcategory_id: string | null
+          suggested_category_id: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string
+          confidence_score?: number | null
+          created_at?: string
+          date: string
+          description?: string | null
+          duplicate_transaction_id?: string | null
+          family_id: string
+          id?: string
+          import_id: string
+          is_duplicate?: boolean
+          needs_review?: boolean
+          original_date?: string | null
+          raw_data?: Json | null
+          subcategory_id?: string | null
+          suggested_category_id?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string
+          confidence_score?: number | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          duplicate_transaction_id?: string | null
+          family_id?: string
+          id?: string
+          import_id?: string
+          is_duplicate?: boolean
+          needs_review?: boolean
+          original_date?: string | null
+          raw_data?: Json | null
+          subcategory_id?: string | null
+          suggested_category_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_pending_transactions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_pending_transactions_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "imports"
             referencedColumns: ["id"]
           },
         ]
