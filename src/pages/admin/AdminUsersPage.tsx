@@ -4,10 +4,9 @@ import {
   Users, 
   Search, 
   Eye, 
-  Shield, 
-  UserCog,
   Loader2,
-  ChevronRight
+  ChevronRight,
+  ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAssignRole, useRemoveRole, AppRole } from "@/hooks/useUserRole";
+import { AdminUserProfileView } from "@/components/admin/AdminUserProfileView";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -59,6 +59,7 @@ export function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [selectedFamily, setSelectedFamily] = useState<FamilyWithMembers | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<{ userId: string; memberId: string } | null>(null);
 
   const { data: families, isLoading } = useQuery({
     queryKey: ['admin-families'],
@@ -96,6 +97,37 @@ export function AdminUsersPage() {
     setSelectedFamily(family);
     setDetailsOpen(true);
   };
+
+  const handleViewMemberProfile = (userId: string, memberId: string) => {
+    setSelectedMember({ userId, memberId });
+    setDetailsOpen(false);
+  };
+
+  // If viewing a member profile
+  if (selectedMember) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setSelectedMember(null)}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h2 className="text-2xl font-bold">Perfil do Usuário</h2>
+            <p className="text-muted-foreground">Visualização administrativa (somente leitura)</p>
+          </div>
+        </div>
+        
+        <AdminUserProfileView 
+          userId={selectedMember.userId}
+          memberId={selectedMember.memberId}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

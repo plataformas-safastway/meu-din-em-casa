@@ -4,6 +4,7 @@ import { TransactionsPage } from "./TransactionsPage";
 import { CategoriesPage } from "./CategoriesPage";
 import { GoalsPage } from "./GoalsPage";
 import { SettingsPage } from "./SettingsPage";
+import { ProfilePage } from "./ProfilePage";
 import { BanksPage } from "./BanksPage";
 import { ImportFlowPage } from "./import";
 import { ReportsPage } from "./ReportsPage";
@@ -69,6 +70,8 @@ const Index = () => {
         );
       case "banks":
         return <BanksPage onBack={() => setActiveTab("settings")} />;
+      case "profile":
+        return <ProfilePage onBack={() => setActiveTab("settings")} />;
       case "import":
         return (
           <ImportFlowPage 
