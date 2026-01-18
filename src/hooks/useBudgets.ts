@@ -10,6 +10,8 @@ export interface Budget {
   monthly_limit: number;
   is_active: boolean;
   use_income_reference: boolean;
+  average_spending: number | null;
+  projected_amount: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -20,6 +22,14 @@ export interface BudgetInput {
   monthly_limit: number;
   is_active?: boolean;
   use_income_reference?: boolean;
+}
+
+export interface BudgetAlert {
+  budget: Budget;
+  spent: number;
+  percentage: number;
+  remaining: number;
+  status: "ok" | "warning" | "exceeded";
 }
 
 export function useBudgets() {
@@ -64,6 +74,7 @@ export function useCreateBudget() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["budget-alerts"] });
     },
   });
 }
@@ -82,6 +93,7 @@ export function useUpdateBudget() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["budget-alerts"] });
     },
   });
 }
@@ -96,19 +108,21 @@ export function useDeleteBudget() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["budget-alerts"] });
     },
   });
 }
 
-// Hook to get budget alerts (spending vs limit)
+// Hook to get budget alerts (spending vs limit) for a specific month
 export function useBudgetAlerts(month?: number, year?: number) {
   const { family } = useAuth();
-  const currentMonth = month ?? new Date().getMonth();
-  const currentYear = year ?? new Date().getFullYear();
+  const currentDate = new Date();
+  const currentMonth = month ?? currentDate.getMonth();
+  const currentYear = year ?? currentDate.getFullYear();
 
   return useQuery({
     queryKey: ["budget-alerts", family?.id, currentMonth, currentYear],
-    queryFn: async () => {
+    queryFn: async (): Promise<BudgetAlert[]> => {
       if (!family) return [];
 
       // Get all active budgets
@@ -120,9 +134,10 @@ export function useBudgetAlerts(month?: number, year?: number) {
 
       if (budgetsError) throw budgetsError;
 
-      // Get transactions for the month
-      const startDate = new Date(currentYear, currentMonth, 1).toISOString().split("T")[0];
-      const endDate = new Date(currentYear, currentMonth + 1, 0).toISOString().split("T")[0];
+      // Get transactions for the month (month is 0-indexed from Date, but we need 1-indexed for query)
+      const monthForQuery = currentMonth; // Already 0-indexed
+      const startDate = new Date(currentYear, monthForQuery, 1).toISOString().split("T")[0];
+      const endDate = new Date(currentYear, monthForQuery + 1, 0).toISOString().split("T")[0];
 
       const { data: transactions, error: transactionsError } = await supabase
         .from("transactions")
@@ -147,21 +162,15 @@ export function useBudgetAlerts(month?: number, year?: number) {
       });
 
       // Generate alerts
-      const alerts: Array<{
-        budget: Budget;
-        spent: number;
-        percentage: number;
-        remaining: number;
-        status: "ok" | "warning" | "exceeded";
-      }> = [];
+      const alerts: BudgetAlert[] = [];
 
       (budgets as Budget[]).forEach((budget) => {
         const key = budget.subcategory_id
           ? `${budget.category_id}:${budget.subcategory_id}`
           : budget.category_id;
         const spent = spending[key] || 0;
-        const percentage = (spent / budget.monthly_limit) * 100;
-        const remaining = budget.monthly_limit - spent;
+        const percentage = budget.monthly_limit > 0 ? (spent / budget.monthly_limit) * 100 : 0;
+        const remaining = Math.max(0, budget.monthly_limit - spent);
 
         let status: "ok" | "warning" | "exceeded" = "ok";
         if (percentage >= 100) {
@@ -183,4 +192,20 @@ export function useBudgetAlerts(month?: number, year?: number) {
     },
     enabled: !!family,
   });
+}
+
+// Hook to get budget summary for the month
+export function useBudgetSummary(month?: number, year?: number) {
+  const { data: alerts = [], isLoading } = useBudgetAlerts(month, year);
+
+  const summary = {
+    total: alerts.length,
+    exceeded: alerts.filter((a) => a.status === "exceeded").length,
+    warning: alerts.filter((a) => a.status === "warning").length,
+    ok: alerts.filter((a) => a.status === "ok").length,
+    totalBudgeted: alerts.reduce((sum, a) => sum + a.budget.monthly_limit, 0),
+    totalSpent: alerts.reduce((sum, a) => sum + a.spent, 0),
+  };
+
+  return { summary, isLoading };
 }

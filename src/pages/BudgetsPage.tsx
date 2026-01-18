@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Target, Plus, Trash2, Edit2, AlertTriangle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Target, Plus, Trash2, Edit2, AlertTriangle, CheckCircle, TrendingDown, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,15 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { useBudgets, useCreateBudget, useUpdateBudget, useDeleteBudget, useBudgetAlerts } from "@/hooks/useBudgets";
+import { MonthSelector } from "@/components/MonthSelector";
+import { MoneyLoader } from "@/components/ui/money-loader";
+import { useBudgets, useCreateBudget, useUpdateBudget, useDeleteBudget, useBudgetAlerts, useBudgetSummary } from "@/hooks/useBudgets";
+import { useDebouncedLoading } from "@/hooks/useLoading";
 import { defaultCategories, getCategoryById, getExpenseCategories } from "@/data/categories";
 import { formatCurrency } from "@/lib/formatters";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface BudgetsPageProps {
   onBack: () => void;
@@ -24,9 +28,14 @@ export function BudgetsPage({ onBack }: BudgetsPageProps) {
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
   const [monthlyLimit, setMonthlyLimit] = useState("");
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const selectedMonth = selectedDate.getMonth();
+  const selectedYear = selectedDate.getFullYear();
 
   const { data: budgets, isLoading: loadingBudgets } = useBudgets();
-  const { data: alerts, isLoading: loadingAlerts } = useBudgetAlerts();
+  const { data: alerts, isLoading: loadingAlerts } = useBudgetAlerts(selectedMonth, selectedYear);
+  const { summary } = useBudgetSummary(selectedMonth, selectedYear);
   const createBudget = useCreateBudget();
   const updateBudget = useUpdateBudget();
   const deleteBudget = useDeleteBudget();
@@ -102,11 +111,12 @@ export function BudgetsPage({ onBack }: BudgetsPageProps) {
   const okAlerts = alerts?.filter((a) => a.status === "ok") || [];
 
   const isLoading = loadingBudgets || loadingAlerts;
+  const showLoading = useDebouncedLoading(isLoading, { delay: 300 });
 
-  if (isLoading) {
+  if (showLoading && !alerts?.length) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <MoneyLoader label="Carregando orçamentos..." />
       </div>
     );
   }
@@ -208,6 +218,78 @@ export function BudgetsPage({ onBack }: BudgetsPageProps) {
       </header>
 
       <main className="container px-4 py-4 space-y-6">
+        {/* Month Selector */}
+        <MonthSelector selectedDate={selectedDate} onMonthChange={setSelectedDate} />
+
+        {/* Budget Summary Card */}
+        {budgets && budgets.length > 0 && (
+          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-semibold flex items-center gap-2">
+                  <Target className="w-4 h-4 text-primary" />
+                  Resumo do Mês
+                </h2>
+                <div className="flex gap-2">
+                  {summary.exceeded > 0 && (
+                    <span className="text-xs bg-destructive/20 text-destructive px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <TrendingDown className="w-3 h-3" />
+                      {summary.exceeded}
+                    </span>
+                  )}
+                  {summary.warning > 0 && (
+                    <span className="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      {summary.warning}
+                    </span>
+                  )}
+                  {summary.ok > 0 && (
+                    <span className="text-xs bg-success/20 text-success px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      {summary.ok}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Orçado</p>
+                  <p className="text-lg font-bold">{formatCurrency(summary.totalBudgeted)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Realizado</p>
+                  <p className={cn(
+                    "text-lg font-bold",
+                    summary.totalSpent > summary.totalBudgeted ? "text-destructive" : "text-success"
+                  )}>
+                    {formatCurrency(summary.totalSpent)}
+                  </p>
+                </div>
+              </div>
+              
+              {summary.totalBudgeted > 0 && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">Progresso geral</span>
+                    <span className="font-medium">
+                      {((summary.totalSpent / summary.totalBudgeted) * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <Progress 
+                    value={Math.min((summary.totalSpent / summary.totalBudgeted) * 100, 100)} 
+                    className={cn(
+                      "h-2",
+                      summary.totalSpent > summary.totalBudgeted && "[&>div]:bg-destructive",
+                      summary.totalSpent >= summary.totalBudgeted * 0.8 && summary.totalSpent < summary.totalBudgeted && "[&>div]:bg-warning"
+                    )}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Exceeded Alerts */}
         {exceededAlerts.length > 0 && (
           <div className="space-y-3">
