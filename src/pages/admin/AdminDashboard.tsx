@@ -1,0 +1,216 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { 
+  Users, 
+  BarChart3, 
+  BookOpen, 
+  Settings, 
+  LogOut,
+  Home,
+  Shield,
+  UserCog,
+  FileText,
+  TrendingUp
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { useIsAdmin } from "@/hooks/useUserRole";
+import { AdminUsersPage } from "./AdminUsersPage";
+import { AdminEbooksPage } from "./AdminEbooksPage";
+import { AdminMetricsPage } from "./AdminMetricsPage";
+
+type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "settings";
+
+export function AdminDashboard() {
+  const navigate = useNavigate();
+  const { user, familyMember, signOut } = useAuth();
+  const { role, isAdmin, isCS } = useIsAdmin();
+  const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
+
+  const menuItems = [
+    { id: "overview" as AdminTab, label: "Visão Geral", icon: Home },
+    { id: "users" as AdminTab, label: "Usuários", icon: Users },
+    { id: "ebooks" as AdminTab, label: "eBooks", icon: BookOpen },
+    { id: "metrics" as AdminTab, label: "Métricas", icon: BarChart3 },
+    ...(isAdmin ? [{ id: "settings" as AdminTab, label: "Configurações", icon: Settings }] : []),
+  ];
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case "users":
+        return <AdminUsersPage />;
+      case "ebooks":
+        return <AdminEbooksPage />;
+      case "metrics":
+        return <AdminMetricsPage />;
+      case "settings":
+        return <AdminSettingsPlaceholder />;
+      default:
+        return <AdminOverview onNavigate={setActiveTab} />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
+      <aside className="w-64 bg-card border-r border-border flex flex-col">
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Shield className="w-8 h-8 text-primary" />
+            <div>
+              <h1 className="font-bold text-lg">Admin</h1>
+              <p className="text-xs text-muted-foreground capitalize">{role}</p>
+            </div>
+          </div>
+        </div>
+
+        <nav className="flex-1 p-4 space-y-1">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  activeTab === item.id
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-border space-y-2">
+          <div className="px-3 py-2">
+            <p className="text-sm font-medium truncate">{familyMember?.display_name}</p>
+            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+          </div>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start gap-2"
+            onClick={() => navigate("/app")}
+          >
+            <Home className="w-4 h-4" />
+            Ir para App
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start gap-2 text-destructive hover:text-destructive"
+            onClick={handleSignOut}
+          >
+            <LogOut className="w-4 h-4" />
+            Sair
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-auto">
+        <div className="p-6">
+          {renderContent()}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function AdminOverview({ onNavigate }: { onNavigate: (tab: AdminTab) => void }) {
+  const stats = [
+    { label: "Total de Usuários", value: "—", icon: Users, color: "text-blue-500" },
+    { label: "Famílias Ativas", value: "—", icon: Home, color: "text-green-500" },
+    { label: "eBooks Publicados", value: "—", icon: BookOpen, color: "text-purple-500" },
+    { label: "Transações este mês", value: "—", icon: TrendingUp, color: "text-orange-500" },
+  ];
+
+  const quickActions = [
+    { label: "Gerenciar Usuários", icon: UserCog, action: () => onNavigate("users") },
+    { label: "Gerenciar eBooks", icon: BookOpen, action: () => onNavigate("ebooks") },
+    { label: "Ver Métricas", icon: BarChart3, action: () => onNavigate("metrics") },
+    { label: "Relatórios", icon: FileText, action: () => {} },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">Painel Administrativo</h2>
+        <p className="text-muted-foreground">Bem-vindo ao painel de administração</p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={stat.label}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="text-2xl font-bold">{stat.value}</p>
+                  </div>
+                  <Icon className={`w-8 h-8 ${stat.color}`} />
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Ações Rápidas</CardTitle>
+          <CardDescription>Acesse as principais funcionalidades</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {quickActions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <Button
+                  key={action.label}
+                  variant="outline"
+                  className="h-24 flex-col gap-2"
+                  onClick={action.action}
+                >
+                  <Icon className="w-6 h-6" />
+                  <span className="text-xs text-center">{action.label}</span>
+                </Button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AdminSettingsPlaceholder() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">Configurações</h2>
+        <p className="text-muted-foreground">Configurações do sistema</p>
+      </div>
+      
+      <Card>
+        <CardContent className="p-8 text-center text-muted-foreground">
+          <Settings className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p>Configurações em desenvolvimento</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
