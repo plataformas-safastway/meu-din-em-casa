@@ -1,12 +1,13 @@
-import { Bell, ChevronDown } from "lucide-react";
+import { Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getGreeting, getCurrentMonth } from "@/lib/formatters";
 
 interface HeaderProps {
   familyName?: string;
+  onSettingsClick?: () => void;
 }
 
-export function Header({ familyName = "Família" }: HeaderProps) {
+export function Header({ familyName = "Família", onSettingsClick }: HeaderProps) {
   const greeting = getGreeting();
   const currentMonth = getCurrentMonth();
 
@@ -18,20 +19,31 @@ export function Header({ familyName = "Família" }: HeaderProps) {
             <h1 className="text-lg font-semibold text-foreground">
               {greeting}, {familyName}! 👋
             </h1>
-            <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <span className="capitalize">{currentMonth}</span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
+            <p className="text-sm text-muted-foreground capitalize">
+              {currentMonth}
+            </p>
           </div>
           
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="relative"
-          >
-            <Bell className="w-5 h-5" />
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-accent rounded-full" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="relative"
+            >
+              <Bell className="w-5 h-5" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-accent rounded-full" />
+            </Button>
+            
+            {onSettingsClick && (
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={onSettingsClick}
+              >
+                <Settings className="w-5 h-5" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </header>
