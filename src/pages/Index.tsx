@@ -12,6 +12,7 @@ import { CategoryReportPage } from "./CategoryReportPage";
 import { BudgetsPage } from "./BudgetsPage";
 import { CashflowPage } from "./CashflowPage";
 import { EducationPage } from "./EducationPage";
+import EbooksAdminPage from "./EbooksAdminPage";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { WhatsAppCTA } from "@/components/WhatsAppCTA";
 
@@ -98,7 +99,14 @@ const Index = () => {
         }
         return <Dashboard />;
       case "education":
-        return <EducationPage onBack={() => setActiveTab("dashboard")} />;
+        return (
+          <EducationPage 
+            onBack={() => setActiveTab("dashboard")} 
+            onAdminClick={() => setActiveTab("ebooks-admin")}
+          />
+        );
+      case "ebooks-admin":
+        return <EbooksAdminPage onBack={() => setActiveTab("education")} />;
       default:
         return <Dashboard />;
     }
