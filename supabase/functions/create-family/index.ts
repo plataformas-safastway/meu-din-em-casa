@@ -20,6 +20,8 @@ type CreateFamilyBody = {
   incomeRange?: string | null;
   primaryObjective?: string | null;
   displayName: string;
+  cpf?: string | null;
+  birthDate?: string | null;
 };
 
 function sanitizeString(value: unknown, maxLength: number): string | null {
@@ -57,6 +59,8 @@ function validateBody(body: unknown): { valid: true; data: CreateFamilyBody } | 
   // Validate optional fields
   const incomeRange = b.incomeRange ? sanitizeString(b.incomeRange, MAX_INCOME_RANGE_LENGTH) : null;
   const primaryObjective = b.primaryObjective ? sanitizeString(b.primaryObjective, MAX_OBJECTIVE_LENGTH) : null;
+  const cpf = b.cpf ? sanitizeString(b.cpf, 11)?.replace(/\D/g, "") : null;
+  const birthDate = b.birthDate ? sanitizeString(b.birthDate, 10) : null;
 
   return {
     valid: true,
@@ -66,6 +70,8 @@ function validateBody(body: unknown): { valid: true; data: CreateFamilyBody } | 
       membersCount: Math.floor(membersCount),
       incomeRange,
       primaryObjective,
+      cpf,
+      birthDate,
     },
   };
 }
@@ -161,6 +167,8 @@ serve(async (req) => {
       user_id: userData.user.id,
       display_name: body.displayName,
       role: "owner",
+      cpf: body.cpf || null,
+      birth_date: body.birthDate || null,
     });
 
     if (memberError) {
