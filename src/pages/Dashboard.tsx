@@ -11,6 +11,7 @@ import { TransactionList } from "@/components/TransactionList";
 import { MonthlyChart } from "@/components/MonthlyChart";
 import { AddTransactionSheet } from "@/components/AddTransactionSheet";
 import { FabButton } from "@/components/QuickActions";
+import { BudgetAlertsWidget } from "@/components/budget/BudgetAlertsWidget";
 import { ScreenLoader, SkeletonHome } from "@/components/ui/money-loader";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions, useFinanceSummary, useCreateTransaction } from "@/hooks/useTransactions";
@@ -24,9 +25,10 @@ import { format } from "date-fns";
 interface DashboardProps {
   onSettingsClick?: () => void;
   onGoalsClick?: () => void;
+  onBudgetsClick?: () => void;
 }
 
-export function Dashboard({ onSettingsClick, onGoalsClick }: DashboardProps) {
+export function Dashboard({ onSettingsClick, onGoalsClick, onBudgetsClick }: DashboardProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -196,6 +198,13 @@ export function Dashboard({ onSettingsClick, onGoalsClick }: DashboardProps) {
 
         {/* Insights */}
         {insights.length > 0 && <InsightList insights={insights} />}
+
+        {/* Budget Alerts Widget */}
+        <BudgetAlertsWidget 
+          month={selectedMonth - 1} 
+          year={selectedYear} 
+          onViewAll={onBudgetsClick}
+        />
 
         {/* Goals Widget - Always visible */}
         <GoalsWidget onViewAll={onGoalsClick} />
