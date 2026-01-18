@@ -11,13 +11,14 @@ import { TransactionList } from "@/components/TransactionList";
 import { MonthlyChart } from "@/components/MonthlyChart";
 import { AddTransactionSheet } from "@/components/AddTransactionSheet";
 import { FabButton } from "@/components/QuickActions";
+import { ScreenLoader, SkeletonHome } from "@/components/ui/money-loader";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions, useFinanceSummary, useCreateTransaction } from "@/hooks/useTransactions";
 import { useInsights } from "@/hooks/useInsights";
+import { useDebouncedLoading } from "@/hooks/useLoading";
 import { getCategoryById } from "@/data/categories";
 import { TransactionType } from "@/types/finance";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface DashboardProps {
@@ -151,11 +152,14 @@ export function Dashboard({ onSettingsClick, onGoalsClick }: DashboardProps) {
   ];
 
   const isLoading = loadingTransactions || loadingSummary;
+  const showLoading = useDebouncedLoading(isLoading, { delay: 300, minDuration: 500 });
 
-  if (isLoading) {
+  // Show skeleton on first load, not on subsequent month changes
+  if (showLoading && transactions.length === 0) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background">
+        <Header userName="..." onSettingsClick={onSettingsClick} />
+        <SkeletonHome />
       </div>
     );
   }
