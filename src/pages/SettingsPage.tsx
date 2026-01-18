@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { EditFamilyProfileSheet } from "@/components/profile/EditFamilyProfileSheet";
 
 interface SettingsPageProps {
   onBack: () => void;
@@ -11,6 +13,7 @@ interface SettingsPageProps {
 
 export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
   const { family, familyMember, signOut } = useAuth();
+  const [showFamilySheet, setShowFamilySheet] = useState(false);
 
   const handleAction = (id: string) => {
     switch (id) {
@@ -27,7 +30,7 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
         onNavigate?.("profile");
         break;
       case "family":
-        toast.info("Funcionalidade em desenvolvimento.");
+        setShowFamilySheet(true);
         break;
       case "help":
         onNavigate?.("help");
@@ -155,6 +158,8 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
           Finanças em Família v1.0.0
         </p>
       </main>
+
+      <EditFamilyProfileSheet open={showFamilySheet} onOpenChange={setShowFamilySheet} />
     </div>
   );
 }
