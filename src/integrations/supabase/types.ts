@@ -408,44 +408,6 @@ export type Database = {
         }
         Relationships: []
       }
-      emergency_funds: {
-        Row: {
-          created_at: string
-          current_amount: number
-          family_id: string
-          id: string
-          target_amount: number
-          target_months: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          current_amount?: number
-          family_id: string
-          id?: string
-          target_amount?: number
-          target_months?: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          current_amount?: number
-          family_id?: string
-          id?: string
-          target_amount?: number
-          target_months?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "emergency_funds_family_id_fkey"
-            columns: ["family_id"]
-            isOneToOne: true
-            referencedRelation: "families"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       families: {
         Row: {
           created_at: string
@@ -513,6 +475,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "family_members_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goals: {
+        Row: {
+          created_at: string
+          current_amount: number | null
+          description: string | null
+          due_date: string | null
+          family_id: string
+          id: string
+          status: string
+          target_amount: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_amount?: number | null
+          description?: string | null
+          due_date?: string | null
+          family_id: string
+          id?: string
+          status?: string
+          target_amount?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_amount?: number | null
+          description?: string | null
+          due_date?: string | null
+          family_id?: string
+          id?: string
+          status?: string
+          target_amount?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"

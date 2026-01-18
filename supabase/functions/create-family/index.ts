@@ -171,18 +171,6 @@ serve(async (req) => {
       });
     }
 
-    // emergency fund is best-effort
-    const { error: emergencyError } = await adminClient.from("emergency_funds").insert({
-      family_id: familyId,
-      target_amount: 0,
-      current_amount: 0,
-      target_months: 6,
-    });
-
-    if (emergencyError) {
-      console.error("create-family: emergency_funds insert error", emergencyError);
-    }
-
     return new Response(JSON.stringify({ familyId }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },

@@ -44,11 +44,18 @@ const Index = () => {
   const renderPage = () => {
     switch (activeTab) {
       case "dashboard":
-        return <Dashboard onSettingsClick={() => setActiveTab("settings")} />;
+        return (
+          <Dashboard 
+            onSettingsClick={() => setActiveTab("settings")} 
+            onGoalsClick={() => setActiveTab("objectives")}
+          />
+        );
       case "transactions":
         return <TransactionsPage onBack={() => setActiveTab("dashboard")} />;
       case "categories":
         return <CategoriesPage onBack={() => setActiveTab("dashboard")} />;
+      case "objectives":
+        return <GoalsPage onBack={() => setActiveTab("dashboard")} />;
       case "goals":
         return <BudgetsPage onBack={() => setActiveTab("dashboard")} />;
       case "cashflow":

@@ -1,10 +1,9 @@
 import { useState, useCallback } from 'react';
-import { Transaction, EmergencyFund } from '@/types/finance';
+import { Transaction } from '@/types/finance';
 import { mockTransactions, mockFinanceSummary } from '@/data/mockData';
 
 export function useFinanceStore() {
   const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
-  const [emergencyFund, setEmergencyFund] = useState<EmergencyFund>(mockFinanceSummary.emergencyFund);
 
   const addTransaction = useCallback((transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
     const newTransaction: Transaction = {
@@ -18,13 +17,6 @@ export function useFinanceStore() {
 
   const deleteTransaction = useCallback((id: string) => {
     setTransactions(prev => prev.filter(t => t.id !== id));
-  }, []);
-
-  const updateEmergencyFund = useCallback((amount: number) => {
-    setEmergencyFund(prev => ({
-      ...prev,
-      currentAmount: amount,
-    }));
   }, []);
 
   const getMonthlyIncome = useCallback(() => {
@@ -70,10 +62,8 @@ export function useFinanceStore() {
 
   return {
     transactions,
-    emergencyFund,
     addTransaction,
     deleteTransaction,
-    updateEmergencyFund,
     getMonthlyIncome,
     getMonthlyExpenses,
     getExpensesByCategory,

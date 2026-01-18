@@ -4,13 +4,13 @@ import { BalanceCard } from "@/components/BalanceCard";
 import { QuickActions } from "@/components/QuickActions";
 import { InsightList } from "@/components/InsightCard";
 import { CategoryChart } from "@/components/CategoryChart";
-import { EmergencyFundProgress } from "@/components/EmergencyFundProgress";
+import { GoalsWidget } from "@/components/goals/GoalsWidget";
 import { TransactionList } from "@/components/TransactionList";
 import { MonthlyChart } from "@/components/MonthlyChart";
 import { AddTransactionSheet } from "@/components/AddTransactionSheet";
 import { FabButton } from "@/components/QuickActions";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTransactions, useFinanceSummary, useEmergencyFund, useCreateTransaction } from "@/hooks/useTransactions";
+import { useTransactions, useFinanceSummary, useCreateTransaction } from "@/hooks/useTransactions";
 import { useInsights } from "@/hooks/useInsights";
 import { getCategoryById } from "@/data/categories";
 import { TransactionType } from "@/types/finance";
@@ -19,16 +19,16 @@ import { Loader2 } from "lucide-react";
 
 interface DashboardProps {
   onSettingsClick?: () => void;
+  onGoalsClick?: () => void;
 }
 
-export function Dashboard({ onSettingsClick }: DashboardProps) {
+export function Dashboard({ onSettingsClick, onGoalsClick }: DashboardProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
 
   const { family } = useAuth();
   const { data: transactions = [], isLoading: loadingTransactions } = useTransactions();
   const { data: summary, isLoading: loadingSummary } = useFinanceSummary();
-  const { data: emergencyFund } = useEmergencyFund();
   const { insights } = useInsights();
   const createTransaction = useCreateTransaction();
 
@@ -43,7 +43,7 @@ export function Dashboard({ onSettingsClick }: DashboardProps) {
   };
 
   const handleAddGoal = () => {
-    toast.info("Em breve! Vamos implementar metas personalizadas para a família.");
+    onGoalsClick?.();
   };
 
   const handleViewReceipts = () => {
@@ -144,24 +144,15 @@ export function Dashboard({ onSettingsClick }: DashboardProps) {
         {/* Insights */}
         {insights.length > 0 && <InsightList insights={insights} />}
 
+        {/* Goals Widget - Always visible */}
+        <GoalsWidget onViewAll={onGoalsClick} />
+
         {/* Charts Grid */}
         {categoryExpenses.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2">
             <CategoryChart categories={categoryExpenses} />
             <MonthlyChart data={monthlyData} />
           </div>
-        )}
-
-        {/* Emergency Fund */}
-        {emergencyFund && (
-          <EmergencyFundProgress
-            fund={{
-              currentAmount: Number(emergencyFund.current_amount),
-              targetAmount: Number(emergencyFund.target_amount),
-              targetMonths: emergencyFund.target_months,
-            }}
-            onAddFund={() => toast.info("Em breve! Adicione valores à sua reserva.")}
-          />
         )}
 
         {/* Recent Transactions */}
