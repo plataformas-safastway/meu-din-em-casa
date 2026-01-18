@@ -1245,6 +1245,48 @@ export type Database = {
           },
         ]
       }
+      pix_keys: {
+        Row: {
+          bank_account_id: string
+          created_at: string
+          family_id: string
+          id: string
+          key_type: string
+          key_value_masked: string
+        }
+        Insert: {
+          bank_account_id: string
+          created_at?: string
+          family_id: string
+          id?: string
+          key_type: string
+          key_value_masked: string
+        }
+        Update: {
+          bank_account_id?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          key_type?: string
+          key_value_masked?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pix_keys_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pix_keys_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       place_category_mapping: {
         Row: {
           category_id: string
