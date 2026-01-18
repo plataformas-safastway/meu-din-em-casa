@@ -12,6 +12,7 @@ import { CategoryReportPage } from "./CategoryReportPage";
 import { BudgetsPage } from "./BudgetsPage";
 import { CashflowPage } from "./CashflowPage";
 import { ProjectionPage } from "./ProjectionPage";
+import { HelpCenterPage } from "./HelpCenterPage";
 import { EducationPage } from "./EducationPage";
 import EbooksAdminPage from "./EbooksAdminPage";
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -92,6 +93,13 @@ const Index = () => {
         );
       case "ebooks-admin":
         return <EbooksAdminPage onBack={() => setActiveTab("education")} />;
+      case "help":
+        return (
+          <HelpCenterPage 
+            onBack={() => setActiveTab("settings")} 
+            onNavigate={setActiveTab}
+          />
+        );
       default:
         return <Dashboard />;
     }

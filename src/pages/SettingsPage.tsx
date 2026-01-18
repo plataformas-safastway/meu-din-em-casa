@@ -27,8 +27,10 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
         onNavigate?.("profile");
         break;
       case "family":
-      case "help":
         toast.info("Funcionalidade em desenvolvimento.");
+        break;
+      case "help":
+        onNavigate?.("help");
         break;
       default:
         break;
