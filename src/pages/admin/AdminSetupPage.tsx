@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Shield, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MoneyLoader } from "@/components/ui/money-loader";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSetupFirstAdmin, useHasAnyAdmin } from "@/hooks/useUserRole";
 import { toast } from "sonner";
@@ -30,7 +31,7 @@ export function AdminSetupPage() {
   if (checkingAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <MoneyLoader label="Verificando..." size="lg" />
       </div>
     );
   }
