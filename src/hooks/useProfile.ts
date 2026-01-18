@@ -29,6 +29,122 @@ export const passwordSchema = z.object({
 export type ProfileFormData = z.infer<typeof profileSchema>;
 export type PasswordFormData = z.infer<typeof passwordSchema>;
 
+// Allowed image types and max size (5MB)
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+// Validate image file
+export function validateImageFile(file: File): { valid: boolean; error?: string } {
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return { valid: false, error: "Tipo de arquivo não permitido. Use JPG, PNG ou WebP." };
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    return { valid: false, error: "Arquivo muito grande. Máximo de 5MB." };
+  }
+  return { valid: true };
+}
+
+// Hook to upload avatar
+export function useUploadAvatar() {
+  const queryClient = useQueryClient();
+  const { user, familyMember, refreshFamily } = useAuth();
+
+  return useMutation({
+    mutationFn: async (file: File) => {
+      if (!user || !familyMember) throw new Error("Usuário não autenticado");
+
+      // Validate file
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        throw new Error(validation.error);
+      }
+
+      // Generate unique filename with user folder
+      const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const fileName = `${user.id}/avatar-${Date.now()}.${fileExt}`;
+
+      // Delete old avatar if exists
+      if (familyMember.avatar_url) {
+        const oldPath = familyMember.avatar_url.split("/avatars/")[1];
+        if (oldPath) {
+          await supabase.storage.from("avatars").remove([`${user.id}/${oldPath.split("/").pop()}`]);
+        }
+      }
+
+      // Upload new avatar
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(uploadData.path);
+
+      const publicUrl = urlData.publicUrl;
+
+      // Update family member with new avatar URL
+      const { error: updateError } = await supabase
+        .from("family_members")
+        .update({ avatar_url: publicUrl })
+        .eq("id", familyMember.id);
+
+      if (updateError) throw updateError;
+
+      return publicUrl;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["family"] });
+      refreshFamily();
+      toast.success("Foto de perfil atualizada!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao enviar foto");
+    },
+  });
+}
+
+// Hook to remove avatar
+export function useRemoveAvatar() {
+  const queryClient = useQueryClient();
+  const { user, familyMember, refreshFamily } = useAuth();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!user || !familyMember) throw new Error("Usuário não autenticado");
+
+      // Remove from storage if exists
+      if (familyMember.avatar_url) {
+        const urlParts = familyMember.avatar_url.split("/avatars/");
+        if (urlParts[1]) {
+          await supabase.storage.from("avatars").remove([urlParts[1]]);
+        }
+      }
+
+      // Clear avatar URL in database
+      const { error } = await supabase
+        .from("family_members")
+        .update({ avatar_url: null })
+        .eq("id", familyMember.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["family"] });
+      refreshFamily();
+      toast.success("Foto de perfil removida!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao remover foto");
+    },
+  });
+}
+
 // Hook to update profile
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
@@ -153,7 +269,7 @@ export function useExportData() {
 
 // Hook to request account deletion (LGPD)
 export function useDeleteAccount() {
-  const { deleteAccount, signOut } = useAuth();
+  const { deleteAccount } = useAuth();
 
   return useMutation({
     mutationFn: async () => {
