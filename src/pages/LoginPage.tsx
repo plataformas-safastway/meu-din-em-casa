@@ -4,6 +4,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 type Mode = "login" | "forgot" | "reset";
@@ -50,11 +51,31 @@ export function LoginPage() {
       return;
     }
 
-    const from = (location.state as any)?.from;
-    const redirectTo = from?.pathname ? `${from.pathname}${from.search ?? ""}` : "/app";
+    const nextParam = searchParams.get("next");
+    const safeNext = nextParam && nextParam.startsWith("/") ? nextParam : null;
+
+    const from = (location.state as any)?.from as
+      | { pathname?: string; search?: string }
+      | undefined;
+
+    let redirectTo = safeNext ?? (from?.pathname ? `${from.pathname}${from.search ?? ""}` : null);
+
+    // Fallback: redirect by role (single login)
+    if (!redirectTo) {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+
+      if (userId) {
+        const { data: roleData } = await supabase.rpc("get_user_role", { _user_id: userId });
+        redirectTo = roleData === "admin" || roleData === "cs" ? "/admin" : "/app";
+      } else {
+        redirectTo = "/app";
+      }
+    }
 
     toast.success("Bem-vindos de volta! 👋");
     navigate(redirectTo, { replace: true });
+
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
