@@ -24,7 +24,9 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
         onNavigate?.("import");
         break;
       case "profile":
-      case "members":
+        onNavigate?.("profile");
+        break;
+      case "family":
       case "help":
         toast.info("Funcionalidade em desenvolvimento.");
         break;
@@ -42,8 +44,8 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
     {
       title: "Conta",
       items: [
-        { id: "profile", label: "Perfil da Família", icon: Users, action: "navigate" },
-        { id: "members", label: "Membros", icon: User, action: "navigate" },
+        { id: "profile", label: "Meus Dados", icon: User, action: "navigate" },
+        { id: "family", label: "Perfil da Família", icon: Users, action: "navigate" },
         { id: "banks", label: "Bancos e Cartões", icon: Building2, action: "navigate" },
         { id: "notifications", label: "Notificações", icon: Bell, action: "toggle", enabled: true },
       ],
