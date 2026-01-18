@@ -197,100 +197,326 @@ function parseXLSX(content: string, password?: string): { transactions: ParsedTr
 }
 
 // ============================================
-// PDF PARSER (basic text extraction)
+// PDF PARSER (enhanced with OCR-like text extraction)
 // ============================================
 
-function parsePDF(content: string, password?: string): { transactions: ParsedTransaction[]; needsPassword?: boolean } {
+function parsePDF(content: string, password?: string): { transactions: ParsedTransaction[]; needsPassword?: boolean; confidence: "high" | "medium" | "low" } {
   try {
     // Decode base64 content
     const binaryContent = atob(content);
     
     // Check for encryption
     const isEncrypted = binaryContent.includes("/Encrypt") && 
-                        !binaryContent.includes("/Encrypt <<>>"); // Empty encrypt = no encryption
+                        !binaryContent.includes("/Encrypt <<>>") &&
+                        !binaryContent.includes("/Encrypt<<>>");
     
     if (isEncrypted && !password) {
-      return { transactions: [], needsPassword: true };
+      return { transactions: [], needsPassword: true, confidence: "low" };
     }
     
-    const transactions: ParsedTransaction[] = [];
+    // Extract all text using multiple methods
+    const extractedText = extractPDFTextEnhanced(binaryContent);
     
-    // Extract text streams from PDF
-    // This is a very basic extractor - production should use a proper library
-    const textMatches = binaryContent.match(/\(([^)]+)\)/g) || [];
-    const textContent = textMatches.map(m => m.slice(1, -1)).join(" ");
+    console.log(`PDF text extraction: ${extractedText.length} characters extracted`);
     
-    // Also try to extract from streams
-    const streamMatches = binaryContent.match(/stream\s*([\s\S]*?)\s*endstream/g) || [];
-    let additionalText = "";
-    for (const stream of streamMatches) {
-      // Try to decode text commands (Tj, TJ operators)
-      const tjMatches = stream.match(/\(([^)]*)\)\s*Tj/g) || [];
-      additionalText += " " + tjMatches.map(m => {
-        const match = m.match(/\(([^)]*)\)/);
-        return match ? match[1] : "";
-      }).join(" ");
+    if (extractedText.length < 50) {
+      // Very little text - likely scanned/image PDF
+      console.log("PDF appears to be scanned/image-based, attempting pattern extraction");
+      const ocrTransactions = extractTransactionsFromScannedPDF(binaryContent);
+      return { 
+        transactions: ocrTransactions, 
+        confidence: "low" 
+      };
     }
     
-    const fullText = textContent + " " + additionalText;
+    // Parse the extracted text to find transactions
+    const transactions = parseTransactionsFromText(extractedText);
     
-    // Try to find transaction patterns
-    // Common patterns: DATE DESCRIPTION AMOUNT
-    // DD/MM/YYYY or DD/MM/YY
-    const datePattern = /(\d{1,2}\/\d{1,2}\/\d{2,4})/g;
-    const dateMatches = fullText.match(datePattern) || [];
+    return { 
+      transactions, 
+      confidence: transactions.length > 0 ? "medium" : "low" 
+    };
+  } catch (e) {
+    console.error("Error parsing PDF:", e);
+    return { transactions: [], confidence: "low" };
+  }
+}
+
+// Enhanced PDF text extraction using multiple methods
+function extractPDFTextEnhanced(binaryContent: string): string {
+  const textParts: string[] = [];
+  
+  // Method 1: Extract text from parentheses (literal strings)
+  const literalMatches = binaryContent.match(/\((?:[^()\\]|\\.)*\)/g) || [];
+  for (const match of literalMatches) {
+    const decoded = decodePDFLiteralString(match.slice(1, -1));
+    if (decoded.length > 1 && /[a-zA-Z0-9]/.test(decoded)) {
+      textParts.push(decoded);
+    }
+  }
+  
+  // Method 2: Extract from stream content (Tj and TJ operators)
+  const streamRegex = /stream\s*([\s\S]*?)\s*endstream/gi;
+  let streamMatch;
+  while ((streamMatch = streamRegex.exec(binaryContent)) !== null) {
+    const streamContent = streamMatch[1];
     
-    // Look for amount patterns near dates
-    const amountPattern = /R?\$?\s*[\d.,]+[,.]?\d{0,2}/g;
-    
-    // This is a heuristic approach - PDF parsing is complex
-    // All PDF transactions should be marked for review
-    
-    for (const dateStr of dateMatches) {
-      try {
-        const [day, month, year] = dateStr.split("/");
-        const fullYear = year.length === 2 ? `20${year}` : year;
-        const isoDate = `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-        
-        // Get surrounding text as description
-        const idx = fullText.indexOf(dateStr);
-        const surroundingText = fullText.substring(Math.max(0, idx - 50), Math.min(fullText.length, idx + 200));
-        
-        // Find amount in surrounding text
-        const amounts = surroundingText.match(amountPattern) || [];
-        for (const amountStr of amounts) {
-          const cleanAmount = amountStr.replace(/[R$\s]/g, "").replace(".", "").replace(",", ".");
-          const amount = parseFloat(cleanAmount);
-          
-          if (!isNaN(amount) && amount > 0) {
-            // Extract description (text between date and amount)
-            const desc = surroundingText
-              .replace(dateStr, "")
-              .replace(amountStr, "")
-              .replace(/[^\w\s]/g, " ")
-              .trim()
-              .substring(0, 200);
-            
-            transactions.push({
-              date: isoDate,
-              description: desc || "Transação importada de PDF",
-              amount,
-              type: "expense", // Default for PDF - user should review
-              raw_data: { source: "pdf", confidence: "low" },
-            });
-            break; // Only one amount per date match
-          }
-        }
-      } catch (e) {
-        // Skip malformed dates
+    // Extract Tj operator strings
+    const tjMatches = streamContent.match(/\((?:[^()\\]|\\.)*\)\s*Tj/gi) || [];
+    for (const tj of tjMatches) {
+      const textMatch = tj.match(/\(((?:[^()\\]|\\.)*)\)/);
+      if (textMatch) {
+        const decoded = decodePDFLiteralString(textMatch[1]);
+        textParts.push(decoded);
       }
     }
     
-    return { transactions };
-  } catch (e) {
-    console.error("Error parsing PDF:", e);
-    return { transactions: [] };
+    // Extract TJ operator arrays (more complex text positioning)
+    const tjArrays = streamContent.match(/\[((?:\([^)]*\)|[^\]])*)\]\s*TJ/gi) || [];
+    for (const tjArr of tjArrays) {
+      const innerStrings = tjArr.match(/\((?:[^()\\]|\\.)*\)/g) || [];
+      const combined = innerStrings.map(s => decodePDFLiteralString(s.slice(1, -1))).join("");
+      if (combined.length > 0) {
+        textParts.push(combined);
+      }
+    }
   }
+  
+  // Method 3: Extract from BT...ET blocks (text blocks)
+  const btBlocks = binaryContent.match(/BT\s*([\s\S]*?)\s*ET/gi) || [];
+  for (const block of btBlocks) {
+    const innerStrings = block.match(/\((?:[^()\\]|\\.)*\)/g) || [];
+    for (const s of innerStrings) {
+      const decoded = decodePDFLiteralString(s.slice(1, -1));
+      if (decoded.length > 0) {
+        textParts.push(decoded);
+      }
+    }
+  }
+  
+  // Method 4: Extract hex strings
+  const hexMatches = binaryContent.match(/<[0-9A-Fa-f\s]+>/g) || [];
+  for (const hex of hexMatches) {
+    const decoded = decodeHexString(hex.slice(1, -1));
+    if (decoded.length > 1 && /[a-zA-Z0-9]/.test(decoded)) {
+      textParts.push(decoded);
+    }
+  }
+  
+  // Combine and clean up
+  return textParts
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .replace(/[^\x20-\x7E\xA0-\xFF]/g, " ") // Keep printable chars
+    .trim();
+}
+
+// Decode PDF literal string escapes
+function decodePDFLiteralString(str: string): string {
+  return str
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\b/g, "\b")
+    .replace(/\\f/g, "\f")
+    .replace(/\\\(/g, "(")
+    .replace(/\\\)/g, ")")
+    .replace(/\\\\/g, "\\")
+    .replace(/\\(\d{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)));
+}
+
+// Decode hex string to text
+function decodeHexString(hex: string): string {
+  const clean = hex.replace(/\s/g, "");
+  let result = "";
+  for (let i = 0; i < clean.length; i += 2) {
+    const charCode = parseInt(clean.substring(i, i + 2), 16);
+    if (charCode >= 32 && charCode <= 126) {
+      result += String.fromCharCode(charCode);
+    }
+  }
+  return result;
+}
+
+// Parse transactions from extracted text
+function parseTransactionsFromText(text: string): ParsedTransaction[] {
+  const transactions: ParsedTransaction[] = [];
+  const seenHashes = new Set<string>();
+  
+  // Normalize text
+  const normalized = text.replace(/\s+/g, " ");
+  
+  // Split into potential transaction lines
+  // Look for date patterns as line starters
+  const datePattern = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.]?(\d{2,4})?/g;
+  
+  // Find all date occurrences
+  let match;
+  const datePositions: { date: string; isoDate: string; position: number }[] = [];
+  
+  while ((match = datePattern.exec(normalized)) !== null) {
+    const [fullMatch, day, month, year] = match;
+    const dayNum = parseInt(day);
+    const monthNum = parseInt(month);
+    
+    // Validate date components
+    if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12) {
+      const fullYear = year 
+        ? (year.length === 2 ? `20${year}` : year)
+        : new Date().getFullYear().toString();
+      
+      const isoDate = `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+      datePositions.push({
+        date: fullMatch,
+        isoDate,
+        position: match.index,
+      });
+    }
+  }
+  
+  // For each date, extract the transaction info
+  for (let i = 0; i < datePositions.length; i++) {
+    const current = datePositions[i];
+    const next = datePositions[i + 1];
+    
+    // Get text between this date and the next one
+    const endPos = next ? next.position : Math.min(current.position + 300, normalized.length);
+    const segment = normalized.substring(current.position, endPos);
+    
+    // Look for amount in segment
+    // Brazilian format: 1.234,56 or R$ 1.234,56 or -1.234,56
+    const amountPatterns = [
+      /R\$\s*-?([\d.,]+)/i,
+      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/,
+      /(-?\d+,\d{2})/,
+    ];
+    
+    let amount: number | null = null;
+    let amountStr = "";
+    
+    for (const pattern of amountPatterns) {
+      const amountMatch = segment.match(pattern);
+      if (amountMatch) {
+        amountStr = amountMatch[1] || amountMatch[0];
+        // Convert Brazilian format to number
+        const cleaned = amountStr
+          .replace(/[R$\s]/g, "")
+          .replace(/\./g, "") // Remove thousand separators
+          .replace(",", "."); // Decimal separator
+        amount = parseFloat(cleaned);
+        if (!isNaN(amount) && amount !== 0) {
+          break;
+        }
+        amount = null;
+      }
+    }
+    
+    if (amount === null || Math.abs(amount) < 0.01) {
+      continue;
+    }
+    
+    // Extract description (text between date and amount)
+    const dateEndPos = segment.indexOf(current.date) + current.date.length;
+    const amountStartPos = segment.indexOf(amountStr);
+    let description = "";
+    
+    if (amountStartPos > dateEndPos) {
+      description = segment.substring(dateEndPos, amountStartPos).trim();
+    } else {
+      // Amount before description - try to get text after amount
+      description = segment.substring(amountStartPos + amountStr.length).trim();
+    }
+    
+    // Clean description
+    description = description
+      .replace(/^[\s\-:]+/, "") // Remove leading separators
+      .replace(/[\s\-:]+$/, "") // Remove trailing separators
+      .replace(/\s+/g, " ")
+      .substring(0, 200);
+    
+    if (description.length < 3) {
+      description = "Transação importada de PDF";
+    }
+    
+    // Deduplicate
+    const hash = `${current.isoDate}_${Math.abs(amount).toFixed(2)}_${description.substring(0, 20)}`;
+    if (seenHashes.has(hash)) {
+      continue;
+    }
+    seenHashes.add(hash);
+    
+    transactions.push({
+      date: current.isoDate,
+      description,
+      amount: Math.abs(amount),
+      type: amount < 0 ? "expense" : "expense", // Default to expense for PDF
+      raw_data: { 
+        source: "pdf_text", 
+        confidence: "medium",
+        original_segment: segment.substring(0, 100),
+      },
+    });
+  }
+  
+  return transactions;
+}
+
+// Extract transactions from scanned/image PDFs (OCR-like heuristics)
+function extractTransactionsFromScannedPDF(binaryContent: string): ParsedTransaction[] {
+  const transactions: ParsedTransaction[] = [];
+  
+  // For scanned PDFs, we look for raw byte patterns that might be dates and amounts
+  // This is a last-resort heuristic
+  
+  // Look for patterns that survived encoding: date-like and number-like sequences
+  const dateValuePattern = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.]?(\d{2,4})?\s*[^\d]*?(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})/g;
+  
+  let match;
+  const seenHashes = new Set<string>();
+  
+  while ((match = dateValuePattern.exec(binaryContent)) !== null) {
+    const [, day, month, year, valueStr] = match;
+    
+    const dayNum = parseInt(day);
+    const monthNum = parseInt(month);
+    
+    if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) {
+      continue;
+    }
+    
+    const fullYear = year 
+      ? (year.length === 2 ? `20${year}` : year)
+      : new Date().getFullYear().toString();
+    
+    const isoDate = `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    
+    // Parse value
+    const cleanValue = valueStr.replace(/\./g, "").replace(",", ".");
+    const amount = parseFloat(cleanValue);
+    
+    if (isNaN(amount) || amount <= 0 || amount > 1000000) {
+      continue;
+    }
+    
+    const hash = `${isoDate}_${amount.toFixed(2)}`;
+    if (seenHashes.has(hash)) {
+      continue;
+    }
+    seenHashes.add(hash);
+    
+    transactions.push({
+      date: isoDate,
+      description: "Transação extraída de PDF (revisar)",
+      amount,
+      type: "expense",
+      raw_data: { 
+        source: "pdf_ocr_heuristic", 
+        confidence: "low" 
+      },
+    });
+  }
+  
+  return transactions;
 }
 
 // ============================================
