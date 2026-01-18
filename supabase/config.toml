@@ -1,6 +1,9 @@
 project_id = "wnagybpurqweowmievji"
 
-[functions.process-import]
+[functions.import-process]
+verify_jwt = false
+
+[functions.import-confirm]
 verify_jwt = false
 
 [functions.create-family]
@@ -10,4 +13,34 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.generate-recurring]
+verify_jwt = false
+
+[functions.generate-monthly-report]
+verify_jwt = false
+
+[functions.pluggy-check-config]
+verify_jwt = false
+
+[functions.pluggy-connect]
+verify_jwt = false
+
+[functions.pluggy-institutions]
+verify_jwt = false
+
+[functions.pluggy-save-config]
+verify_jwt = false
+
+[functions.pluggy-sync]
+verify_jwt = false
+
+[functions.pluggy-test-connection]
+verify_jwt = false
+
+[functions.pluggy-webhook]
+verify_jwt = false
+
+[functions.send-family-invite]
+verify_jwt = false
+
+[functions.send-welcome-email]
 verify_jwt = false

@@ -46,6 +46,8 @@ export function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [cpf, setCpf] = useState("");
+  const [birthDate, setBirthDate] = useState("");
 
   // Step 2 - Family
   const [familyName, setFamilyName] = useState("");
@@ -78,8 +80,15 @@ export function SignupPage() {
     e.preventDefault();
     setEmailAlreadyExists(false);
 
-    if (!name) {
-      toast.error("Preencha seu nome");
+    if (!name || !cpf || !birthDate) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+    
+    // Validate CPF format (11 digits)
+    const cleanCpf = cpf.replace(/\D/g, "");
+    if (cleanCpf.length !== 11) {
+      toast.error("CPF deve ter 11 dígitos");
       return;
     }
 
@@ -134,7 +143,7 @@ export function SignupPage() {
           }
         }
 
-        const { error: joinError } = await joinFamily(inviteFamilyId, name);
+        const { error: joinError } = await joinFamily(inviteFamilyId, name, cpf.replace(/\D/g, ""), birthDate);
         if (joinError) {
           toast.error("Erro ao entrar na família", {
             description: "Tente novamente mais tarde.",
@@ -235,6 +244,8 @@ export function SignupPage() {
       membersCount: membersCount,
       incomeRange: incomeRange || undefined,
       primaryObjective: primaryObjective || undefined,
+      cpf: cpf.replace(/\D/g, ""),
+      birthDate: birthDate,
     });
 
     if (error) {
@@ -367,6 +378,35 @@ export function SignupPage() {
                     onChange={(e) => setName(e.target.value)}
                     className="h-12"
                     autoComplete="name"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cpf">CPF *</Label>
+                  <Input
+                    id="cpf"
+                    type="text"
+                    placeholder="000.000.000-00"
+                    value={cpf}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, "").slice(0, 11);
+                      const masked = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+                      setCpf(masked || v);
+                    }}
+                    className="h-12"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="birthDate">Data de nascimento *</Label>
+                  <Input
+                    id="birthDate"
+                    type="date"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                    className="h-12"
                     required
                   />
                 </div>

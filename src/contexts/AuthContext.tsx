@@ -35,8 +35,10 @@ interface AuthContextType {
     membersCount: number;
     incomeRange?: string;
     primaryObjective?: string;
+    cpf?: string;
+    birthDate?: string;
   }) => Promise<{ error: Error | null }>;
-  joinFamily: (familyId: string, displayName: string) => Promise<{ error: Error | null }>;
+  joinFamily: (familyId: string, displayName: string, cpf?: string, birthDate?: string) => Promise<{ error: Error | null }>;
   deleteAccount: () => Promise<{ error: Error | null }>;
   refreshFamily: () => Promise<void>;
 }
@@ -186,6 +188,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     membersCount: number;
     incomeRange?: string;
     primaryObjective?: string;
+    cpf?: string;
+    birthDate?: string;
   }) => {
     const { user: currentUser, error: authError } = await getAuthenticatedUser();
 
@@ -201,6 +205,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           incomeRange: data.incomeRange || null,
           primaryObjective: data.primaryObjective || null,
           displayName: data.displayName,
+          cpf: data.cpf || null,
+          birthDate: data.birthDate || null,
         },
       });
 
@@ -222,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const joinFamily = async (familyId: string, displayName: string) => {
+  const joinFamily = async (familyId: string, displayName: string, cpf?: string, birthDate?: string) => {
     const { user: currentUser, error: authError } = await getAuthenticatedUser();
 
     if (authError || !currentUser) {
@@ -235,6 +241,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user_id: currentUser.id,
         display_name: displayName,
         role: 'member',
+        cpf: cpf || null,
+        birth_date: birthDate || null,
       });
 
       if (memberError) {
