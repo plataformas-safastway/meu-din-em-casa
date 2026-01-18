@@ -35,7 +35,7 @@ export function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast.error("Preencha todos os campos");
       return;
@@ -50,8 +50,11 @@ export function LoginPage() {
       return;
     }
 
+    const from = (location.state as any)?.from;
+    const redirectTo = from?.pathname ? `${from.pathname}${from.search ?? ""}` : "/app";
+
     toast.success("Bem-vindos de volta! 👋");
-    navigate("/app");
+    navigate(redirectTo, { replace: true });
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {

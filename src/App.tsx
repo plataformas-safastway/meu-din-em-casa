@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useUserRole, useHasAnyAdmin } from "@/hooks/useUserRole";
 import { LoginPage } from "./pages/LoginPage";
@@ -24,29 +24,38 @@ function LoadingSpinner() {
   );
 }
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({
+  children,
+  requireFamily = true,
+}: {
+  children: React.ReactNode;
+  requireFamily?: boolean;
+}) {
   const { user, family, loading } = useAuth();
-  
+  const location = useLocation();
+
   if (loading) return <LoadingSpinner />;
-  if (!user) return <Navigate to="/login" replace />;
-  if (!family) return <Navigate to="/signup" replace />;
-  
+  if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
+  if (requireFamily && !family)
+    return <Navigate to="/signup" replace state={{ from: location }} />;
+
   return <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, family, loading } = useAuth();
   const { data: role, isLoading: roleLoading } = useUserRole();
-  
+  const location = useLocation();
+
   if (loading || roleLoading) return <LoadingSpinner />;
-  if (!user) return <Navigate to="/login" replace />;
-  if (!family) return <Navigate to="/signup" replace />;
-  
+  if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
+  if (!family) return <Navigate to="/signup" replace state={{ from: location }} />;
+
   // Check if user has admin or CS role
-  if (role !== 'admin' && role !== 'cs') {
+  if (role !== "admin" && role !== "cs") {
     return <Navigate to="/app" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
@@ -83,9 +92,30 @@ function AppRoutes() {
       <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       
       {/* Admin routes */}
-      <Route path="/admin/setup" element={<ProtectedRoute><AdminSetupPage /></ProtectedRoute>} />
-      <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-      <Route path="/admin/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+      <Route
+        path="/admin/setup"
+        element={
+          <ProtectedRoute requireFamily={false}>
+            <AdminSetupPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminDashboard />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/*"
+        element={
+          <AdminRoute>
+            <AdminDashboard />
+          </AdminRoute>
+        }
+      />
       
       {/* 404 */}
       <Route path="*" element={<NotFound />} />
