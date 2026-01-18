@@ -1,4 +1,4 @@
-import { Home, PieChart, Target, Clock, GraduationCap } from "lucide-react";
+import { Home, PieChart, Target, Clock, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BottomNavigationProps {
@@ -9,9 +9,9 @@ interface BottomNavigationProps {
 const navItems = [
   { id: "dashboard", label: "Início", icon: Home },
   { id: "transactions", label: "Extrato", icon: Clock },
+  { id: "projection", label: "Projeção", icon: TrendingUp },
   { id: "categories", label: "Categorias", icon: PieChart },
   { id: "objectives", label: "Metas", icon: Target },
-  { id: "education", label: "Educação", icon: GraduationCap },
 ];
 
 export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationProps) {

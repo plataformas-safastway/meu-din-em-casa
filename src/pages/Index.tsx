@@ -11,6 +11,7 @@ import { ReportsPage } from "./ReportsPage";
 import { CategoryReportPage } from "./CategoryReportPage";
 import { BudgetsPage } from "./BudgetsPage";
 import { CashflowPage } from "./CashflowPage";
+import { ProjectionPage } from "./ProjectionPage";
 import { EducationPage } from "./EducationPage";
 import EbooksAdminPage from "./EbooksAdminPage";
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -45,6 +46,8 @@ const Index = () => {
         return <BudgetsPage onBack={() => setActiveTab("dashboard")} />;
       case "cashflow":
         return <CashflowPage onBack={() => setActiveTab("dashboard")} />;
+      case "projection":
+        return <ProjectionPage onBack={() => setActiveTab("dashboard")} />;
       case "reports":
         return (
           <ReportsPage 
