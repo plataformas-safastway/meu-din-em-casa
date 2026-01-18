@@ -10,7 +10,7 @@ const navItems = [
   { id: "dashboard", label: "Início", icon: Home },
   { id: "transactions", label: "Extrato", icon: Clock },
   { id: "categories", label: "Categorias", icon: PieChart },
-  { id: "goals", label: "Metas", icon: Target },
+  { id: "objectives", label: "Metas", icon: Target },
   { id: "education", label: "Educação", icon: GraduationCap },
 ];
 
