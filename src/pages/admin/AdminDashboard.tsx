@@ -10,7 +10,8 @@ import {
   Shield,
   UserCog,
   FileText,
-  TrendingUp
+  TrendingUp,
+  Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,8 +20,9 @@ import { useIsAdmin } from "@/hooks/useUserRole";
 import { AdminUsersPage } from "./AdminUsersPage";
 import { AdminEbooksPage } from "./AdminEbooksPage";
 import { AdminMetricsPage } from "./AdminMetricsPage";
+import { AdminOpenFinancePage } from "./AdminOpenFinancePage";
 
-type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "settings";
+type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -38,6 +40,7 @@ export function AdminDashboard() {
     { id: "users" as AdminTab, label: "Usuários", icon: Users },
     { id: "ebooks" as AdminTab, label: "eBooks", icon: BookOpen },
     { id: "metrics" as AdminTab, label: "Métricas", icon: BarChart3 },
+    { id: "openfinance" as AdminTab, label: "Open Finance", icon: Building2 },
     ...(isAdmin ? [{ id: "settings" as AdminTab, label: "Configurações", icon: Settings }] : []),
   ];
 
@@ -49,6 +52,8 @@ export function AdminDashboard() {
         return <AdminEbooksPage />;
       case "metrics":
         return <AdminMetricsPage />;
+      case "openfinance":
+        return <AdminOpenFinancePage />;
       case "settings":
         return <AdminSettingsPlaceholder />;
       default:
@@ -138,7 +143,7 @@ function AdminOverview({ onNavigate }: { onNavigate: (tab: AdminTab) => void }) 
     { label: "Gerenciar Usuários", icon: UserCog, action: () => onNavigate("users") },
     { label: "Gerenciar eBooks", icon: BookOpen, action: () => onNavigate("ebooks") },
     { label: "Ver Métricas", icon: BarChart3, action: () => onNavigate("metrics") },
-    { label: "Relatórios", icon: FileText, action: () => {} },
+    { label: "Open Finance", icon: Building2, action: () => onNavigate("openfinance") },
   ];
 
   return (

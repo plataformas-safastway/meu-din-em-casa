@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload } from "lucide-react";
+import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,6 +52,7 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
         { id: "profile", label: "Meus Dados", icon: User, action: "navigate" },
         { id: "family", label: "Perfil da Família", icon: Users, action: "navigate" },
         { id: "banks", label: "Bancos e Cartões", icon: Building2, action: "navigate" },
+        { id: "openfinance", label: "Open Finance", icon: Wifi, action: "navigate" },
         { id: "notifications", label: "Notificações", icon: Bell, action: "toggle", enabled: true },
       ],
     },
