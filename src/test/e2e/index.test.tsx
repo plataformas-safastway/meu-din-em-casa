@@ -13,7 +13,10 @@ import {
   TEST_BUDGETS,
   TEST_RECURRING_TRANSACTIONS,
   TEST_INSTALLMENT,
-  WHATSAPP_CONFIG
+  TEST_GOALS,
+  WHATSAPP_CONFIG,
+  PAYMENT_METHODS,
+  FILE_PASSWORD_ATTEMPTS
 } from "./testData";
 
 describe("Suíte Completa E2E - Finanças Familiares", () => {
@@ -37,23 +40,25 @@ describe("Suíte Completa E2E - Finanças Familiares", () => {
   });
 
   describe("0. Validação de Dados de Teste (Seed)", () => {
-    it("deve ter família fictícia configurada", () => {
-      runner.startTest("0.1 - Família Teste");
+    it("deve ter família QA configurada", () => {
+      runner.startTest("0.1 - Família QA");
       
-      expect(TEST_FAMILY.name).toBe("Família Teste");
+      expect(TEST_FAMILY.name).toBe("Família QA");
       expect(TEST_FAMILY.members_count).toBe(2);
       
-      runner.addStep("Verificar família", "Nome: Família Teste", TEST_FAMILY.name, true);
+      runner.addStep("Verificar família", "Nome: Família QA", TEST_FAMILY.name, true);
       runner.endTest();
     });
 
-    it("deve ter usuário admin configurado", () => {
-      runner.startTest("0.2 - Usuário Admin");
+    it("deve ter usuário admin com CPF e nascimento", () => {
+      runner.startTest("0.2 - Usuário Admin com CPF");
       
       expect(TEST_ADMIN_USER.email).toBe("qa+admin@exemplo.com");
       expect(TEST_ADMIN_USER.password).toBe("SenhaForte@123");
+      expect(TEST_ADMIN_USER.cpf).toBe("12345678901");
+      expect(TEST_ADMIN_USER.birth_date).toBe("1990-03-15");
       
-      runner.addStep("Verificar admin", "Email: qa+admin@exemplo.com", TEST_ADMIN_USER.email, true);
+      runner.addStep("Verificar admin com CPF", "CPF: 12345678901", TEST_ADMIN_USER.cpf, true);
       runner.endTest();
     });
 
@@ -88,8 +93,19 @@ describe("Suíte Completa E2E - Finanças Familiares", () => {
       runner.endTest();
     });
 
+    it("deve ter objetivos configurados", () => {
+      runner.startTest("0.6 - Objetivos");
+      
+      expect(TEST_GOALS.length).toBe(2);
+      expect(TEST_GOALS[0].title).toBe("Viagem");
+      expect(TEST_GOALS[1].title).toBe("Reforma");
+      
+      runner.addStep("Verificar objetivos", "Viagem e Reforma", `${TEST_GOALS.length} objetivos`, true);
+      runner.endTest();
+    });
+
     it("deve ter recorrências configuradas", () => {
-      runner.startTest("0.6 - Recorrências");
+      runner.startTest("0.7 - Recorrências");
       
       expect(TEST_RECURRING_TRANSACTIONS.length).toBe(2);
       expect(TEST_RECURRING_TRANSACTIONS[0].amount).toBe(12000); // Salário
@@ -100,7 +116,7 @@ describe("Suíte Completa E2E - Finanças Familiares", () => {
     });
 
     it("deve ter parcelamento configurado", () => {
-      runner.startTest("0.7 - Parcelamento");
+      runner.startTest("0.8 - Parcelamento");
       
       expect(TEST_INSTALLMENT.description).toBe("Celular parcelado");
       expect(TEST_INSTALLMENT.total_amount).toBe(2400);
@@ -111,12 +127,46 @@ describe("Suíte Completa E2E - Finanças Familiares", () => {
     });
 
     it("deve ter WhatsApp configurado", () => {
-      runner.startTest("0.8 - WhatsApp");
+      runner.startTest("0.9 - WhatsApp");
       
       expect(WHATSAPP_CONFIG.phone).toBe("5548988483333");
       expect(WHATSAPP_CONFIG.message).toContain("consultoria financeira familiar");
       
       runner.addStep("Verificar WhatsApp", "+55 48 98848-3333", WHATSAPP_CONFIG.phone, true);
+      runner.endTest();
+    });
+
+    it("deve ter métodos de pagamento corretos", () => {
+      runner.startTest("0.10 - Métodos de Pagamento");
+      
+      // Despesas: todos os métodos
+      expect(PAYMENT_METHODS.expense).toContain("pix");
+      expect(PAYMENT_METHODS.expense).toContain("debit");
+      expect(PAYMENT_METHODS.expense).toContain("credit");
+      expect(PAYMENT_METHODS.expense).toContain("cash");
+      expect(PAYMENT_METHODS.expense).toContain("transfer");
+      expect(PAYMENT_METHODS.expense).toContain("cheque");
+      
+      // Receitas: NÃO tem débito/crédito
+      expect(PAYMENT_METHODS.income).toContain("pix");
+      expect(PAYMENT_METHODS.income).toContain("cash");
+      expect(PAYMENT_METHODS.income).toContain("transfer");
+      expect(PAYMENT_METHODS.income).toContain("cheque");
+      expect(PAYMENT_METHODS.income).not.toContain("debit");
+      expect(PAYMENT_METHODS.income).not.toContain("credit");
+      
+      runner.addStep("Verificar métodos", "Receita sem débito/crédito", "Métodos corretos", true);
+      runner.endTest();
+    });
+
+    it("deve ter tentativas de senha de arquivo", () => {
+      runner.startTest("0.11 - Senhas de Arquivo");
+      
+      expect(FILE_PASSWORD_ATTEMPTS.length).toBe(4);
+      expect(FILE_PASSWORD_ATTEMPTS[0]).toBe(TEST_ADMIN_USER.cpf); // CPF 11 dígitos
+      expect(FILE_PASSWORD_ATTEMPTS[1]).toBe(TEST_ADMIN_USER.cpf.substring(2)); // CPF sem 2 primeiros
+      
+      runner.addStep("Verificar tentativas de senha", "CPF e variações", `${FILE_PASSWORD_ATTEMPTS.length} tentativas`, true);
       runner.endTest();
     });
   });
@@ -125,24 +175,22 @@ describe("Suíte Completa E2E - Finanças Familiares", () => {
     it("deve cobrir todos os cenários especificados", () => {
       const coverage = {
         "1. Autenticação": ["login", "logout", "recuperar senha", "links legais"],
-        "2. Cadastro/Onboarding": ["criar conta", "importação opcional", "email boas-vindas"],
-        "3. Bancos/Cartões": ["cadastrar banco", "cadastrar cartão", "listagem"],
-        "4. Lançamentos": ["receita", "despesa débito", "despesa crédito", "editar", "excluir"],
-        "5. Metas/Alertas": ["alerta 80%", "alerta 100%", "ajustar meta"],
-        "6. Recorrências": ["criar", "execução automática", "detecção padrão"],
-        "7. Importação": ["OFX", "XLS", "PDF", "senha", "categorização", "deduplicação"],
-        "8. Orçamento Projetado": ["sugestão metas", "meta vs projeção"],
-        "9. Parcelas/Fluxo": ["criar parcelamento", "projeção 30/60/90", "alerta saldo"],
-        "10. Relatório IA": ["opt-in", "geração", "cenários bom/ruim"],
-        "11. WhatsApp": ["deep link", "mensagem pré-preenchida"],
-        "12. eBooks": ["CRUD admin", "vitrine app"],
-        "13. Segurança": ["logs seguros", "isolamento RLS", "rate limiting"]
+        "2. Cadastro/Onboarding": ["criar conta", "CPF obrigatório", "nascimento obrigatório", "importação opcional", "email boas-vindas"],
+        "3. Dashboard": ["saldo atual", "fatura cartão", "timeline meses", "notificações", "configurações", "FAB", "WhatsApp CTA"],
+        "4. Lançamentos": ["despesa PIX", "despesa dinheiro", "despesa débito", "despesa crédito", "despesa transferência", "despesa cheque", "receita sem débito/crédito", "editar", "excluir"],
+        "5. Objetivos": ["criar objetivo", "subcategoria automática", "aporte gera transação", "editar objetivo", "excluir aporte específico", "progresso recalculado"],
+        "6. Categorias": ["totais por transações reais", "subcategorias de objetivos", "filtro receita/despesa"],
+        "7. Metas/Alertas": ["alerta 80%", "alerta 100%", "ajustar meta"],
+        "8. Importação": ["OFX", "XLS", "PDF", "senha CPF 11 dígitos", "senha CPF sem 2 primeiros", "categorização", "deduplicação", "revisão obrigatória"],
+        "9. Educação": ["placeholder ok"],
+        "10. WhatsApp": ["deep link", "mensagem pré-preenchida", "número correto"],
+        "11. Segurança": ["logs seguros", "senha não persistida", "senha não logada"]
       };
       
       const totalScenarios = Object.values(coverage).flat().length;
       
-      expect(totalScenarios).toBeGreaterThan(40);
-      expect(Object.keys(coverage).length).toBe(13);
+      expect(totalScenarios).toBeGreaterThan(50);
+      expect(Object.keys(coverage).length).toBe(11);
       
       console.log("\n📊 Cobertura de Cenários:");
       Object.entries(coverage).forEach(([section, scenarios]) => {
