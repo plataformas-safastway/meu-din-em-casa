@@ -50,7 +50,8 @@ export interface HomeSummaryData {
 
 export function useHomeSummary(month: number, year: number) {
   const { user } = useAuth();
-  const monthStr = `${year}-${String(month).padStart(2, "0")}`;
+  // month is 0-indexed (0 = January), so add 1 for the API
+  const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
 
   return useQuery({
     queryKey: ["home-summary", monthStr],
