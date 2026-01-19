@@ -119,7 +119,7 @@ export function Dashboard({
   };
 
   // Transform transactions for display
-  const displayTransactions = transactions.map((t) => ({
+  const displayTransactions = transactions.map((t: any) => ({
     id: t.id,
     type: t.type as TransactionType,
     amount: Number(t.amount),
@@ -129,6 +129,7 @@ export function Dashboard({
     paymentMethod: t.payment_method as any,
     description: t.description || undefined,
     createdAt: t.created_at,
+    goalTitle: t.goals?.title || undefined,
   }));
 
   // Transform expenses by category for chart

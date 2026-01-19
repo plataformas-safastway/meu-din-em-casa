@@ -31,11 +31,12 @@ export function useTransactions(month?: number, year?: number) {
 
       const { data, error } = await supabase
         .from("transactions")
-        .select("*, bank_accounts(nickname, banks(name)), credit_cards(card_name)")
+        .select("*, bank_accounts(nickname, banks(name)), credit_cards(card_name), goals(title)")
         .eq("family_id", family.id)
         .gte("date", startDate)
         .lte("date", endDate)
-        .order("date", { ascending: false });
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data;
@@ -54,9 +55,10 @@ export function useAllTransactions() {
 
       const { data, error } = await supabase
         .from("transactions")
-        .select("*, bank_accounts(nickname, banks(name)), credit_cards(card_name)")
+        .select("*, bank_accounts(nickname, banks(name)), credit_cards(card_name), goals(title)")
         .eq("family_id", family.id)
         .order("date", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(100);
 
       if (error) throw error;
