@@ -153,16 +153,25 @@ export function Dashboard({
     }).sort((a, b) => b.amount - a.amount);
   }, [summary]);
 
-  // Monthly data from real transactions (last 6 months)
+  // Monthly data from real transactions - only show months with data
   const monthlyData = useMemo(() => {
-    const now = new Date();
+    if (last6MonthsTransactions.length === 0) return [];
+    
+    // Find the range of months with transactions
+    const transactionDates = last6MonthsTransactions.map((t: any) => new Date(t.date));
+    const minDate = new Date(Math.min(...transactionDates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...transactionDates.map(d => d.getTime())));
+    
     const months: { month: string; income: number; expenses: number }[] = [];
     
-    for (let i = 5; i >= 0; i--) {
-      const date = subMonths(now, i);
-      const monthNum = date.getMonth();
-      const yearNum = date.getFullYear();
-      const monthLabel = format(date, "MMM", { locale: ptBR });
+    // Start from the first month with data
+    let currentDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    const endDate = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+    
+    while (currentDate <= endDate) {
+      const monthNum = currentDate.getMonth();
+      const yearNum = currentDate.getFullYear();
+      const monthLabel = format(currentDate, "MMM", { locale: ptBR });
       
       // Filter transactions for this month
       const monthTransactions = last6MonthsTransactions.filter((t: any) => {
@@ -183,6 +192,9 @@ export function Dashboard({
         income,
         expenses
       });
+      
+      // Move to next month
+      currentDate = new Date(yearNum, monthNum + 1, 1);
     }
     
     return months;
