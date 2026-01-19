@@ -79,8 +79,8 @@ export function QuickContributionSheet({ open, onOpenChange, goal }: QuickContri
         description: description || null,
         contributed_at: new Date(date).toISOString(),
         payment_method: paymentMethod as 'pix' | 'cash' | 'transfer' | 'debit' | 'credit' | 'cheque',
-        bank_account_id: bankAccountId || undefined,
-        credit_card_id: creditCardId || undefined,
+        bank_account_id: bankAccountId && bankAccountId !== "_none" ? bankAccountId : undefined,
+        credit_card_id: creditCardId && creditCardId !== "_none" ? creditCardId : undefined,
         goal: goal,
       });
       
@@ -199,18 +199,18 @@ export function QuickContributionSheet({ open, onOpenChange, goal }: QuickContri
                 Conta Bancária
               </Label>
               <Select value={bankAccountId} onValueChange={setBankAccountId}>
-                <SelectTrigger id="bank-account">
-                  <SelectValue placeholder="Selecione a conta (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
-                  {activeAccounts.map((account: { id: string; nickname: string; banks?: { name: string } | null }) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.nickname} {account.banks?.name ? `(${account.banks.name})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SelectTrigger id="bank-account">
+                <SelectValue placeholder="Selecione a conta (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">Nenhuma</SelectItem>
+                {activeAccounts.map((account: { id: string; nickname: string; banks?: { name: string } | null }) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.nickname} {account.banks?.name ? `(${account.banks.name})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             </div>
           )}
 
@@ -221,18 +221,18 @@ export function QuickContributionSheet({ open, onOpenChange, goal }: QuickContri
                 Cartão de Crédito
               </Label>
               <Select value={creditCardId} onValueChange={setCreditCardId}>
-                <SelectTrigger id="credit-card">
-                  <SelectValue placeholder="Selecione o cartão (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
-                  {activeCards.map((card: { id: string; card_name: string; brand: string }) => (
-                    <SelectItem key={card.id} value={card.id}>
-                      {card.card_name} ({card.brand.toUpperCase()})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SelectTrigger id="credit-card">
+                <SelectValue placeholder="Selecione o cartão (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">Nenhum</SelectItem>
+                {activeCards.map((card: { id: string; card_name: string; brand: string }) => (
+                  <SelectItem key={card.id} value={card.id}>
+                    {card.card_name} ({card.brand.toUpperCase()})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             </div>
           )}
 
