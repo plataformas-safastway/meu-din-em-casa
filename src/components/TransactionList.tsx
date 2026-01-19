@@ -1,17 +1,28 @@
 import { Transaction } from "@/types/finance";
-import { getCategoryById } from "@/data/categories";
+import { getCategoryById, GOALS_CATEGORY_ID } from "@/data/categories";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 
 interface TransactionItemProps {
-  transaction: Transaction;
+  transaction: Transaction & { goalTitle?: string };
   onClick?: () => void;
 }
 
 function TransactionItem({ transaction, onClick }: TransactionItemProps) {
   const category = getCategoryById(transaction.category);
   const isExpense = transaction.type === 'expense';
+  const isGoalTransaction = transaction.category === GOALS_CATEGORY_ID;
+
+  // For goal transactions, show the goal title as the description
+  const displayTitle = isGoalTransaction && transaction.goalTitle 
+    ? transaction.goalTitle 
+    : (transaction.description || category?.name);
+
+  // For goal transactions, show "Objetivos • Goal Name" as subtitle
+  const displaySubtitle = isGoalTransaction && transaction.goalTitle
+    ? `Objetivos • ${transaction.goalTitle}`
+    : category?.name;
 
   return (
     <button
@@ -27,10 +38,10 @@ function TransactionItem({ transaction, onClick }: TransactionItemProps) {
       
       <div className="flex-1 text-left">
         <p className="font-medium text-foreground text-sm">
-          {transaction.description || category?.name}
+          {displayTitle}
         </p>
         <p className="text-xs text-muted-foreground">
-          {category?.name} • {formatDate(transaction.date)}
+          {displaySubtitle} • {formatDate(transaction.date)}
         </p>
       </div>
 

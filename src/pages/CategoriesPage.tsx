@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
 import { ArrowLeft, Plus, ChevronRight, ChevronDown, TrendingUp, TrendingDown, Minus, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getExpenseCategories, getIncomeCategories } from "@/data/categories";
+import { getExpenseCategories, getIncomeCategories, GOALS_CATEGORY_ID } from "@/data/categories";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useTransactions, useTransactionsCurrentYear } from "@/hooks/useTransactions";
+import { useActiveGoals } from "@/hooks/useGoals";
 import { MonthSelector } from "@/components/MonthSelector";
 import { CategoryEvolutionSection } from "@/components/CategoryEvolutionChart";
 
@@ -27,12 +28,34 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
   
   const expenseCategories = getExpenseCategories();
   const incomeCategories = getIncomeCategories();
-  const categories = activeTab === 'expense' ? expenseCategories : incomeCategories;
+  
+  // Fetch goals to get real names for dynamic subcategories
+  const { data: goals = [] } = useActiveGoals();
 
   // Fetch real transactions for selected month, previous month, and current year
   const { data: transactions = [] } = useTransactions(selectedMonth, selectedYear);
   const { data: prevTransactions = [] } = useTransactions(prevMonth, prevYear);
   const { data: currentYearTransactions = [] } = useTransactionsCurrentYear();
+
+  // Build dynamic subcategories for "Objetivos" based on goals
+  const categoriesWithDynamicSubs = useMemo(() => {
+    const baseCategories = activeTab === 'expense' ? expenseCategories : incomeCategories;
+    
+    return baseCategories.map(cat => {
+      if (cat.id === GOALS_CATEGORY_ID && activeTab === 'expense') {
+        // For Objetivos, create subcategories from actual goals
+        const goalSubcategories = goals.map(goal => ({
+          id: goal.subcategory_id || `objetivos-${goal.id}`,
+          name: goal.title,
+          categoryId: GOALS_CATEGORY_ID,
+        }));
+        return { ...cat, subcategories: goalSubcategories };
+      }
+      return cat;
+    });
+  }, [activeTab, expenseCategories, incomeCategories, goals]);
+
+  const categories = categoriesWithDynamicSubs;
 
   // Calculate totals from real transaction data
   const totals = useMemo(() => {
