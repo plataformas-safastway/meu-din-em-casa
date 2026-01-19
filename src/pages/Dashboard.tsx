@@ -14,14 +14,15 @@ import { FabButton } from "@/components/QuickActions";
 import { BudgetAlertsWidget } from "@/components/budget/BudgetAlertsWidget";
 import { SkeletonHome } from "@/components/ui/money-loader";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTransactions, useFinanceSummary, useCreateTransaction } from "@/hooks/useTransactions";
+import { useTransactions, useFinanceSummary, useCreateTransaction, useTransactionsLast6Months } from "@/hooks/useTransactions";
 import { useInsights } from "@/hooks/useInsights";
 import { useHomeSummary } from "@/hooks/useHomeSummary";
 import { useDebouncedLoading } from "@/hooks/useLoading";
 import { getCategoryById } from "@/data/categories";
 import { TransactionType } from "@/types/finance";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface DashboardProps {
   onSettingsClick?: () => void;
@@ -51,6 +52,7 @@ export function Dashboard({
   const { data: transactions = [], isLoading: loadingTransactions } = useTransactions(selectedMonth, selectedYear);
   const { data: summary, isLoading: loadingSummary } = useFinanceSummary(selectedMonth, selectedYear);
   const { data: homeSummary, isLoading: loadingHomeSummary } = useHomeSummary(selectedMonth, selectedYear);
+  const { data: last6MonthsTransactions = [] } = useTransactionsLast6Months();
   const { insights } = useInsights();
   const createTransaction = useCreateTransaction();
 
@@ -151,15 +153,40 @@ export function Dashboard({
     }).sort((a, b) => b.amount - a.amount);
   }, [summary]);
 
-  // Monthly data placeholder
-  const monthlyData = [
-    { month: "Jan", income: 0, expenses: 0 },
-    { month: "Fev", income: 0, expenses: 0 },
-    { month: "Mar", income: 0, expenses: 0 },
-    { month: "Abr", income: 0, expenses: 0 },
-    { month: "Mai", income: 0, expenses: 0 },
-    { month: "Jun", income: summary?.income || 0, expenses: summary?.expenses || 0 },
-  ];
+  // Monthly data from real transactions (last 6 months)
+  const monthlyData = useMemo(() => {
+    const now = new Date();
+    const months: { month: string; income: number; expenses: number }[] = [];
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = subMonths(now, i);
+      const monthNum = date.getMonth();
+      const yearNum = date.getFullYear();
+      const monthLabel = format(date, "MMM", { locale: ptBR });
+      
+      // Filter transactions for this month
+      const monthTransactions = last6MonthsTransactions.filter((t: any) => {
+        const tDate = new Date(t.date);
+        return tDate.getMonth() === monthNum && tDate.getFullYear() === yearNum;
+      });
+      
+      const income = monthTransactions
+        .filter((t: any) => t.type === "income")
+        .reduce((sum: number, t: any) => sum + (Number(t.amount) || 0), 0);
+        
+      const expenses = monthTransactions
+        .filter((t: any) => t.type === "expense")
+        .reduce((sum: number, t: any) => sum + (Number(t.amount) || 0), 0);
+      
+      months.push({
+        month: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
+        income,
+        expenses
+      });
+    }
+    
+    return months;
+  }, [last6MonthsTransactions]);
 
   const isLoading = loadingTransactions || loadingSummary || loadingHomeSummary;
   const showLoading = useDebouncedLoading(isLoading, { delay: 300, minDuration: 500 });
