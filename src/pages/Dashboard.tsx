@@ -6,12 +6,11 @@ import { CreditCardsPreviewCard } from "@/components/home/CreditCardsPreviewCard
 import { QuickActions } from "@/components/QuickActions";
 import { InsightList } from "@/components/InsightCard";
 import { CategoryChart } from "@/components/CategoryChart";
-
+import { GoalsWidget } from "@/components/goals/GoalsWidget";
 import { TransactionList } from "@/components/TransactionList";
 import { MonthlyChart } from "@/components/MonthlyChart";
 import { AddTransactionSheet } from "@/components/AddTransactionSheet";
 import { FabButton } from "@/components/QuickActions";
-import { BudgetAlertsWidget } from "@/components/budget/BudgetAlertsWidget";
 import { SkeletonHome } from "@/components/ui/money-loader";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions, useFinanceSummary, useCreateTransaction, useTransactionsLast6Months } from "@/hooks/useTransactions";
@@ -26,7 +25,7 @@ import { ptBR } from "date-fns/locale";
 
 interface DashboardProps {
   onSettingsClick?: () => void;
-  onBudgetsClick?: () => void;
+  onGoalsClick?: () => void;
   onLearnMore?: (tab?: "accounts" | "cards") => void;
   onBanksClick?: () => void;
   onCategoriesClick?: () => void;
@@ -34,7 +33,7 @@ interface DashboardProps {
 
 export function Dashboard({ 
   onSettingsClick, 
-  onBudgetsClick,
+  onGoalsClick,
   onLearnMore,
   onBanksClick,
   onCategoriesClick,
@@ -76,6 +75,10 @@ export function Dashboard({
   const handleAddExpense = () => {
     setDefaultTransactionType("expense");
     setIsSheetOpen(true);
+  };
+
+  const handleAddGoal = () => {
+    onGoalsClick?.();
   };
 
   const handleViewReceipts = () => {
@@ -241,18 +244,15 @@ export function Dashboard({
         <QuickActions
           onAddIncome={handleAddIncome}
           onAddExpense={handleAddExpense}
+          onAddGoal={handleAddGoal}
           onViewReceipts={handleViewReceipts}
         />
 
         {/* Insights */}
         {insights.length > 0 && <InsightList insights={insights} />}
 
-        {/* Budget Alerts Widget */}
-        <BudgetAlertsWidget 
-          month={selectedMonth} 
-          year={selectedYear} 
-          onViewAll={onBudgetsClick}
-        />
+        {/* Goals Widget */}
+        <GoalsWidget onViewAll={onGoalsClick} />
 
         {/* Charts Grid */}
         {categoryExpenses.length > 0 && (

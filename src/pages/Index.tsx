@@ -41,7 +41,7 @@ const Index = () => {
         return (
           <Dashboard 
             onSettingsClick={() => setActiveTab("settings")} 
-            onBudgetsClick={() => setActiveTab("goals")}
+            onGoalsClick={() => setActiveTab("objectives")}
             onLearnMore={handleLearnMore}
             onBanksClick={() => setActiveTab("banks")}
             onCategoriesClick={() => setActiveTab("categories")}
