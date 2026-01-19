@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Goal, GoalInput, useActiveGoals, useCreateGoal, useUpdateGoal, useDeleteGoal } from "@/hooks/useGoals";
 import { GoalCard } from "./GoalCard";
 import { GoalForm } from "./GoalForm";
+import { QuickContributionSheet } from "./QuickContributionSheet";
+import { ContributionHistorySheet } from "./ContributionHistorySheet";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -29,6 +31,8 @@ export function GoalsWidget({ onViewAll }: GoalsWidgetProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [deletingGoal, setDeletingGoal] = useState<Goal | null>(null);
+  const [contributionGoal, setContributionGoal] = useState<Goal | null>(null);
+  const [historyGoal, setHistoryGoal] = useState<Goal | null>(null);
 
   const displayedGoals = goals.slice(0, 3);
   const hasMore = goals.length > 3;
@@ -132,6 +136,8 @@ export function GoalsWidget({ onViewAll }: GoalsWidgetProps) {
                 onEdit={setEditingGoal}
                 onDelete={setDeletingGoal}
                 onStatusChange={handleStatusChange}
+                onQuickContribution={setContributionGoal}
+                onViewHistory={setHistoryGoal}
               />
             ))}
 
@@ -164,6 +170,25 @@ export function GoalsWidget({ onViewAll }: GoalsWidgetProps) {
         goal={editingGoal}
         onSubmit={handleUpdate}
         isLoading={updateGoal.isPending}
+      />
+
+      {/* Quick Contribution Sheet */}
+      <QuickContributionSheet
+        open={!!contributionGoal}
+        onOpenChange={(open) => !open && setContributionGoal(null)}
+        goal={contributionGoal}
+      />
+
+      {/* Contribution History Sheet */}
+      <ContributionHistorySheet
+        open={!!historyGoal}
+        onOpenChange={(open) => !open && setHistoryGoal(null)}
+        goal={historyGoal}
+        onAddContribution={() => {
+          const goal = historyGoal;
+          setHistoryGoal(null);
+          setTimeout(() => setContributionGoal(goal), 100);
+        }}
       />
 
       {/* Delete Confirmation */}

@@ -1,4 +1,4 @@
-import { Target, Calendar, MoreVertical, Pause, Play, Check, Pencil, Trash2 } from "lucide-react";
+import { Target, Calendar, MoreVertical, Pause, Play, Check, Pencil, Trash2, PiggyBank, History } from "lucide-react";
 import { Goal } from "@/hooks/useGoals";
 import { formatCurrency, formatPercentage } from "@/lib/formatters";
 import { format } from "date-fns";
@@ -9,6 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -18,9 +19,11 @@ interface GoalCardProps {
   onEdit: (goal: Goal) => void;
   onDelete: (goal: Goal) => void;
   onStatusChange: (goal: Goal, status: "ACTIVE" | "PAUSED" | "COMPLETED") => void;
+  onQuickContribution: (goal: Goal) => void;
+  onViewHistory: (goal: Goal) => void;
 }
 
-export function GoalCard({ goal, onEdit, onDelete, onStatusChange }: GoalCardProps) {
+export function GoalCard({ goal, onEdit, onDelete, onStatusChange, onQuickContribution, onViewHistory }: GoalCardProps) {
   const progress = goal.target_amount && goal.target_amount > 0
     ? Math.min((Number(goal.current_amount || 0) / Number(goal.target_amount)) * 100, 100)
     : null;
@@ -67,6 +70,15 @@ export function GoalCard({ goal, onEdit, onDelete, onStatusChange }: GoalCardPro
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onQuickContribution(goal)}>
+                <PiggyBank className="w-4 h-4 mr-2" />
+                Adicionar Aporte
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onViewHistory(goal)}>
+                <History className="w-4 h-4 mr-2" />
+                Histórico de Aportes
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onEdit(goal)}>
                 <Pencil className="w-4 h-4 mr-2" />
                 Editar
@@ -101,6 +113,7 @@ export function GoalCard({ goal, onEdit, onDelete, onStatusChange }: GoalCardPro
                   Reabrir
                 </DropdownMenuItem>
               )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={() => onDelete(goal)}
                 className="text-destructive focus:text-destructive"
@@ -139,13 +152,29 @@ export function GoalCard({ goal, onEdit, onDelete, onStatusChange }: GoalCardPro
         </div>
       )}
 
-      {/* Due date */}
-      {goal.due_date && (
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Calendar className="w-3.5 h-3.5" />
-          <span>Prazo: {format(new Date(goal.due_date), "dd/MM/yyyy", { locale: ptBR })}</span>
-        </div>
-      )}
+      {/* Due date and quick action */}
+      <div className="flex items-center justify-between">
+        {goal.due_date ? (
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Prazo: {format(new Date(goal.due_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+          </div>
+        ) : (
+          <div />
+        )}
+        
+        {goal.status !== "COMPLETED" && (
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="h-8 text-xs"
+            onClick={() => onQuickContribution(goal)}
+          >
+            <PiggyBank className="w-3.5 h-3.5 mr-1" />
+            + Aporte
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
