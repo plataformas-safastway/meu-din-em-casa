@@ -6,7 +6,7 @@ import { CreditCardsPreviewCard } from "@/components/home/CreditCardsPreviewCard
 import { QuickActions } from "@/components/QuickActions";
 import { InsightList } from "@/components/InsightCard";
 import { CategoryChart } from "@/components/CategoryChart";
-import { GoalsWidget } from "@/components/goals/GoalsWidget";
+
 import { TransactionList } from "@/components/TransactionList";
 import { MonthlyChart } from "@/components/MonthlyChart";
 import { AddTransactionSheet } from "@/components/AddTransactionSheet";
@@ -26,7 +26,6 @@ import { ptBR } from "date-fns/locale";
 
 interface DashboardProps {
   onSettingsClick?: () => void;
-  onGoalsClick?: () => void;
   onBudgetsClick?: () => void;
   onLearnMore?: (tab?: "accounts" | "cards") => void;
   onBanksClick?: () => void;
@@ -35,7 +34,6 @@ interface DashboardProps {
 
 export function Dashboard({ 
   onSettingsClick, 
-  onGoalsClick, 
   onBudgetsClick,
   onLearnMore,
   onBanksClick,
@@ -78,10 +76,6 @@ export function Dashboard({
   const handleAddExpense = () => {
     setDefaultTransactionType("expense");
     setIsSheetOpen(true);
-  };
-
-  const handleAddGoal = () => {
-    onGoalsClick?.();
   };
 
   const handleViewReceipts = () => {
@@ -247,7 +241,6 @@ export function Dashboard({
         <QuickActions
           onAddIncome={handleAddIncome}
           onAddExpense={handleAddExpense}
-          onAddGoal={handleAddGoal}
           onViewReceipts={handleViewReceipts}
         />
 
@@ -260,9 +253,6 @@ export function Dashboard({
           year={selectedYear} 
           onViewAll={onBudgetsClick}
         />
-
-        {/* Goals Widget */}
-        <GoalsWidget onViewAll={onGoalsClick} />
 
         {/* Charts Grid */}
         {categoryExpenses.length > 0 && (
