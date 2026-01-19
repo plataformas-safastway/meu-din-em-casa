@@ -35,6 +35,16 @@ export const defaultCategories: Category[] = [
 
   // ========== EXPENSE CATEGORIES ==========
   {
+    id: "objetivos",
+    name: "Objetivos",
+    code: "OBJ",
+    icon: "🎯",
+    color: "hsl(var(--primary))",
+    type: "expense",
+    isDefault: true,
+    subcategories: [], // Subcategories are created dynamically per goal
+  },
+  {
     id: "casa",
     name: "Casa",
     code: "C",
@@ -305,13 +315,26 @@ export const defaultCategories: Category[] = [
   },
 ];
 
-export const paymentMethods = [
-  { id: "debit", name: "Débito", icon: "💳" },
-  { id: "credit", name: "Crédito", icon: "💳" },
+// Payment methods for EXPENSES
+export const expensePaymentMethods = [
   { id: "pix", name: "PIX", icon: "📱" },
   { id: "cash", name: "Dinheiro", icon: "💵" },
   { id: "transfer", name: "Transferência", icon: "🔄" },
+  { id: "credit", name: "Cartão de Crédito", icon: "💳" },
+  { id: "debit", name: "Cartão de Débito", icon: "💳" },
+  { id: "cheque", name: "Cheque", icon: "📝" },
 ];
+
+// Payment methods for INCOME (no debit/credit cards)
+export const incomePaymentMethods = [
+  { id: "pix", name: "PIX", icon: "📱" },
+  { id: "cash", name: "Dinheiro", icon: "💵" },
+  { id: "transfer", name: "Transferência", icon: "🔄" },
+  { id: "cheque", name: "Cheque", icon: "📝" },
+];
+
+// Legacy export for backward compatibility
+export const paymentMethods = expensePaymentMethods;
 
 export const getCategoryById = (id: string): Category | undefined => {
   return defaultCategories.find(cat => cat.id === id);
@@ -339,3 +362,10 @@ export const getSubcategoryName = (categoryId: string, subcategoryId: string): s
 
 export const getIncomeCategories = () => defaultCategories.filter(c => c.type === 'income');
 export const getExpenseCategories = () => defaultCategories.filter(c => c.type === 'expense');
+
+// Goal subcategory helpers
+export const GOALS_CATEGORY_ID = 'objetivos';
+
+export const createGoalSubcategoryId = (goalTitle: string): string => {
+  return `objetivos-${goalTitle.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')}`;
+};

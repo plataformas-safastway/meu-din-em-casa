@@ -51,6 +51,7 @@ export function ContributionHistorySheet({
         id: deletingContribution.id,
         goalId: goal.id,
         amount: deletingContribution.amount,
+        goal: goal,
       });
       toast.success("Aporte removido");
       setDeletingContribution(null);

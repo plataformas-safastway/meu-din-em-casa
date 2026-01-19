@@ -580,6 +580,7 @@ export type Database = {
       }
       goals: {
         Row: {
+          category_id: string | null
           created_at: string
           current_amount: number | null
           description: string | null
@@ -587,11 +588,13 @@ export type Database = {
           family_id: string
           id: string
           status: string
+          subcategory_id: string | null
           target_amount: number | null
           title: string
           updated_at: string
         }
         Insert: {
+          category_id?: string | null
           created_at?: string
           current_amount?: number | null
           description?: string | null
@@ -599,11 +602,13 @@ export type Database = {
           family_id: string
           id?: string
           status?: string
+          subcategory_id?: string | null
           target_amount?: number | null
           title: string
           updated_at?: string
         }
         Update: {
+          category_id?: string | null
           created_at?: string
           current_amount?: number | null
           description?: string | null
@@ -611,6 +616,7 @@ export type Database = {
           family_id?: string
           id?: string
           status?: string
+          subcategory_id?: string | null
           target_amount?: number | null
           title?: string
           updated_at?: string
@@ -1446,11 +1452,13 @@ export type Database = {
           amount: number
           bank_account_id: string | null
           category_id: string
+          check_number: string | null
           created_at: string
           credit_card_id: string | null
           date: string
           description: string | null
           family_id: string
+          goal_id: string | null
           id: string
           import_id: string | null
           is_auto_generated: boolean
@@ -1470,11 +1478,13 @@ export type Database = {
           amount: number
           bank_account_id?: string | null
           category_id: string
+          check_number?: string | null
           created_at?: string
           credit_card_id?: string | null
           date: string
           description?: string | null
           family_id: string
+          goal_id?: string | null
           id?: string
           import_id?: string | null
           is_auto_generated?: boolean
@@ -1494,11 +1504,13 @@ export type Database = {
           amount?: number
           bank_account_id?: string | null
           category_id?: string
+          check_number?: string | null
           created_at?: string
           credit_card_id?: string | null
           date?: string
           description?: string | null
           family_id?: string
+          goal_id?: string | null
           id?: string
           import_id?: string | null
           is_auto_generated?: boolean
@@ -1534,6 +1546,13 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
             referencedColumns: ["id"]
           },
           {
@@ -1595,7 +1614,13 @@ export type Database = {
       family_role: "owner" | "member"
       import_file_type: "ofx" | "xls" | "xlsx" | "pdf"
       import_status: "pending" | "processing" | "completed" | "failed"
-      payment_method: "cash" | "debit" | "credit" | "pix" | "transfer"
+      payment_method:
+        | "cash"
+        | "debit"
+        | "credit"
+        | "pix"
+        | "transfer"
+        | "cheque"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -1731,7 +1756,7 @@ export const Constants = {
       family_role: ["owner", "member"],
       import_file_type: ["ofx", "xls", "xlsx", "pdf"],
       import_status: ["pending", "processing", "completed", "failed"],
-      payment_method: ["cash", "debit", "credit", "pix", "transfer"],
+      payment_method: ["cash", "debit", "credit", "pix", "transfer", "cheque"],
       transaction_type: ["income", "expense"],
     },
   },

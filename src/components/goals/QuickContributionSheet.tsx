@@ -43,6 +43,7 @@ export function QuickContributionSheet({ open, onOpenChange, goal }: QuickContri
         goal_id: goal.id,
         amount: numAmount,
         description: description || null,
+        goal: goal,
       });
       
       toast.success(`Aporte de ${formatCurrency(numAmount)} adicionado!`);
