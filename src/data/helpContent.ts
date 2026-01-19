@@ -1,7 +1,7 @@
 export interface HelpArticle {
   id: string;
   title: string;
-  category: "getting-started" | "home" | "transactions" | "categories" | "goals" | "budgets" | "projection" | "family" | "settings" | "privacy";
+  category: "getting-started" | "home" | "transactions" | "categories" | "goals" | "objectives" | "budgets" | "projection" | "import" | "family" | "settings" | "privacy";
   icon: string;
   summary: string;
   steps: Array<{
@@ -21,7 +21,11 @@ export interface FAQItem {
   keywords: string[];
 }
 
+// Última atualização: 19/01/2026
+export const HELP_CENTER_VERSION = "19/01/2026";
+
 export const helpArticles: HelpArticle[] = [
+  // ===== PRIMEIROS PASSOS =====
   {
     id: "getting-started",
     title: "Primeiros Passos",
@@ -31,7 +35,7 @@ export const helpArticles: HelpArticle[] = [
     steps: [
       {
         title: "Crie sua conta",
-        description: "Faça o cadastro com seu email ou conta Google. Você será automaticamente adicionado à sua família financeira.",
+        description: "Faça o cadastro com seu email. Informe seu CPF e data de nascimento (usados para desbloquear arquivos de importação).",
         tip: "Use um email que você acessa frequentemente para receber alertas importantes.",
       },
       {
@@ -45,11 +49,13 @@ export const helpArticles: HelpArticle[] = [
       },
       {
         title: "Defina metas de orçamento",
-        description: "Vá em Metas e crie limites para cada categoria de gasto. Você receberá alertas ao se aproximar do limite.",
+        description: "Vá em Metas e crie limites para cada categoria de gasto. Vocês receberão alertas ao se aproximar do limite.",
       },
     ],
-    keywords: ["começar", "início", "cadastro", "primeiro", "tutorial", "básico"],
+    keywords: ["começar", "início", "cadastro", "primeiro", "tutorial", "básico", "criar conta", "login"],
   },
+
+  // ===== TELA INICIAL =====
   {
     id: "home-dashboard",
     title: "Tela Inicial: Saldo e Timeline",
@@ -64,7 +70,7 @@ export const helpArticles: HelpArticle[] = [
       {
         title: "Seletor de Mês",
         description: "Toque nas setas para navegar entre meses. Toque no mês para voltar ao atual rapidamente.",
-        tip: "Você pode ver meses anteriores para comparar gastos.",
+        tip: "Vocês podem ver meses anteriores para comparar gastos.",
       },
       {
         title: "Fatura do Cartão",
@@ -72,16 +78,22 @@ export const helpArticles: HelpArticle[] = [
       },
       {
         title: "Ações Rápidas",
-        description: "Botões para adicionar receita, despesa, meta ou visualizar recibos.",
+        description: "Botões para adicionar receita, despesa ou acessar funcionalidades rápidas.",
       },
       {
         title: "Widget de Orçamento",
         description: "Mostra alertas de metas próximas do limite ou excedidas.",
       },
+      {
+        title: "Ícones do Topo",
+        description: "Sino para notificações e engrenagem para configurações.",
+      },
     ],
-    keywords: ["home", "início", "saldo", "dashboard", "cartão", "fatura", "mês"],
+    keywords: ["home", "início", "saldo", "dashboard", "cartão", "fatura", "mês", "timeline", "notificações", "configurações"],
     deepLink: "dashboard",
   },
+
+  // ===== LANÇAMENTOS =====
   {
     id: "add-transaction",
     title: "Inserir Receita ou Despesa",
@@ -91,7 +103,7 @@ export const helpArticles: HelpArticle[] = [
     steps: [
       {
         title: "Toque no botão +",
-        description: "O botão flutuante no canto inferior direito abre o formulário de novo lançamento.",
+        description: "O botão flutuante no canto inferior abre o formulário de novo lançamento.",
       },
       {
         title: "Escolha o tipo",
@@ -103,21 +115,27 @@ export const helpArticles: HelpArticle[] = [
       },
       {
         title: "Selecione a categoria",
-        description: "Escolha a categoria que melhor descreve o lançamento. Você pode também escolher uma subcategoria.",
+        description: "Escolha a categoria que melhor descreve o lançamento. Vocês podem também escolher uma subcategoria.",
         tip: "Categorizar corretamente ajuda nos relatórios e metas.",
       },
       {
-        title: "Método de pagamento",
-        description: "Informe como foi pago: PIX, cartão de débito/crédito, dinheiro ou transferência.",
+        title: "Método de pagamento (Despesa)",
+        description: "Para despesas: PIX, Dinheiro, Transferência, Cartão de Débito, Cartão de Crédito ou Cheque.",
+        tip: "Ao selecionar Cheque, o campo 'Número do cheque' se torna obrigatório.",
       },
       {
-        title: "Descrição (opcional)",
-        description: "Adicione uma descrição para lembrar do que se trata o lançamento.",
+        title: "Método de recebimento (Receita)",
+        description: "Para receitas: PIX, Dinheiro, Transferência ou Cheque. NÃO há opção de Débito/Crédito para receitas.",
+      },
+      {
+        title: "Vincular conta ou cartão",
+        description: "Opcionalmente, vincule o lançamento a uma conta bancária ou cartão de crédito específico.",
       },
     ],
-    keywords: ["adicionar", "inserir", "lançamento", "receita", "despesa", "gasto", "entrada", "saída"],
+    keywords: ["adicionar", "inserir", "lançamento", "receita", "despesa", "gasto", "entrada", "saída", "pix", "dinheiro", "cartão", "cheque", "débito", "crédito"],
     deepLink: "dashboard",
   },
+
   {
     id: "statement-filters",
     title: "Extrato e Filtros",
@@ -146,12 +164,14 @@ export const helpArticles: HelpArticle[] = [
     keywords: ["extrato", "filtro", "busca", "histórico", "lançamentos", "transações"],
     deepLink: "transactions",
   },
+
+  // ===== CATEGORIAS =====
   {
     id: "categories-management",
-    title: "Gerenciando Categorias",
+    title: "Categorias e Subcategorias",
     category: "categories",
     icon: "📊",
-    summary: "Organize seus gastos por categoria",
+    summary: "Como os valores são calculados por categoria",
     steps: [
       {
         title: "Visualize suas categorias",
@@ -159,7 +179,7 @@ export const helpArticles: HelpArticle[] = [
       },
       {
         title: "Categorias de despesa",
-        description: "Casa, Alimentação, Transporte, Lazer, Filhos, Pet, Saúde e mais.",
+        description: "Casa, Alimentação, Transporte, Lazer, Filhos, Pet, Saúde, Objetivos e mais.",
       },
       {
         title: "Categorias de receita",
@@ -170,15 +190,57 @@ export const helpArticles: HelpArticle[] = [
         description: "Cada categoria tem subcategorias para detalhar melhor seus gastos.",
         tip: "Use subcategorias para relatórios mais precisos.",
       },
+      {
+        title: "Cálculo de valores",
+        description: "Os valores exibidos são calculados pela SOMA REAL das transações cadastradas, não por estimativas.",
+        tip: "O total da categoria é sempre igual à soma de suas subcategorias.",
+      },
     ],
-    keywords: ["categoria", "subcategoria", "organizar", "classificar", "tipo"],
+    keywords: ["categoria", "subcategoria", "organizar", "classificar", "tipo", "total", "soma"],
     deepLink: "categories",
   },
+
+  // ===== OBJETIVOS =====
+  {
+    id: "objectives-goals",
+    title: "Objetivos Financeiros",
+    category: "objectives",
+    icon: "🎯",
+    summary: "Crie e acompanhe objetivos de poupança",
+    steps: [
+      {
+        title: "Crie um objetivo",
+        description: "Em Metas, toque em 'Novo Objetivo'. Defina nome, valor alvo e data limite.",
+        tip: "Ao criar um objetivo, ele aparece automaticamente como subcategoria em 'Objetivos'.",
+      },
+      {
+        title: "Faça aportes",
+        description: "Use o botão 'Contribuir' para registrar aportes no objetivo. Uma transação é criada automaticamente.",
+      },
+      {
+        title: "Acompanhe o progresso",
+        description: "Veja o percentual atingido e quanto falta para a meta.",
+      },
+      {
+        title: "Integração com categorias",
+        description: "Aportes aparecem na categoria 'Objetivos' com subcategoria igual ao nome do objetivo.",
+        tip: "Vocês podem fazer lançamentos manuais em 'Objetivos > [Nome]' e o progresso será atualizado.",
+      },
+      {
+        title: "Editar ou excluir",
+        description: "Vocês podem editar nome, valor alvo e data. Ao excluir um aporte, apenas aquele aporte específico é removido.",
+      },
+    ],
+    keywords: ["objetivo", "meta", "poupança", "guardar", "viagem", "reserva", "aporte", "contribuição"],
+    deepLink: "goals",
+  },
+
+  // ===== METAS/ORÇAMENTOS =====
   {
     id: "budget-goals",
     title: "Metas de Orçamento",
     category: "budgets",
-    icon: "🎯",
+    icon: "💰",
     summary: "Defina limites e receba alertas",
     steps: [
       {
@@ -187,49 +249,96 @@ export const helpArticles: HelpArticle[] = [
       },
       {
         title: "Alerta de 80%",
-        description: "Quando atingir 80% do limite, você verá um alerta amarelo.",
+        description: "Quando vocês atingirem 80% do limite, verão um alerta amarelo com a mensagem 'Atenção com [Categoria]'.",
       },
       {
-        title: "Limite excedido",
-        description: "Ao ultrapassar 100%, o alerta fica vermelho com sugestões de ação.",
+        title: "Limite excedido (100%)",
+        description: "Ao ultrapassar 100%, o alerta fica vermelho: 'O limite de [Categoria] foi ultrapassado'.",
       },
       {
         title: "Ajuste metas",
-        description: "Você pode editar ou remover metas a qualquer momento.",
+        description: "Vocês podem editar ou remover metas a qualquer momento. Após exceder, é possível aumentar o limite.",
         tip: "Comece com metas realistas baseadas no seu histórico.",
       },
     ],
-    keywords: ["meta", "orçamento", "limite", "alerta", "objetivo", "controle"],
+    keywords: ["meta", "orçamento", "limite", "alerta", "objetivo", "controle", "80%", "100%", "excedido"],
     deepLink: "goals",
   },
+
+  // ===== IMPORTAÇÃO =====
   {
-    id: "projection-module",
-    title: "Projeção Financeira",
-    category: "projection",
-    icon: "📈",
-    summary: "Veja o futuro das suas finanças",
+    id: "import-files",
+    title: "Importar Extratos",
+    category: "import",
+    icon: "📥",
+    summary: "Importe arquivos OFX, XLSX ou PDF",
     steps: [
       {
-        title: "Acesse Projeção",
-        description: "Toque em 'Projeção' na navegação inferior.",
+        title: "Formatos suportados",
+        description: "OFX (padrão bancário), XLSX/XLS (Excel) e PDF (fatura de cartão).",
       },
       {
-        title: "Timeline mensal",
-        description: "Veja cards com projeção de saldo para os próximos 6 meses.",
+        title: "Upload do arquivo",
+        description: "Vá em Configurações > Importar ou use o atalho na tela inicial.",
       },
       {
-        title: "Detalhes do mês",
-        description: "Toque em um mês para ver receitas, despesas e parcelas projetadas.",
+        title: "Arquivos com senha",
+        description: "Se o arquivo estiver protegido, o app tentará desbloquear automaticamente usando seu CPF (11 dígitos), CPF sem os 2 primeiros dígitos, ou data de nascimento (DDMMYYYY).",
+        tip: "Vocês também podem digitar a senha manualmente se as tentativas automáticas falharem.",
       },
       {
-        title: "Dicas de IA",
-        description: "Na aba 'Dicas IA', receba recomendações personalizadas baseadas nos seus dados.",
-        tip: "As dicas são geradas com dados agregados, sem expor informações sensíveis.",
+        title: "Revisão obrigatória",
+        description: "Antes de salvar, vocês SEMPRE revisam as transações. É possível editar categoria, descartar itens ou ajustar valores.",
+      },
+      {
+        title: "Categorização automática",
+        description: "O app sugere categorias baseado em palavras-chave (ex: 'IFOOD' → Lazer > Restaurantes).",
+        tip: "Ao corrigir uma categoria, o app aprende para próximas importações.",
+      },
+      {
+        title: "Deduplicação",
+        description: "Transações duplicadas são detectadas automaticamente. Vocês podem importar mesmo assim se desejarem.",
       },
     ],
-    keywords: ["projeção", "futuro", "previsão", "parcela", "cartão", "IA", "dica"],
-    deepLink: "projection",
+    keywords: ["importar", "extrato", "banco", "ofx", "excel", "xlsx", "pdf", "senha", "cpf", "duplicado"],
+    deepLink: "settings",
   },
+
+  // ===== PRIVACIDADE E SEGURANÇA =====
+  {
+    id: "privacy-security",
+    title: "Privacidade e Segurança",
+    category: "privacy",
+    icon: "🔒",
+    summary: "Como tratamos seus dados e senhas",
+    steps: [
+      {
+        title: "Senhas de arquivo",
+        description: "Senhas usadas para desbloquear arquivos de importação NUNCA são salvas no banco de dados. São usadas apenas temporariamente para processar o arquivo.",
+      },
+      {
+        title: "Dados sensíveis",
+        description: "CPF, senhas e dados financeiros são criptografados e nunca aparecem em logs.",
+      },
+      {
+        title: "Exportar dados",
+        description: "Em Configurações > Meus Dados, vocês podem exportar todos os dados em formato JSON.",
+      },
+      {
+        title: "Excluir conta",
+        description: "Vocês podem solicitar a exclusão total da conta e dados a qualquer momento.",
+        tip: "A exclusão é irreversível. Exportem os dados antes se precisarem.",
+      },
+      {
+        title: "Isolamento por família",
+        description: "Cada família só acessa seus próprios dados. Não há compartilhamento entre famílias.",
+      },
+    ],
+    keywords: ["privacidade", "lgpd", "dados", "exportar", "excluir", "segurança", "proteção", "senha", "criptografia"],
+    deepLink: "settings",
+  },
+
+  // ===== FAMÍLIA =====
   {
     id: "family-members",
     title: "Família e Permissões",
@@ -254,6 +363,8 @@ export const helpArticles: HelpArticle[] = [
     keywords: ["família", "membro", "convidar", "permissão", "compartilhar"],
     deepLink: "settings",
   },
+
+  // ===== CONFIGURAÇÕES =====
   {
     id: "settings-profile",
     title: "Configurações e Perfil",
@@ -275,39 +386,36 @@ export const helpArticles: HelpArticle[] = [
       },
       {
         title: "Importação",
-        description: "Importe extratos de bancos em formato OFX ou Excel.",
+        description: "Importe extratos de bancos em formato OFX, Excel ou PDF.",
       },
     ],
     keywords: ["configuração", "perfil", "conta", "cartão", "importar", "dados"],
     deepLink: "settings",
   },
+
+  // ===== WHATSAPP =====
   {
-    id: "privacy-lgpd",
-    title: "Privacidade e LGPD",
-    category: "privacy",
-    icon: "🔒",
-    summary: "Seus dados estão protegidos",
+    id: "whatsapp-support",
+    title: "Consultoria via WhatsApp",
+    category: "home",
+    icon: "💬",
+    summary: "Agende consultoria financeira",
     steps: [
       {
-        title: "Exportar dados",
-        description: "Em Configurações > Meus Dados, você pode exportar todos os seus dados em formato JSON.",
+        title: "Botão WhatsApp",
+        description: "Na tela inicial, há um botão/link para WhatsApp que abre conversa direta.",
       },
       {
-        title: "Excluir conta",
-        description: "Você pode solicitar a exclusão total da sua conta e dados a qualquer momento.",
-        tip: "A exclusão é irreversível. Exporte seus dados antes se precisar.",
+        title: "Número oficial",
+        description: "+55 48 98848-3333 é o número para agendamento de consultoria.",
       },
       {
-        title: "Segurança",
-        description: "Seus dados são criptografados e armazenados de forma segura.",
-      },
-      {
-        title: "Uso dos dados",
-        description: "Usamos seus dados apenas para fornecer o serviço. Nunca vendemos informações.",
+        title: "Mensagem pré-preenchida",
+        description: "Ao clicar, a mensagem já vem pronta para agendar 1 hora de consultoria financeira familiar.",
       },
     ],
-    keywords: ["privacidade", "lgpd", "dados", "exportar", "excluir", "segurança", "proteção"],
-    deepLink: "settings",
+    keywords: ["whatsapp", "consultoria", "ajuda", "suporte", "atendimento"],
+    deepLink: "dashboard",
   },
 ];
 
@@ -322,14 +430,14 @@ export const faqItems: FAQItem[] = [
   {
     id: "faq-2",
     question: "Posso usar o app sem internet?",
-    answer: "O app precisa de internet para sincronizar dados. No entanto, você pode visualizar dados já carregados mesmo offline.",
+    answer: "O app precisa de internet para sincronizar dados. No entanto, vocês podem visualizar dados já carregados mesmo offline.",
     category: "general",
     keywords: ["offline", "internet", "conexão"],
   },
   {
     id: "faq-3",
     question: "Como funciona o alerta de orçamento?",
-    answer: "Quando você gasta 80% do limite definido para uma categoria, recebe um alerta amarelo. Ao atingir 100%, o alerta fica vermelho indicando que o limite foi excedido.",
+    answer: "Quando vocês gastam 80% do limite definido para uma categoria, aparece um alerta amarelo. Ao atingir 100%, o alerta fica vermelho indicando que o limite foi excedido.",
     category: "budgets",
     keywords: ["alerta", "orçamento", "limite", "meta", "80%", "100%"],
   },
@@ -343,44 +451,79 @@ export const faqItems: FAQItem[] = [
   {
     id: "faq-5",
     question: "Meus dados estão seguros?",
-    answer: "Sim! Utilizamos criptografia de ponta a ponta e seguimos as melhores práticas de segurança. Seus dados são armazenados em servidores seguros e nunca são vendidos a terceiros.",
+    answer: "Sim! Utilizamos criptografia e seguimos as melhores práticas de segurança. Seus dados são armazenados de forma segura e nunca são vendidos a terceiros. Senhas de arquivos de importação nunca são salvas.",
     category: "privacy",
-    keywords: ["segurança", "dados", "privacidade", "criptografia"],
+    keywords: ["segurança", "dados", "privacidade", "criptografia", "senha"],
   },
   {
     id: "faq-6",
     question: "Como importar meu extrato bancário?",
-    answer: "Vá em Configurações > Importar Dados. Você pode importar arquivos OFX ou Excel do seu banco. O app tentará categorizar automaticamente os lançamentos.",
-    category: "settings",
-    keywords: ["importar", "extrato", "banco", "ofx", "excel"],
+    answer: "Vá em Configurações > Importar Dados. Vocês podem importar arquivos OFX, Excel (XLSX/XLS) ou PDF. Se o arquivo tiver senha, o app tentará usar CPF ou data de nascimento automaticamente.",
+    category: "import",
+    keywords: ["importar", "extrato", "banco", "ofx", "excel", "pdf", "senha"],
   },
   {
     id: "faq-7",
     question: "Posso alterar a categoria de um lançamento?",
-    answer: "Sim! Vá ao Extrato, toque no lançamento desejado e selecione 'Editar'. Você poderá alterar a categoria, valor, data e outros detalhes.",
+    answer: "Sim! Vá ao Extrato, toque no lançamento desejado e selecione 'Editar'. Vocês podem alterar a categoria, valor, data e outros detalhes.",
     category: "transactions",
     keywords: ["editar", "alterar", "categoria", "lançamento"],
   },
   {
     id: "faq-8",
-    question: "O que são as dicas de IA na Projeção?",
-    answer: "São recomendações personalizadas geradas por inteligência artificial baseadas nos seus padrões de gastos. As dicas usam apenas dados agregados para proteger sua privacidade.",
-    category: "projection",
-    keywords: ["IA", "inteligência", "dica", "recomendação", "projeção"],
+    question: "Como criar um objetivo de poupança?",
+    answer: "Em Metas, toque em 'Novo Objetivo'. Defina nome (ex: Viagem), valor alvo e data limite. Ao criar, ele aparece como subcategoria em 'Objetivos'. Faça aportes pelo botão 'Contribuir'.",
+    category: "objectives",
+    keywords: ["objetivo", "poupança", "guardar", "aporte", "contribuição"],
   },
   {
     id: "faq-9",
-    question: "Como excluir minha conta?",
-    answer: "Em Configurações > Meus Dados > Privacidade, você encontra a opção de excluir conta. Esta ação é irreversível e remove todos os seus dados permanentemente.",
-    category: "privacy",
-    keywords: ["excluir", "deletar", "conta", "remover"],
+    question: "Por que ao excluir um aporte, todos foram apagados?",
+    answer: "Isso era um bug que já foi corrigido. Agora, ao excluir um aporte, apenas aquele aporte específico é removido. O objetivo recalcula o progresso corretamente.",
+    category: "objectives",
+    keywords: ["excluir", "aporte", "bug", "corrigido"],
   },
   {
     id: "faq-10",
     question: "Posso definir metas por subcategoria?",
-    answer: "Sim! Ao criar uma meta de orçamento, você pode escolher uma categoria específica ou uma subcategoria para um controle mais detalhado.",
+    answer: "Sim! Ao criar uma meta de orçamento, vocês podem escolher uma categoria específica ou uma subcategoria para um controle mais detalhado.",
     category: "budgets",
     keywords: ["meta", "subcategoria", "orçamento", "específico"],
+  },
+  {
+    id: "faq-11",
+    question: "Por que preciso informar CPF e data de nascimento?",
+    answer: "Essas informações são usadas para tentar desbloquear automaticamente arquivos de extrato que vêm protegidos por senha (como faturas de cartão em PDF).",
+    category: "import",
+    keywords: ["cpf", "nascimento", "senha", "importar"],
+  },
+  {
+    id: "faq-12",
+    question: "Por que receitas não têm opção de débito/crédito?",
+    answer: "Porque débito e crédito são métodos de PAGAMENTO. Para receitas (dinheiro entrando), os métodos de RECEBIMENTO disponíveis são: PIX, Dinheiro, Transferência e Cheque.",
+    category: "transactions",
+    keywords: ["receita", "débito", "crédito", "pagamento", "recebimento"],
+  },
+  {
+    id: "faq-13",
+    question: "O que acontece se eu selecionar Cheque?",
+    answer: "Ao selecionar Cheque como método de pagamento, o campo 'Número do cheque' se torna obrigatório. Isso ajuda a rastrear e conciliar os cheques emitidos.",
+    category: "transactions",
+    keywords: ["cheque", "número", "obrigatório"],
+  },
+  {
+    id: "faq-14",
+    question: "Como funciona o WhatsApp do app?",
+    answer: "O botão WhatsApp na tela inicial abre uma conversa com o número +55 48 98848-3333. A mensagem já vem pré-preenchida para agendar consultoria financeira familiar.",
+    category: "home",
+    keywords: ["whatsapp", "consultoria", "número"],
+  },
+  {
+    id: "faq-15",
+    question: "Como excluir minha conta?",
+    answer: "Em Configurações > Meus Dados > Privacidade, vocês encontram a opção de excluir conta. Esta ação é irreversível e remove todos os dados permanentemente.",
+    category: "privacy",
+    keywords: ["excluir", "deletar", "conta", "remover"],
   },
 ];
 
@@ -390,11 +533,13 @@ export const categoryLabels: Record<string, string> = {
   "transactions": "Lançamentos",
   "categories": "Categorias",
   "goals": "Metas",
+  "objectives": "Objetivos",
   "budgets": "Orçamento",
   "projection": "Projeção",
+  "import": "Importação",
   "family": "Família",
   "settings": "Configurações",
-  "privacy": "Privacidade",
+  "privacy": "Privacidade e Segurança",
   "general": "Geral",
 };
 
