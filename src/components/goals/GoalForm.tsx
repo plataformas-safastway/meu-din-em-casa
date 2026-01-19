@@ -132,7 +132,7 @@ export function GoalForm({ open, onOpenChange, goal, onSubmit, isLoading }: Goal
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="current_amount">Valor Atual (R$)</Label>
+              <Label htmlFor="current_amount">Valor Investido (R$)</Label>
               <Input
                 id="current_amount"
                 type="number"
