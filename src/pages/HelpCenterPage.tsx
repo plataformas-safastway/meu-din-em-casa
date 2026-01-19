@@ -3,27 +3,27 @@ import {
   ArrowLeft, 
   Search, 
   ChevronRight,
-  ChevronDown,
   BookOpen,
   HelpCircle,
   Lightbulb,
   ExternalLink,
-  X
+  X,
+  Calendar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   helpArticles, 
   faqItems, 
   categoryLabels, 
   searchHelp,
   HelpArticle,
-  FAQItem 
+  FAQItem,
+  HELP_CENTER_VERSION
 } from "@/data/helpContent";
 import { cn } from "@/lib/utils";
 
@@ -271,10 +271,11 @@ export function HelpCenterPage({ onBack, onNavigate }: HelpCenterPageProps) {
             <Button variant="ghost" size="icon" onClick={onBack}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-lg font-semibold">Central de Ajuda</h1>
-              <p className="text-xs text-muted-foreground">
-                Tutoriais e perguntas frequentes
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                Atualizado em {HELP_CENTER_VERSION}
               </p>
             </div>
           </div>
