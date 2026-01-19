@@ -42,7 +42,7 @@ export function Dashboard({
   const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  const selectedMonth = selectedDate.getMonth() + 1;
+  const selectedMonth = selectedDate.getMonth();
   const selectedYear = selectedDate.getFullYear();
 
   const { family, user } = useAuth();
@@ -208,7 +208,7 @@ export function Dashboard({
 
         {/* Budget Alerts Widget */}
         <BudgetAlertsWidget 
-          month={selectedMonth - 1} 
+          month={selectedMonth} 
           year={selectedYear} 
           onViewAll={onBudgetsClick}
         />
