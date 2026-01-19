@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Goal } from "@/hooks/useGoals";
 import { useCreateContribution } from "@/hooks/useGoalContributions";
+import { useBankAccounts, useCreditCards } from "@/hooks/useBankData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, PiggyBank } from "lucide-react";
+import { Loader2, PiggyBank, Building2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatters";
 import { expensePaymentMethods } from "@/data/categories";
@@ -35,7 +36,25 @@ export function QuickContributionSheet({ open, onOpenChange, goal }: QuickContri
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState<string>("pix");
+  const [bankAccountId, setBankAccountId] = useState<string>("");
+  const [creditCardId, setCreditCardId] = useState<string>("");
+  
   const createContribution = useCreateContribution();
+  const { data: bankAccounts = [] } = useBankAccounts();
+  const { data: creditCards = [] } = useCreditCards();
+
+  const activeAccounts = bankAccounts.filter((a: { is_active: boolean }) => a.is_active);
+  const activeCards = creditCards.filter((c: { is_active: boolean }) => c.is_active);
+
+  // Reset source selection when payment method changes
+  useEffect(() => {
+    if (paymentMethod !== 'credit') {
+      setCreditCardId("");
+    }
+    if (paymentMethod === 'credit') {
+      setBankAccountId("");
+    }
+  }, [paymentMethod]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,23 +79,34 @@ export function QuickContributionSheet({ open, onOpenChange, goal }: QuickContri
         description: description || null,
         contributed_at: new Date(date).toISOString(),
         payment_method: paymentMethod as 'pix' | 'cash' | 'transfer' | 'debit' | 'credit' | 'cheque',
+        bank_account_id: bankAccountId || undefined,
+        credit_card_id: creditCardId || undefined,
         goal: goal,
       });
       
       toast.success(`Aporte de ${formatCurrency(numAmount)} adicionado!`);
-      setAmount("");
-      setDescription("");
-      setDate(new Date().toISOString().split('T')[0]);
-      setPaymentMethod("pix");
+      resetForm();
       onOpenChange(false);
     } catch (error) {
       toast.error("Erro ao adicionar aporte");
     }
   };
 
+  const resetForm = () => {
+    setAmount("");
+    setDescription("");
+    setDate(new Date().toISOString().split('T')[0]);
+    setPaymentMethod("pix");
+    setBankAccountId("");
+    setCreditCardId("");
+  };
+
   const progress = goal?.target_amount && goal.target_amount > 0
     ? Math.min((Number(goal.current_amount || 0) / Number(goal.target_amount)) * 100, 100)
     : null;
+
+  const showBankAccountField = ['pix', 'transfer', 'debit', 'cash', 'cheque'].includes(paymentMethod) && activeAccounts.length > 0;
+  const showCreditCardField = paymentMethod === 'credit' && activeCards.length > 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -161,6 +191,50 @@ export function QuickContributionSheet({ open, onOpenChange, goal }: QuickContri
               </SelectContent>
             </Select>
           </div>
+
+          {showBankAccountField && (
+            <div className="space-y-2">
+              <Label htmlFor="bank-account" className="flex items-center gap-2">
+                <Building2 className="w-4 h-4" />
+                Conta Bancária
+              </Label>
+              <Select value={bankAccountId} onValueChange={setBankAccountId}>
+                <SelectTrigger id="bank-account">
+                  <SelectValue placeholder="Selecione a conta (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhuma</SelectItem>
+                  {activeAccounts.map((account: { id: string; nickname: string; banks?: { name: string } | null }) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.nickname} {account.banks?.name ? `(${account.banks.name})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {showCreditCardField && (
+            <div className="space-y-2">
+              <Label htmlFor="credit-card" className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                Cartão de Crédito
+              </Label>
+              <Select value={creditCardId} onValueChange={setCreditCardId}>
+                <SelectTrigger id="credit-card">
+                  <SelectValue placeholder="Selecione o cartão (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhum</SelectItem>
+                  {activeCards.map((card: { id: string; card_name: string; brand: string }) => (
+                    <SelectItem key={card.id} value={card.id}>
+                      {card.card_name} ({card.brand.toUpperCase()})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="contribution-description">Observação (opcional)</Label>
