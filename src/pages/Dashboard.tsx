@@ -29,6 +29,7 @@ interface DashboardProps {
   onBudgetsClick?: () => void;
   onLearnMore?: (tab?: "accounts" | "cards") => void;
   onBanksClick?: () => void;
+  onCategoriesClick?: () => void;
 }
 
 export function Dashboard({ 
@@ -37,6 +38,7 @@ export function Dashboard({
   onBudgetsClick,
   onLearnMore,
   onBanksClick,
+  onCategoriesClick,
 }: DashboardProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
@@ -131,16 +133,23 @@ export function Dashboard({
   }));
 
   // Transform expenses by category for chart
-  const categoryExpenses = summary?.expensesByCategory
-    ? Object.entries(summary.expensesByCategory).map(([categoryId, amount]) => {
-        const category = getCategoryById(categoryId);
-        return {
-          category: category?.name || categoryId,
-          amount: amount as number,
-          color: category?.color || "hsl(var(--muted))",
-        };
-      })
-    : [];
+  const categoryExpenses = useMemo(() => {
+    if (!summary?.expensesByCategory) return [];
+    
+    const totalExpenses = summary.expenses || 0;
+    
+    return Object.entries(summary.expensesByCategory).map(([categoryId, amount]) => {
+      const category = getCategoryById(categoryId);
+      const percentage = totalExpenses > 0 ? ((amount as number) / totalExpenses) * 100 : 0;
+      
+      return {
+        category: categoryId,
+        amount: amount as number,
+        color: category?.color || "hsl(var(--muted))",
+        percentage,
+      };
+    }).sort((a, b) => b.amount - a.amount);
+  }, [summary]);
 
   // Monthly data placeholder
   const monthlyData = [
@@ -219,7 +228,7 @@ export function Dashboard({
         {/* Charts Grid */}
         {categoryExpenses.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2">
-            <CategoryChart categories={categoryExpenses} />
+            <CategoryChart categories={categoryExpenses} onViewAll={onCategoriesClick} />
             <MonthlyChart data={monthlyData} />
           </div>
         )}
