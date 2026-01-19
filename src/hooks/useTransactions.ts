@@ -66,6 +66,33 @@ export function useAllTransactions() {
   });
 }
 
+export function useTransactionsLast6Months() {
+  const { family } = useAuth();
+
+  return useQuery({
+    queryKey: ["transactions", family?.id, "last-6-months"],
+    queryFn: async () => {
+      if (!family) return [];
+
+      // Calculate date 6 months ago
+      const now = new Date();
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      const startDate = sixMonthsAgo.toISOString().split("T")[0];
+
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("id, type, amount, category_id, subcategory_id, date")
+        .eq("family_id", family.id)
+        .gte("date", startDate)
+        .order("date", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!family,
+  });
+}
+
 export function useCreateTransaction() {
   const queryClient = useQueryClient();
   const { family } = useAuth();

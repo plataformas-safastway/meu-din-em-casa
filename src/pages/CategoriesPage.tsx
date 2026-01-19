@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
-import { ArrowLeft, Plus, ChevronRight, ChevronDown, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ArrowLeft, Plus, ChevronRight, ChevronDown, TrendingUp, TrendingDown, Minus, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getExpenseCategories, getIncomeCategories } from "@/data/categories";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { useTransactions } from "@/hooks/useTransactions";
+import { useTransactions, useTransactionsLast6Months } from "@/hooks/useTransactions";
 import { MonthSelector } from "@/components/MonthSelector";
+import { CategoryEvolutionSection } from "@/components/CategoryEvolutionChart";
 
 interface CategoriesPageProps {
   onBack: () => void;
@@ -15,6 +16,7 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense');
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showChart, setShowChart] = useState(false);
   
   const selectedMonth = selectedDate.getMonth();
   const selectedYear = selectedDate.getFullYear();
@@ -27,9 +29,10 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
   const incomeCategories = getIncomeCategories();
   const categories = activeTab === 'expense' ? expenseCategories : incomeCategories;
 
-  // Fetch real transactions for selected month and previous month
+  // Fetch real transactions for selected month, previous month, and last 6 months
   const { data: transactions = [] } = useTransactions(selectedMonth, selectedYear);
   const { data: prevTransactions = [] } = useTransactions(prevMonth, prevYear);
+  const { data: last6MonthsTransactions = [] } = useTransactionsLast6Months();
 
   // Calculate totals from real transaction data
   const totals = useMemo(() => {
@@ -114,9 +117,9 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
               </Button>
               <h1 className="text-lg font-semibold">Categorias</h1>
             </div>
-            <Button size="sm" variant="outline" className="gap-2">
-              <Plus className="w-4 h-4" />
-              Nova
+            <Button size="sm" variant="outline" className="gap-2" onClick={() => setShowChart(!showChart)}>
+              <BarChart3 className="w-4 h-4" />
+              {showChart ? 'Lista' : 'Gráfico'}
             </Button>
           </div>
         </div>
@@ -155,9 +158,18 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
         </div>
       </div>
 
-      {/* Categories List */}
+      {/* Categories Content */}
       <main className="container px-4">
-        <div className="grid gap-3">
+        {showChart ? (
+          /* Chart View */
+          <CategoryEvolutionSection
+            categories={categories}
+            allTransactions={last6MonthsTransactions}
+            type={activeTab}
+          />
+        ) : (
+          /* List View */
+          <div className="grid gap-3">
           {categories.map((category) => {
             const categoryTotal = totals.categoryTotals[category.id] || 0;
             const prevCategoryTotal = prevTotals.categoryTotals[category.id] || 0;
@@ -284,12 +296,14 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
             );
           })}
         </div>
+        )}
 
         {/* Insight */}
         <div className="mt-6 p-4 rounded-2xl bg-info/10 border border-info/20">
           <p className="text-sm text-info leading-relaxed">
-            💡 <strong>Dica:</strong> A variação percentual compara com o mês anterior. 
-            Para despesas: 🔴 aumento, 🟢 redução. Para receitas: 🟢 aumento, 🔴 redução.
+            💡 <strong>Dica:</strong> {showChart 
+              ? 'Os gráficos mostram a evolução de gastos/receitas por categoria nos últimos 6 meses.'
+              : 'A variação percentual compara com o mês anterior. Para despesas: 🔴 aumento, 🟢 redução. Para receitas: 🟢 aumento, 🔴 redução.'}
           </p>
         </div>
       </main>
