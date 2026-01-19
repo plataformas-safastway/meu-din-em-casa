@@ -1,10 +1,11 @@
 import { useState, useMemo } from "react";
-import { ArrowLeft, Plus, ChevronRight, ChevronDown } from "lucide-react";
+import { ArrowLeft, Plus, ChevronRight, ChevronDown, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getExpenseCategories, getIncomeCategories } from "@/data/categories";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useTransactions } from "@/hooks/useTransactions";
+import { MonthSelector } from "@/components/MonthSelector";
 
 interface CategoriesPageProps {
   onBack: () => void;
@@ -13,13 +14,22 @@ interface CategoriesPageProps {
 export function CategoriesPage({ onBack }: CategoriesPageProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  
+  const selectedMonth = selectedDate.getMonth();
+  const selectedYear = selectedDate.getFullYear();
+  
+  // Calculate previous month
+  const prevMonth = selectedMonth === 0 ? 11 : selectedMonth - 1;
+  const prevYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear;
   
   const expenseCategories = getExpenseCategories();
   const incomeCategories = getIncomeCategories();
   const categories = activeTab === 'expense' ? expenseCategories : incomeCategories;
 
-  // Fetch real transactions
-  const { data: transactions = [] } = useTransactions();
+  // Fetch real transactions for selected month and previous month
+  const { data: transactions = [] } = useTransactions(selectedMonth, selectedYear);
+  const { data: prevTransactions = [] } = useTransactions(prevMonth, prevYear);
 
   // Calculate totals from real transaction data
   const totals = useMemo(() => {
@@ -48,6 +58,46 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
     return { categoryTotals, subcategoryTotals };
   }, [transactions, activeTab]);
 
+  // Calculate previous month totals for comparison
+  const prevTotals = useMemo(() => {
+    const categoryTotals: Record<string, number> = {};
+    const subcategoryTotals: Record<string, Record<string, number>> = {};
+
+    const relevant = prevTransactions.filter((t: any) =>
+      activeTab === "expense" ? t.type === "expense" : t.type === "income"
+    );
+
+    for (const t of relevant) {
+      const catId = t.category_id;
+      const subId = t.subcategory_id;
+      const amount = Number(t.amount) || 0;
+
+      categoryTotals[catId] = (categoryTotals[catId] || 0) + amount;
+
+      if (subId) {
+        subcategoryTotals[catId] = subcategoryTotals[catId] || {};
+        subcategoryTotals[catId][subId] =
+          (subcategoryTotals[catId][subId] || 0) + amount;
+      }
+    }
+
+    return { categoryTotals, subcategoryTotals };
+  }, [prevTransactions, activeTab]);
+
+  // Calculate percentage variation
+  const getVariation = (current: number, previous: number) => {
+    if (previous === 0 && current === 0) return { percent: 0, trend: 'neutral' as const };
+    if (previous === 0) return { percent: 100, trend: 'up' as const };
+    
+    const percent = ((current - previous) / previous) * 100;
+    
+    if (Math.abs(percent) < 0.5) return { percent: 0, trend: 'neutral' as const };
+    return { 
+      percent: Math.abs(percent), 
+      trend: percent > 0 ? 'up' as const : 'down' as const 
+    };
+  };
+
   const toggleCategory = (categoryId: string) => {
     setExpandedCategory(expandedCategory === categoryId ? null : categoryId);
   };
@@ -72,8 +122,13 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
         </div>
       </header>
 
-      {/* Tabs */}
+      {/* Month Selector */}
       <div className="container px-4 py-4">
+        <MonthSelector selectedDate={selectedDate} onMonthChange={setSelectedDate} />
+      </div>
+
+      {/* Tabs */}
+      <div className="container px-4 pb-4">
         <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-xl">
           <button
             onClick={() => setActiveTab('expense')}
@@ -105,6 +160,8 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
         <div className="grid gap-3">
           {categories.map((category) => {
             const categoryTotal = totals.categoryTotals[category.id] || 0;
+            const prevCategoryTotal = prevTotals.categoryTotals[category.id] || 0;
+            const variation = getVariation(categoryTotal, prevCategoryTotal);
             const isExpanded = expandedCategory === category.id;
             const hasSubcategories = category.subcategories.length > 0;
             
@@ -137,16 +194,38 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
                     </p>
                   </div>
 
-                  <div className="text-right shrink-0 flex items-center gap-2">
-                    <p className="font-semibold text-foreground">
-                      {formatCurrency(categoryTotal)}
-                    </p>
-                    {hasSubcategories && (
-                      isExpanded ? (
-                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                      )
+                  <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-foreground">
+                        {formatCurrency(categoryTotal)}
+                      </p>
+                      {hasSubcategories && (
+                        isExpanded ? (
+                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                        )
+                      )}
+                    </div>
+                    {/* Variation indicator */}
+                    {(categoryTotal > 0 || prevCategoryTotal > 0) && (
+                      <div className={cn(
+                        "flex items-center gap-1 text-xs",
+                        variation.trend === 'up' && activeTab === 'expense' && "text-destructive",
+                        variation.trend === 'down' && activeTab === 'expense' && "text-success",
+                        variation.trend === 'up' && activeTab === 'income' && "text-success",
+                        variation.trend === 'down' && activeTab === 'income' && "text-destructive",
+                        variation.trend === 'neutral' && "text-muted-foreground"
+                      )}>
+                        {variation.trend === 'up' && <TrendingUp className="w-3 h-3" />}
+                        {variation.trend === 'down' && <TrendingDown className="w-3 h-3" />}
+                        {variation.trend === 'neutral' && <Minus className="w-3 h-3" />}
+                        <span>
+                          {variation.trend === 'neutral' 
+                            ? 'Sem variação' 
+                            : `${variation.percent.toFixed(0)}%`}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </button>
@@ -156,6 +235,8 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
                   <div className="bg-card border border-t-0 border-border/30 rounded-b-2xl">
                     {category.subcategories.map((sub, index) => {
                       const subTotal = totals.subcategoryTotals[category.id]?.[sub.id] || 0;
+                      const prevSubTotal = prevTotals.subcategoryTotals[category.id]?.[sub.id] || 0;
+                      const subVariation = getVariation(subTotal, prevSubTotal);
                       
                       return (
                         <div
@@ -170,9 +251,30 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
                             style={{ backgroundColor: category.color }}
                           />
                           <span className="text-sm text-foreground flex-1">{sub.name}</span>
-                          <span className="text-sm font-medium text-foreground">
-                            {formatCurrency(subTotal)}
-                          </span>
+                          <div className="flex flex-col items-end gap-0.5">
+                            <span className="text-sm font-medium text-foreground">
+                              {formatCurrency(subTotal)}
+                            </span>
+                            {(subTotal > 0 || prevSubTotal > 0) && (
+                              <div className={cn(
+                                "flex items-center gap-0.5 text-[10px]",
+                                subVariation.trend === 'up' && activeTab === 'expense' && "text-destructive",
+                                subVariation.trend === 'down' && activeTab === 'expense' && "text-success",
+                                subVariation.trend === 'up' && activeTab === 'income' && "text-success",
+                                subVariation.trend === 'down' && activeTab === 'income' && "text-destructive",
+                                subVariation.trend === 'neutral' && "text-muted-foreground"
+                              )}>
+                                {subVariation.trend === 'up' && <TrendingUp className="w-2.5 h-2.5" />}
+                                {subVariation.trend === 'down' && <TrendingDown className="w-2.5 h-2.5" />}
+                                {subVariation.trend === 'neutral' && <Minus className="w-2.5 h-2.5" />}
+                                <span>
+                                  {subVariation.trend === 'neutral' 
+                                    ? '=' 
+                                    : `${subVariation.percent.toFixed(0)}%`}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -186,9 +288,8 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
         {/* Insight */}
         <div className="mt-6 p-4 rounded-2xl bg-info/10 border border-info/20">
           <p className="text-sm text-info leading-relaxed">
-            💡 <strong>Dica:</strong> Categorizar seus gastos ajuda a família a identificar 
-            onde o dinheiro está indo e a tomar decisões mais conscientes. As subcategorias 
-            permitem um controle ainda mais detalhado!
+            💡 <strong>Dica:</strong> A variação percentual compara com o mês anterior. 
+            Para despesas: 🔴 aumento, 🟢 redução. Para receitas: 🟢 aumento, 🔴 redução.
           </p>
         </div>
       </main>
