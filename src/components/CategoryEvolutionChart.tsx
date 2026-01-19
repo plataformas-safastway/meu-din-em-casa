@@ -43,14 +43,16 @@ export function CategoryEvolutionChart({
 
   const { chartData, hasData, subcategoryData, subcategoriesWithData } = useMemo(() => {
     const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
     const months: { month: number; year: number; label: string }[] = [];
     
-    // Generate last 6 months
-    for (let i = 5; i >= 0; i--) {
-      const date = subMonths(now, i);
+    // Generate months from January to current month of current year
+    for (let i = 0; i <= currentMonth; i++) {
+      const date = new Date(currentYear, i, 1);
       months.push({
-        month: date.getMonth(),
-        year: date.getFullYear(),
+        month: i,
+        year: currentYear,
         label: format(date, "MMM", { locale: ptBR })
       });
     }
@@ -293,10 +295,12 @@ export function CategoryEvolutionSection({
     });
   }, [categories, allTransactions, type]);
 
+  const currentYear = new Date().getFullYear();
+
   if (categoriesWithData.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
-        <p>Nenhuma {type === 'expense' ? 'despesa' : 'receita'} encontrada nos últimos 6 meses.</p>
+        <p>Nenhuma {type === 'expense' ? 'despesa' : 'receita'} encontrada em {currentYear}.</p>
       </div>
     );
   }
@@ -304,7 +308,7 @@ export function CategoryEvolutionSection({
   return (
     <div className="space-y-4">
       <h3 className="font-semibold text-foreground flex items-center gap-2">
-        📊 Evolução dos últimos 6 meses
+        📊 Evolução {currentYear}
       </h3>
       <p className="text-xs text-muted-foreground -mt-2">
         Clique em uma categoria para ver o detalhamento por subcategoria

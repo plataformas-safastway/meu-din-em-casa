@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { getExpenseCategories, getIncomeCategories } from "@/data/categories";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { useTransactions, useTransactionsLast6Months } from "@/hooks/useTransactions";
+import { useTransactions, useTransactionsCurrentYear } from "@/hooks/useTransactions";
 import { MonthSelector } from "@/components/MonthSelector";
 import { CategoryEvolutionSection } from "@/components/CategoryEvolutionChart";
 
@@ -29,10 +29,10 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
   const incomeCategories = getIncomeCategories();
   const categories = activeTab === 'expense' ? expenseCategories : incomeCategories;
 
-  // Fetch real transactions for selected month, previous month, and last 6 months
+  // Fetch real transactions for selected month, previous month, and current year
   const { data: transactions = [] } = useTransactions(selectedMonth, selectedYear);
   const { data: prevTransactions = [] } = useTransactions(prevMonth, prevYear);
-  const { data: last6MonthsTransactions = [] } = useTransactionsLast6Months();
+  const { data: currentYearTransactions = [] } = useTransactionsCurrentYear();
 
   // Calculate totals from real transaction data
   const totals = useMemo(() => {
@@ -164,7 +164,7 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
           /* Chart View */
           <CategoryEvolutionSection
             categories={categories}
-            allTransactions={last6MonthsTransactions}
+            allTransactions={currentYearTransactions}
             type={activeTab}
           />
         ) : (
