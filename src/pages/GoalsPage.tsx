@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Goal, GoalInput, useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal } from "@/hooks/useGoals";
 import { GoalCard } from "@/components/goals/GoalCard";
 import { GoalForm } from "@/components/goals/GoalForm";
+import { QuickContributionSheet } from "@/components/goals/QuickContributionSheet";
+import { ContributionHistorySheet } from "@/components/goals/ContributionHistorySheet";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -30,6 +32,8 @@ export function GoalsPage({ onBack }: GoalsPageProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [deletingGoal, setDeletingGoal] = useState<Goal | null>(null);
+  const [contributionGoal, setContributionGoal] = useState<Goal | null>(null);
+  const [historyGoal, setHistoryGoal] = useState<Goal | null>(null);
 
   const activeGoals = goals.filter(g => g.status === "ACTIVE");
   const pausedGoals = goals.filter(g => g.status === "PAUSED");
@@ -102,6 +106,8 @@ export function GoalsPage({ onBack }: GoalsPageProps) {
             onEdit={setEditingGoal}
             onDelete={setDeletingGoal}
             onStatusChange={handleStatusChange}
+            onQuickContribution={setContributionGoal}
+            onViewHistory={setHistoryGoal}
           />
         ))}
       </div>
@@ -192,6 +198,25 @@ export function GoalsPage({ onBack }: GoalsPageProps) {
         goal={editingGoal}
         onSubmit={handleUpdate}
         isLoading={updateGoal.isPending}
+      />
+
+      {/* Quick Contribution Sheet */}
+      <QuickContributionSheet
+        open={!!contributionGoal}
+        onOpenChange={(open) => !open && setContributionGoal(null)}
+        goal={contributionGoal}
+      />
+
+      {/* Contribution History Sheet */}
+      <ContributionHistorySheet
+        open={!!historyGoal}
+        onOpenChange={(open) => !open && setHistoryGoal(null)}
+        goal={historyGoal}
+        onAddContribution={() => {
+          const goal = historyGoal;
+          setHistoryGoal(null);
+          setTimeout(() => setContributionGoal(goal), 100);
+        }}
       />
 
       {/* Delete Confirmation */}
