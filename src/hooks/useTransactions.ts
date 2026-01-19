@@ -93,6 +93,31 @@ export function useTransactionsLast6Months() {
   });
 }
 
+export function useTransactionsCurrentYear() {
+  const { family } = useAuth();
+  const currentYear = new Date().getFullYear();
+
+  return useQuery({
+    queryKey: ["transactions", family?.id, "current-year", currentYear],
+    queryFn: async () => {
+      if (!family) return [];
+
+      const startDate = `${currentYear}-01-01`;
+
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("id, type, amount, category_id, subcategory_id, date")
+        .eq("family_id", family.id)
+        .gte("date", startDate)
+        .order("date", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!family,
+  });
+}
+
 export function useCreateTransaction() {
   const queryClient = useQueryClient();
   const { family } = useAuth();
