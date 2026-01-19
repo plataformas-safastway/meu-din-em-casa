@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { GOALS_CATEGORY_ID } from "@/data/categories";
+import { GOALS_CATEGORY_ID, createGoalSubcategoryId } from "@/data/categories";
 import { Goal } from "./useGoals";
 
 export interface GoalContribution {
@@ -60,6 +60,21 @@ export function useCreateContribution() {
       const contributedAt = data.contributed_at || new Date().toISOString();
       const contributedDate = contributedAt.split('T')[0];
 
+      // Ensure goal has a subcategory_id, create one if missing
+      let subcategoryId = data.goal.subcategory_id;
+      if (!subcategoryId) {
+        subcategoryId = createGoalSubcategoryId(data.goal.title);
+        
+        // Update goal with the subcategory_id
+        await supabase
+          .from("goals")
+          .update({ 
+            category_id: GOALS_CATEGORY_ID,
+            subcategory_id: subcategoryId 
+          })
+          .eq("id", data.goal_id);
+      }
+
       // 1. Insert contribution record
       const { data: contribution, error: contribError } = await supabase
         .from("goal_contributions")
@@ -83,7 +98,7 @@ export function useCreateContribution() {
           type: 'expense' as const,
           amount: data.amount,
           category_id: GOALS_CATEGORY_ID,
-          subcategory_id: data.goal.subcategory_id,
+          subcategory_id: subcategoryId,
           date: contributedDate,
           description: `Aporte no objetivo: ${data.goal.title}`,
           payment_method: data.payment_method || 'pix',
@@ -95,10 +110,11 @@ export function useCreateContribution() {
 
       if (txError) {
         console.error("Error creating goal transaction:", txError);
+        throw txError; // Now we throw so the user knows it failed
       }
 
       // 3. Recalculate goal's current_amount from all transactions
-      await recalculateGoalAmount(family.id, data.goal_id, data.goal.subcategory_id);
+      await recalculateGoalAmount(family.id, data.goal_id, subcategoryId);
 
       return contribution as GoalContribution;
     },
@@ -135,8 +151,11 @@ export function useDeleteContribution() {
         .eq("goal_id", goalId)
         .eq("source", "GOAL_CONTRIBUTION");
 
+      // Get subcategory_id from goal or generate it
+      const subcategoryId = goal.subcategory_id || createGoalSubcategoryId(goal.title);
+
       // Recalculate goal's current_amount
-      await recalculateGoalAmount(family.id, goalId, goal.subcategory_id);
+      await recalculateGoalAmount(family.id, goalId, subcategoryId);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["goal-contributions", variables.goalId] });
