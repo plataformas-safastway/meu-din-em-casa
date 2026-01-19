@@ -2,7 +2,7 @@ export type TransactionType = 'income' | 'expense';
 
 export type ExpenseType = 'fixed' | 'variable';
 
-export type PaymentMethod = 'debit' | 'credit' | 'pix' | 'cash' | 'transfer';
+export type PaymentMethod = 'debit' | 'credit' | 'pix' | 'cash' | 'transfer' | 'cheque';
 
 export interface Subcategory {
   id: string;
@@ -33,6 +33,8 @@ export interface Transaction {
   description?: string;
   isRecurring?: boolean;
   createdAt: string;
+  checkNumber?: string;
+  goalId?: string;
 }
 
 export interface MonthlyBalance {

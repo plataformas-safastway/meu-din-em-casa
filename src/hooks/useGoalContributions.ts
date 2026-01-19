@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { GOALS_CATEGORY_ID } from "@/data/categories";
+import { Goal } from "./useGoals";
 
 export interface GoalContribution {
   id: string;
@@ -17,6 +19,9 @@ export interface ContributionInput {
   amount: number;
   description?: string | null;
   contributed_at?: string;
+  bank_account_id?: string;
+  credit_card_id?: string;
+  payment_method?: 'pix' | 'cash' | 'transfer' | 'debit' | 'credit' | 'cheque';
 }
 
 export function useGoalContributions(goalId: string | null) {
@@ -45,14 +50,17 @@ export function useCreateContribution() {
   const { family } = useAuth();
 
   return useMutation({
-    mutationFn: async (data: ContributionInput) => {
+    mutationFn: async (data: ContributionInput & { goal: Goal }) => {
       if (!family) throw new Error("No family");
 
       if (!data.amount || data.amount <= 0) {
         throw new Error("Valor deve ser maior que zero");
       }
 
-      // Insert contribution
+      const contributedAt = data.contributed_at || new Date().toISOString();
+      const contributedDate = contributedAt.split('T')[0];
+
+      // 1. Insert contribution record
       const { data: contribution, error: contribError } = await supabase
         .from("goal_contributions")
         .insert({
@@ -60,43 +68,56 @@ export function useCreateContribution() {
           family_id: family.id,
           amount: data.amount,
           description: data.description?.trim() || null,
-          contributed_at: data.contributed_at || new Date().toISOString(),
+          contributed_at: contributedAt,
         })
         .select()
         .single();
 
       if (contribError) throw contribError;
 
-      // Update goal's current_amount
-      const { data: goal } = await supabase
-        .from("goals")
-        .select("current_amount")
-        .eq("id", data.goal_id)
-        .single();
+      // 2. Create automatic transaction for this contribution
+      const { error: txError } = await supabase
+        .from("transactions")
+        .insert({
+          family_id: family.id,
+          type: 'expense' as const,
+          amount: data.amount,
+          category_id: GOALS_CATEGORY_ID,
+          subcategory_id: data.goal.subcategory_id,
+          date: contributedDate,
+          description: `Aporte no objetivo: ${data.goal.title}`,
+          payment_method: data.payment_method || 'pix',
+          goal_id: data.goal_id,
+          source: 'GOAL_CONTRIBUTION',
+          bank_account_id: data.bank_account_id || null,
+          credit_card_id: data.credit_card_id || null,
+        });
 
-      const newAmount = (Number(goal?.current_amount) || 0) + data.amount;
+      if (txError) {
+        console.error("Error creating goal transaction:", txError);
+      }
 
-      const { error: updateError } = await supabase
-        .from("goals")
-        .update({ current_amount: newAmount })
-        .eq("id", data.goal_id);
-
-      if (updateError) throw updateError;
+      // 3. Recalculate goal's current_amount from all transactions
+      await recalculateGoalAmount(family.id, data.goal_id, data.goal.subcategory_id);
 
       return contribution as GoalContribution;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["goal-contributions", variables.goal_id] });
       queryClient.invalidateQueries({ queryKey: ["goals"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
   });
 }
 
 export function useDeleteContribution() {
   const queryClient = useQueryClient();
+  const { family } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ id, goalId, amount }: { id: string; goalId: string; amount: number }) => {
+    mutationFn: async ({ id, goalId, goal }: { id: string; goalId: string; amount: number; goal: Goal }) => {
+      if (!family) throw new Error("No family");
+
       // Delete contribution
       const { error: deleteError } = await supabase
         .from("goal_contributions")
@@ -105,24 +126,71 @@ export function useDeleteContribution() {
 
       if (deleteError) throw deleteError;
 
-      // Update goal's current_amount
-      const { data: goal } = await supabase
-        .from("goals")
-        .select("current_amount")
-        .eq("id", goalId)
-        .single();
+      // Also delete related transaction if exists
+      // We identify it by goal_id and source
+      await supabase
+        .from("transactions")
+        .delete()
+        .eq("family_id", family.id)
+        .eq("goal_id", goalId)
+        .eq("source", "GOAL_CONTRIBUTION");
 
-      const newAmount = Math.max(0, (Number(goal?.current_amount) || 0) - amount);
-
-      const { error: updateError } = await supabase
-        .from("goals")
-        .update({ current_amount: newAmount })
-        .eq("id", goalId);
-
-      if (updateError) throw updateError;
+      // Recalculate goal's current_amount
+      await recalculateGoalAmount(family.id, goalId, goal.subcategory_id);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["goal-contributions", variables.goalId] });
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+    },
+  });
+}
+
+// Helper function to recalculate goal amount from transactions
+async function recalculateGoalAmount(familyId: string, goalId: string, subcategoryId: string | null) {
+  if (!subcategoryId) return;
+
+  // Sum all transactions for this goal's subcategory
+  const { data: transactions } = await supabase
+    .from("transactions")
+    .select("amount")
+    .eq("family_id", familyId)
+    .eq("category_id", GOALS_CATEGORY_ID)
+    .eq("subcategory_id", subcategoryId);
+
+  const totalAmount = transactions?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+
+  // Update goal's current_amount
+  await supabase
+    .from("goals")
+    .update({ current_amount: totalAmount })
+    .eq("id", goalId);
+}
+
+// Hook to sync goal amount when transactions change
+export function useSyncGoalFromTransaction() {
+  const queryClient = useQueryClient();
+  const { family } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ subcategoryId }: { subcategoryId: string }) => {
+      if (!family) throw new Error("No family");
+
+      // Find goal with this subcategory
+      const { data: goal } = await supabase
+        .from("goals")
+        .select("id, subcategory_id")
+        .eq("family_id", family.id)
+        .eq("subcategory_id", subcategoryId)
+        .maybeSingle();
+
+      if (!goal) return null;
+
+      // Recalculate
+      await recalculateGoalAmount(family.id, goal.id, subcategoryId);
+      return goal;
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["goals"] });
     },
   });

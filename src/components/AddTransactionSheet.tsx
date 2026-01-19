@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { defaultCategories, paymentMethods, getCategoryById } from "@/data/categories";
+import { defaultCategories, expensePaymentMethods, incomePaymentMethods, getCategoryById } from "@/data/categories";
 import { useBankAccounts, useCreditCards } from "@/hooks/useBankData";
 import { TransactionType, ExpenseType, PaymentMethod } from "@/types/finance";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,7 @@ interface AddTransactionSheetProps {
     bankAccountId?: string;
     creditCardId?: string;
     description?: string;
+    checkNumber?: string;
   }) => void;
   defaultType?: TransactionType;
 }
@@ -46,6 +47,7 @@ export function AddTransactionSheet({
   const [creditCardId, setCreditCardId] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [description, setDescription] = useState("");
+  const [checkNumber, setCheckNumber] = useState("");
   const [showSubcategories, setShowSubcategories] = useState(false);
 
   const { data: bankAccounts = [] } = useBankAccounts();
@@ -53,6 +55,9 @@ export function AddTransactionSheet({
 
   const filteredCategories = defaultCategories.filter((cat) => cat.type === type);
   const selectedCategory = getCategoryById(category);
+
+  // Get payment methods based on transaction type
+  const availablePaymentMethods = type === "income" ? incomePaymentMethods : expensePaymentMethods;
 
   // Reset subcategory when category changes
   useEffect(() => {
@@ -62,20 +67,28 @@ export function AddTransactionSheet({
     }
   }, [category]);
 
-  // Reset category when type changes
+  // Reset category and payment method when type changes
   useEffect(() => {
     setCategory("");
     setSubcategory("");
     setShowSubcategories(false);
+    setCheckNumber("");
+    // Reset to valid payment method for new type
+    if (type === "income" && (paymentMethod === "credit" || paymentMethod === "debit")) {
+      setPaymentMethod("pix");
+    }
   }, [type]);
 
-  // Reset bank/card selection when payment method changes
+  // Reset bank/card selection and check number when payment method changes
   useEffect(() => {
     if (paymentMethod !== "credit") {
       setCreditCardId("");
     }
     if (!["debit", "pix", "transfer"].includes(paymentMethod)) {
       setBankAccountId("");
+    }
+    if (paymentMethod !== "cheque") {
+      setCheckNumber("");
     }
   }, [paymentMethod]);
 
@@ -92,6 +105,11 @@ export function AddTransactionSheet({
 
     if (!amount || !category) return;
 
+    // Validate check number for cheque payment
+    if (paymentMethod === "cheque" && !checkNumber.trim()) {
+      return;
+    }
+
     onSubmit({
       type,
       expenseType: type === "expense" ? expenseType : undefined,
@@ -103,6 +121,7 @@ export function AddTransactionSheet({
       bankAccountId: bankAccountId || undefined,
       creditCardId: creditCardId || undefined,
       description: description || undefined,
+      checkNumber: paymentMethod === "cheque" ? checkNumber.trim() : undefined,
     });
 
     // Reset form
@@ -113,6 +132,7 @@ export function AddTransactionSheet({
     setExpenseType("variable");
     setBankAccountId("");
     setCreditCardId("");
+    setCheckNumber("");
     setShowSubcategories(false);
     onOpenChange(false);
   };
@@ -124,6 +144,7 @@ export function AddTransactionSheet({
 
   const needsBankAccount = ["debit", "pix", "transfer"].includes(paymentMethod);
   const needsCreditCard = paymentMethod === "credit";
+  const needsCheckNumber = paymentMethod === "cheque";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -314,9 +335,9 @@ export function AddTransactionSheet({
 
                   {/* Payment Method */}
                   <div className="space-y-2">
-                    <Label>Forma de Pagamento</Label>
+                    <Label>{type === "income" ? "Meio de Recebimento" : "Forma de Pagamento"}</Label>
                     <div className="flex gap-2 overflow-x-auto pb-2">
-                      {paymentMethods.map((method) => (
+                      {availablePaymentMethods.map((method) => (
                         <button
                           key={method.id}
                           type="button"
@@ -334,6 +355,22 @@ export function AddTransactionSheet({
                       ))}
                     </div>
                   </div>
+
+                  {/* Check Number (for cheque payment) */}
+                  {needsCheckNumber && (
+                    <div className="space-y-2">
+                      <Label htmlFor="checkNumber">Número do Cheque *</Label>
+                      <Input
+                        id="checkNumber"
+                        type="text"
+                        placeholder="Digite o número do cheque"
+                        value={checkNumber}
+                        onChange={(e) => setCheckNumber(e.target.value)}
+                        className="h-12"
+                        required
+                      />
+                    </div>
+                  )}
 
                   {/* Bank Account Selection */}
                   {needsBankAccount && bankAccounts.length > 0 && (
@@ -415,7 +452,7 @@ export function AddTransactionSheet({
                 type="submit"
                 size="lg"
                 className="w-full h-14 text-base font-semibold"
-                disabled={!amount || !category}
+                disabled={!amount || !category || (paymentMethod === "cheque" && !checkNumber.trim())}
               >
                 Salvar Lançamento
               </Button>
