@@ -10,6 +10,7 @@ import { GoalsWidget } from "@/components/goals/GoalsWidget";
 import { TransactionList } from "@/components/TransactionList";
 import { MonthlyChart } from "@/components/MonthlyChart";
 import { AddTransactionSheet } from "@/components/AddTransactionSheet";
+import { EditTransactionSheet } from "@/components/EditTransactionSheet";
 import { FabButton } from "@/components/QuickActions";
 import { SkeletonHome } from "@/components/ui/money-loader";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,7 +19,7 @@ import { useInsights } from "@/hooks/useInsights";
 import { useHomeSummary } from "@/hooks/useHomeSummary";
 import { useDebouncedLoading } from "@/hooks/useLoading";
 import { getCategoryById } from "@/data/categories";
-import { TransactionType } from "@/types/finance";
+import { Transaction, TransactionType } from "@/types/finance";
 import { toast } from "sonner";
 import { format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -41,6 +42,8 @@ export function Dashboard({
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
 
   const selectedMonth = selectedDate.getMonth();
   const selectedYear = selectedDate.getFullYear();
@@ -83,6 +86,11 @@ export function Dashboard({
 
   const handleViewReceipts = () => {
     toast.info("Em breve! Vocês poderão anexar recibos aos lançamentos.");
+  };
+
+  const handleTransactionClick = (transaction: Transaction) => {
+    setTransactionToEdit(transaction);
+    setEditSheetOpen(true);
   };
 
   const handleSubmitTransaction = async (transaction: any) => {
@@ -264,7 +272,11 @@ export function Dashboard({
         )}
 
         {/* Recent Transactions */}
-        <TransactionList transactions={displayTransactions} limit={5} />
+        <TransactionList 
+          transactions={displayTransactions} 
+          limit={5} 
+          onTransactionClick={handleTransactionClick}
+        />
       </main>
 
       {/* Floating Action Button */}
@@ -276,6 +288,13 @@ export function Dashboard({
         onOpenChange={setIsSheetOpen}
         onSubmit={handleSubmitTransaction}
         defaultType={defaultTransactionType}
+      />
+
+      {/* Edit Transaction Sheet */}
+      <EditTransactionSheet
+        open={editSheetOpen}
+        onOpenChange={setEditSheetOpen}
+        transaction={transactionToEdit}
       />
     </div>
   );
