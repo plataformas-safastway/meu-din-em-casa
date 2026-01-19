@@ -1,12 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ArrowLeft, Plus, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { defaultCategories, getExpenseCategories, getIncomeCategories } from "@/data/categories";
-import { formatCurrency, formatPercentage } from "@/lib/formatters";
-import { mockCategoryExpenses } from "@/data/mockData";
+import { getExpenseCategories, getIncomeCategories } from "@/data/categories";
+import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown } from "lucide-react";
-import { Category } from "@/types/finance";
+import { useTransactions } from "@/hooks/useTransactions";
 
 interface CategoriesPageProps {
   onBack: () => void;
@@ -20,9 +18,35 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
   const incomeCategories = getIncomeCategories();
   const categories = activeTab === 'expense' ? expenseCategories : incomeCategories;
 
-  const getCategoryExpense = (categoryId: string) => {
-    return mockCategoryExpenses.find(e => e.category === categoryId);
-  };
+  // Fetch real transactions
+  const { data: transactions = [] } = useTransactions();
+
+  // Calculate totals from real transaction data
+  const totals = useMemo(() => {
+    const categoryTotals: Record<string, number> = {};
+    const subcategoryTotals: Record<string, Record<string, number>> = {};
+
+    // Filter by type (expense/income)
+    const relevant = transactions.filter((t: any) =>
+      activeTab === "expense" ? t.type === "expense" : t.type === "income"
+    );
+
+    for (const t of relevant) {
+      const catId = t.category_id;
+      const subId = t.subcategory_id;
+      const amount = Number(t.amount) || 0;
+
+      categoryTotals[catId] = (categoryTotals[catId] || 0) + amount;
+
+      if (subId) {
+        subcategoryTotals[catId] = subcategoryTotals[catId] || {};
+        subcategoryTotals[catId][subId] =
+          (subcategoryTotals[catId][subId] || 0) + amount;
+      }
+    }
+
+    return { categoryTotals, subcategoryTotals };
+  }, [transactions, activeTab]);
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategory(expandedCategory === categoryId ? null : categoryId);
@@ -80,9 +104,7 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
       <main className="container px-4">
         <div className="grid gap-3">
           {categories.map((category) => {
-            const expense = getCategoryExpense(category.id);
-            const hasChange = expense?.change !== undefined && expense.change !== 0;
-            const isPositiveChange = expense?.change && expense.change > 0;
+            const categoryTotal = totals.categoryTotals[category.id] || 0;
             const isExpanded = expandedCategory === category.id;
             const hasSubcategories = category.subcategories.length > 0;
             
@@ -115,33 +137,15 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
                     </p>
                   </div>
 
-                  <div className="text-right shrink-0">
-                    {expense && activeTab === 'expense' ? (
-                      <>
-                        <p className="font-semibold text-foreground">
-                          {formatCurrency(expense.amount)}
-                        </p>
-                        {hasChange && (
-                          <div className={cn(
-                            "flex items-center justify-end gap-1 text-xs",
-                            isPositiveChange ? "text-destructive" : "text-success"
-                          )}>
-                            {isPositiveChange ? (
-                              <TrendingUp className="w-3 h-3" />
-                            ) : (
-                              <TrendingDown className="w-3 h-3" />
-                            )}
-                            <span>{Math.abs(expense.change || 0).toFixed(1)}%</span>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      hasSubcategories && (
-                        isExpanded ? (
-                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                        )
+                  <div className="text-right shrink-0 flex items-center gap-2">
+                    <p className="font-semibold text-foreground">
+                      {formatCurrency(categoryTotal)}
+                    </p>
+                    {hasSubcategories && (
+                      isExpanded ? (
+                        <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
                       )
                     )}
                   </div>
@@ -150,24 +154,28 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
                 {/* Subcategories */}
                 {isExpanded && hasSubcategories && (
                   <div className="bg-card border border-t-0 border-border/30 rounded-b-2xl">
-                    {category.subcategories.map((sub, index) => (
-                      <div
-                        key={sub.id}
-                        className={cn(
-                          "flex items-center gap-3 px-4 py-3 ml-4",
-                          index !== category.subcategories.length - 1 && "border-b border-border/20"
-                        )}
-                      >
-                        <div 
-                          className="w-2 h-2 rounded-full shrink-0"
-                          style={{ backgroundColor: category.color }}
-                        />
-                        <span className="text-sm text-foreground flex-1">{sub.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatCurrency(0)}
-                        </span>
-                      </div>
-                    ))}
+                    {category.subcategories.map((sub, index) => {
+                      const subTotal = totals.subcategoryTotals[category.id]?.[sub.id] || 0;
+                      
+                      return (
+                        <div
+                          key={sub.id}
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-3 ml-4",
+                            index !== category.subcategories.length - 1 && "border-b border-border/20"
+                          )}
+                        >
+                          <div 
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: category.color }}
+                          />
+                          <span className="text-sm text-foreground flex-1">{sub.name}</span>
+                          <span className="text-sm font-medium text-foreground">
+                            {formatCurrency(subTotal)}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
