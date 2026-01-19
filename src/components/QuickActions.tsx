@@ -1,13 +1,14 @@
-import { Plus, ArrowUpCircle, ArrowDownCircle, Receipt } from "lucide-react";
+import { Plus, ArrowUpCircle, ArrowDownCircle, Target, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface QuickActionsProps {
   onAddIncome: () => void;
   onAddExpense: () => void;
+  onAddGoal: () => void;
   onViewReceipts: () => void;
 }
 
-export function QuickActions({ onAddIncome, onAddExpense, onViewReceipts }: QuickActionsProps) {
+export function QuickActions({ onAddIncome, onAddExpense, onAddGoal, onViewReceipts }: QuickActionsProps) {
   const actions = [
     {
       id: "income",
@@ -24,6 +25,13 @@ export function QuickActions({ onAddIncome, onAddExpense, onViewReceipts }: Quic
       className: "bg-destructive/10 text-destructive hover:bg-destructive/20",
     },
     {
+      id: "goal",
+      label: "Meta",
+      icon: Target,
+      onClick: onAddGoal,
+      className: "bg-info/10 text-info hover:bg-info/20",
+    },
+    {
       id: "receipts",
       label: "Recibos",
       icon: Receipt,
@@ -33,7 +41,7 @@ export function QuickActions({ onAddIncome, onAddExpense, onViewReceipts }: Quic
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-3 animate-fade-in">
+    <div className="grid grid-cols-4 gap-3 animate-fade-in">
       {actions.map((action) => {
         const Icon = action.icon;
         return (
