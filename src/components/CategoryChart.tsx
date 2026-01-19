@@ -7,6 +7,7 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 interface CategoryChartProps {
   categories: CategoryExpense[];
+  onViewAll?: () => void;
 }
 
 const CustomTooltip = ({ active, payload }: any) => {
@@ -29,7 +30,7 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export function CategoryChart({ categories }: CategoryChartProps) {
+export function CategoryChart({ categories, onViewAll }: CategoryChartProps) {
   const chartData = categories.map(cat => ({
     ...cat,
     name: getCategoryById(cat.category)?.name || cat.category,
@@ -99,7 +100,10 @@ export function CategoryChart({ categories }: CategoryChartProps) {
         </div>
       </div>
       
-      <button className="w-full mt-4 text-sm text-primary hover:text-primary/80 font-medium transition-colors">
+      <button 
+        onClick={onViewAll}
+        className="w-full mt-4 text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+      >
         Ver todas as categorias →
       </button>
     </div>
