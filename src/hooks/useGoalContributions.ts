@@ -131,7 +131,13 @@ export function useDeleteContribution() {
   const { family } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ id, goalId, goal }: { id: string; goalId: string; amount: number; goal: Goal }) => {
+    mutationFn: async ({ id, goalId, amount, contributedAt, goal }: { 
+      id: string; 
+      goalId: string; 
+      amount: number; 
+      contributedAt: string;
+      goal: Goal 
+    }) => {
       if (!family) throw new Error("No family");
 
       // Delete contribution
@@ -142,14 +148,17 @@ export function useDeleteContribution() {
 
       if (deleteError) throw deleteError;
 
-      // Also delete related transaction if exists
-      // We identify it by goal_id and source
+      // Delete only the specific transaction that matches this contribution
+      // We identify it by goal_id, source, amount and date
+      const contributedDate = contributedAt.split('T')[0];
       await supabase
         .from("transactions")
         .delete()
         .eq("family_id", family.id)
         .eq("goal_id", goalId)
-        .eq("source", "GOAL_CONTRIBUTION");
+        .eq("source", "GOAL_CONTRIBUTION")
+        .eq("amount", amount)
+        .eq("date", contributedDate);
 
       // Get subcategory_id from goal or generate it
       const subcategoryId = goal.subcategory_id || createGoalSubcategoryId(goal.title);
