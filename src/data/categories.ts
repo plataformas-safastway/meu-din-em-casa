@@ -366,6 +366,18 @@ export const getExpenseCategories = () => defaultCategories.filter(c => c.type =
 // Goal subcategory helpers
 export const GOALS_CATEGORY_ID = 'objetivos';
 
+// Normalize text removing accents and special characters
+const normalizeText = (text: string): string => {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+};
+
 export const createGoalSubcategoryId = (goalTitle: string): string => {
-  return `objetivos-${goalTitle.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')}`;
+  const normalized = normalizeText(goalTitle);
+  return `objetivos-${normalized || 'objetivo'}`;
 };
