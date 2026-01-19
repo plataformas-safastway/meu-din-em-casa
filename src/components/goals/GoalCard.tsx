@@ -127,7 +127,7 @@ export function GoalCard({ goal, onEdit, onDelete, onStatusChange }: GoalCardPro
           </div>
           <div className="flex justify-between mt-1.5 text-sm">
             <span className="text-muted-foreground">
-              {formatCurrency(Number(goal.current_amount || 0))}
+              Investido: {formatCurrency(Number(goal.current_amount || 0))}
             </span>
             <span className="font-medium text-foreground">
               {formatPercentage(progress)}
