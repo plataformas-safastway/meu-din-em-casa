@@ -17,7 +17,12 @@ export function useUserRole() {
   return useQuery({
     queryKey: ['user-role', user?.id],
     queryFn: async (): Promise<AppRole | null> => {
-      if (!user) return null;
+      if (!user) {
+        console.log('[useUserRole] No user, returning null');
+        return null;
+      }
+
+      console.log('[useUserRole] Fetching role for user:', user.id);
 
       // Use RPC to get highest role (bypasses RLS issues)
       const { data, error } = await supabase.rpc('get_user_role', {
@@ -25,15 +30,16 @@ export function useUserRole() {
       });
 
       if (error) {
-        console.error('Error fetching user role:', error);
+        console.error('[useUserRole] Error fetching user role:', error);
         // If no role exists, user might need to be assigned default 'user' role
         return null;
       }
 
+      console.log('[useUserRole] Role fetched:', data);
       return data as AppRole;
     },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 1 * 60 * 1000, // 1 minute (reduced for faster updates)
   });
 }
 
