@@ -498,6 +498,8 @@ export type Database = {
           display_name: string
           family_id: string
           id: string
+          phone_country: string | null
+          phone_e164: string | null
           role: Database["public"]["Enums"]["family_role"]
           user_id: string
         }
@@ -509,6 +511,8 @@ export type Database = {
           display_name: string
           family_id: string
           id?: string
+          phone_country?: string | null
+          phone_e164?: string | null
           role?: Database["public"]["Enums"]["family_role"]
           user_id: string
         }
@@ -520,6 +524,8 @@ export type Database = {
           display_name?: string
           family_id?: string
           id?: string
+          phone_country?: string | null
+          phone_e164?: string | null
           role?: Database["public"]["Enums"]["family_role"]
           user_id?: string
         }
