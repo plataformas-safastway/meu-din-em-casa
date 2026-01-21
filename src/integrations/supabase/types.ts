@@ -817,6 +817,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           error_message: string | null
+          expires_at: string | null
           family_id: string
           file_name: string
           file_type: string
@@ -833,6 +834,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           error_message?: string | null
+          expires_at?: string | null
           family_id: string
           file_name: string
           file_type: string
@@ -849,6 +851,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           error_message?: string | null
+          expires_at?: string | null
           family_id?: string
           file_name?: string
           file_type?: string
@@ -1596,6 +1599,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      expire_old_imports: { Args: never; Returns: undefined }
       get_user_family_id: { Args: never; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
