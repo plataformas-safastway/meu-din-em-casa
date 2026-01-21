@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { 
   ArrowLeft, Check, X, Edit2, Trash2, Loader2, AlertTriangle, 
-  CheckCircle2, RefreshCw, Upload, Clock, AlertCircle 
+  CheckCircle2, RefreshCw, Upload, Clock, AlertCircle, Copy,
+  MessageCircle, FileWarning, HelpCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,13 +14,16 @@ import { cn } from "@/lib/utils";
 import { ScreenLoader } from "@/components/ui/money-loader";
 import {
   useImportBatch,
+  useImportPolling,
   usePendingImports,
   useConfirmImportBatch,
   useCancelImportBatch,
   useUpdateImportItem,
   useDeleteImportItems,
+  useRetryImport,
   getPendingImportId,
   clearPendingImportId,
+  IMPORT_ERROR_CODES,
 } from "@/hooks/useImportFlow";
 import {
   AlertDialog,
@@ -32,6 +36,114 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { DetectedSourceHandler } from "@/components/import/DetectedSourceHandler";
+import { toast } from "sonner";
+
+// ============================================
+// WHATSAPP SUPPORT HELPER
+// ============================================
+
+const WHATSAPP_SUPPORT_NUMBER = "5548988483333";
+const getWhatsAppUrl = (errorCode: string | null, importId: string | null) => {
+  const message = encodeURIComponent(
+    `Olá! Preciso de ajuda com uma importação no OIK.\n\nCódigo do erro: ${errorCode || 'N/A'}\nID da importação: ${importId || 'N/A'}`
+  );
+  return `https://wa.me/${WHATSAPP_SUPPORT_NUMBER}?text=${message}`;
+};
+
+// ============================================
+// COPY ERROR CODE HELPER
+// ============================================
+
+function copyErrorCode(code: string | null, importId: string | null) {
+  const text = `Código: ${code || 'N/A'} | ImportID: ${importId || 'N/A'}`;
+  navigator.clipboard.writeText(text);
+  toast.success("Código copiado para a área de transferência");
+}
+
+// ============================================
+// PROCESSING STATE COMPONENT
+// ============================================
+
+function ProcessingState({ 
+  onRefresh, 
+  isRefreshing,
+  batch
+}: { 
+  onRefresh: () => void; 
+  isRefreshing: boolean;
+  batch?: { detected_bank?: string | null; file_name?: string } | null;
+}) {
+  const [progress, setProgress] = useState(0);
+  const [step, setStep] = useState(0);
+  
+  const steps = [
+    "Detectando banco...",
+    "Abrindo arquivo...",
+    "Extraindo lançamentos...",
+    "Categorizando...",
+  ];
+
+  useEffect(() => {
+    const progressInterval = setInterval(() => {
+      setProgress(p => Math.min(p + 3, 90));
+    }, 500);
+
+    const stepInterval = setInterval(() => {
+      setStep(s => (s + 1) % steps.length);
+    }, 2000);
+
+    return () => {
+      clearInterval(progressInterval);
+      clearInterval(stepInterval);
+    };
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6 relative">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <div 
+          className="absolute inset-0 rounded-full border-4 border-primary/20"
+          style={{
+            background: `conic-gradient(hsl(var(--primary)) ${progress}%, transparent ${progress}%)`
+          }}
+        />
+      </div>
+      
+      <h2 className="text-lg font-semibold text-foreground mb-2">
+        Processando importação...
+      </h2>
+      
+      <p className="text-sm text-primary font-medium mb-2 animate-pulse">
+        {steps[step]}
+      </p>
+      
+      {batch?.detected_bank && (
+        <p className="text-xs text-muted-foreground mb-4">
+          Banco detectado: <span className="font-medium">{batch.detected_bank}</span>
+        </p>
+      )}
+      
+      <p className="text-xs text-muted-foreground mb-6 max-w-sm">
+        Isso geralmente leva menos de 30 segundos. A página atualiza automaticamente.
+      </p>
+      
+      <Button 
+        variant="outline" 
+        onClick={onRefresh}
+        disabled={isRefreshing}
+        size="sm"
+      >
+        {isRefreshing ? (
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        ) : (
+          <RefreshCw className="w-4 h-4 mr-2" />
+        )}
+        Atualizar agora
+      </Button>
+    </div>
+  );
+}
 
 // ============================================
 // EMPTY STATE COMPONENT
@@ -39,22 +151,37 @@ import { DetectedSourceHandler } from "@/components/import/DetectedSourceHandler
 
 function EmptyState({ 
   onRetry, 
-  onNewImport 
+  onNewImport,
+  errorCode,
+  importId
 }: { 
   onRetry: () => void; 
   onNewImport: () => void;
+  errorCode: string | null;
+  importId: string | null;
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
       <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-        <AlertCircle className="w-8 h-8 text-muted-foreground" />
+        <FileWarning className="w-8 h-8 text-muted-foreground" />
       </div>
       <h2 className="text-lg font-semibold text-foreground mb-2">
-        Nenhum dado para revisar
+        Nenhum lançamento encontrado
       </h2>
-      <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-        Não encontramos transações nesta importação. O arquivo pode estar vazio ou em formato não suportado.
+      <p className="text-sm text-muted-foreground mb-4 max-w-sm">
+        Não encontramos transações neste arquivo. Pode estar vazio ou em formato não suportado.
       </p>
+      
+      {errorCode && (
+        <button
+          onClick={() => copyErrorCode(errorCode, importId)}
+          className="flex items-center gap-1 text-xs text-muted-foreground mb-6 hover:text-foreground transition-colors"
+        >
+          <span className="font-mono">{errorCode}</span>
+          <Copy className="w-3 h-3" />
+        </button>
+      )}
+      
       <div className="flex gap-3">
         <Button variant="outline" onClick={onRetry}>
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -65,22 +192,38 @@ function EmptyState({
           Novo arquivo
         </Button>
       </div>
+      
+      <a 
+        href="/app?tab=help&article=import-files"
+        className="mt-4 text-xs text-primary hover:underline flex items-center gap-1"
+      >
+        <HelpCircle className="w-3 h-3" />
+        Ver dicas de importação
+      </a>
     </div>
   );
 }
 
 // ============================================
-// ERROR STATE COMPONENT
+// ERROR STATE COMPONENT (FAILED)
 // ============================================
 
-function ErrorState({ 
-  error, 
+function FailedState({ 
+  error,
+  errorMessage,
+  errorCode,
+  importId,
   onRetry, 
-  onNewImport 
+  onNewImport,
+  isRetrying
 }: { 
-  error: Error | null; 
+  error: Error | null;
+  errorMessage: string | null;
+  errorCode: string | null;
+  importId: string | null;
   onRetry: () => void; 
   onNewImport: () => void;
+  isRetrying: boolean;
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
@@ -88,25 +231,46 @@ function ErrorState({
         <AlertTriangle className="w-8 h-8 text-destructive" />
       </div>
       <h2 className="text-lg font-semibold text-foreground mb-2">
-        Erro ao carregar dados
+        Erro ao processar arquivo
       </h2>
       <p className="text-sm text-muted-foreground mb-2 max-w-sm">
-        Não foi possível carregar os dados da importação.
+        {errorMessage || error?.message || "Não foi possível processar o arquivo. Tente novamente."}
       </p>
-      {error?.message && (
-        <p className="text-xs text-destructive mb-6 max-w-sm font-mono">
-          {error.message}
-        </p>
+      
+      {errorCode && (
+        <button
+          onClick={() => copyErrorCode(errorCode, importId)}
+          className="flex items-center gap-2 text-xs text-muted-foreground mb-6 hover:text-foreground transition-colors bg-muted/50 px-3 py-1.5 rounded-full"
+        >
+          <span className="font-mono">{errorCode}</span>
+          <Copy className="w-3 h-3" />
+        </button>
       )}
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={onRetry}>
-          <RefreshCw className="w-4 h-4 mr-2" />
+      
+      <div className="flex flex-col gap-2 w-full max-w-xs">
+        <Button onClick={onRetry} disabled={isRetrying}>
+          {isRetrying ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4 mr-2" />
+          )}
           Tentar novamente
         </Button>
-        <Button onClick={onNewImport}>
+        
+        <Button variant="outline" onClick={onNewImport}>
           <Upload className="w-4 h-4 mr-2" />
-          Novo arquivo
+          Enviar outro arquivo
         </Button>
+        
+        <a 
+          href={getWhatsAppUrl(errorCode, importId)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-md text-sm font-medium border border-border hover:bg-accent transition-colors"
+        >
+          <MessageCircle className="w-4 h-4" />
+          Falar com suporte
+        </a>
       </div>
     </div>
   );
@@ -116,7 +280,15 @@ function ErrorState({
 // EXPIRED STATE COMPONENT
 // ============================================
 
-function ExpiredState({ onNewImport }: { onNewImport: () => void }) {
+function ExpiredState({ 
+  onNewImport,
+  errorCode,
+  importId
+}: { 
+  onNewImport: () => void;
+  errorCode: string | null;
+  importId: string | null;
+}) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
       <div className="w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center mb-4">
@@ -125,9 +297,20 @@ function ExpiredState({ onNewImport }: { onNewImport: () => void }) {
       <h2 className="text-lg font-semibold text-foreground mb-2">
         Importação expirada
       </h2>
-      <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+      <p className="text-sm text-muted-foreground mb-4 max-w-sm">
         Esta importação expirou após 24 horas. Por segurança, os dados foram removidos automaticamente.
       </p>
+      
+      {errorCode && (
+        <button
+          onClick={() => copyErrorCode(errorCode, importId)}
+          className="flex items-center gap-1 text-xs text-muted-foreground mb-6 hover:text-foreground transition-colors"
+        >
+          <span className="font-mono">{errorCode}</span>
+          <Copy className="w-3 h-3" />
+        </button>
+      )}
+      
       <Button onClick={onNewImport}>
         <Upload className="w-4 h-4 mr-2" />
         Enviar novo arquivo
@@ -140,7 +323,13 @@ function ExpiredState({ onNewImport }: { onNewImport: () => void }) {
 // NOT FOUND STATE COMPONENT
 // ============================================
 
-function NotFoundState({ onNewImport }: { onNewImport: () => void }) {
+function NotFoundState({ 
+  onNewImport,
+  importId
+}: { 
+  onNewImport: () => void;
+  importId: string | null;
+}) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
       <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -149,14 +338,124 @@ function NotFoundState({ onNewImport }: { onNewImport: () => void }) {
       <h2 className="text-lg font-semibold text-foreground mb-2">
         Importação não encontrada
       </h2>
-      <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+      <p className="text-sm text-muted-foreground mb-4 max-w-sm">
         Esta importação não existe ou você não tem permissão para acessá-la.
       </p>
+      
+      {importId && (
+        <p className="text-xs text-muted-foreground mb-6 font-mono">
+          ID: {importId.substring(0, 8)}...
+        </p>
+      )}
+      
       <Button onClick={onNewImport}>
         <Upload className="w-4 h-4 mr-2" />
         Iniciar nova importação
       </Button>
     </div>
+  );
+}
+
+// ============================================
+// NETWORK ERROR STATE
+// ============================================
+
+function NetworkErrorState({
+  error,
+  onRetry,
+  onNewImport,
+  errorCode,
+  importId
+}: {
+  error: Error | null;
+  onRetry: () => void;
+  onNewImport: () => void;
+  errorCode: string | null;
+  importId: string | null;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+        <AlertTriangle className="w-8 h-8 text-destructive" />
+      </div>
+      <h2 className="text-lg font-semibold text-foreground mb-2">
+        Erro de conexão
+      </h2>
+      <p className="text-sm text-muted-foreground mb-2 max-w-sm">
+        Não foi possível carregar os dados. Verifique sua conexão e tente novamente.
+      </p>
+      
+      {errorCode && (
+        <button
+          onClick={() => copyErrorCode(errorCode, importId)}
+          className="flex items-center gap-1 text-xs text-muted-foreground mb-6 hover:text-foreground transition-colors"
+        >
+          <span className="font-mono">{errorCode}</span>
+          <Copy className="w-3 h-3" />
+        </button>
+      )}
+      
+      <div className="flex gap-3">
+        <Button variant="outline" onClick={onRetry}>
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Tentar novamente
+        </Button>
+        <Button onClick={onNewImport}>
+          <Upload className="w-4 h-4 mr-2" />
+          Novo arquivo
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// PAGE HEADER COMPONENT
+// ============================================
+
+function PageHeader({
+  title,
+  subtitle,
+  onBack,
+  onRefresh,
+  isRefreshing
+}: {
+  title: string;
+  subtitle?: string;
+  onBack: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+}) {
+  return (
+    <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border/50">
+      <div className="container px-4 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={onBack}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="text-lg font-semibold">{title}</h1>
+              {subtitle && (
+                <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                  {subtitle}
+                </p>
+              )}
+            </div>
+          </div>
+          {onRefresh && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+            </Button>
+          )}
+        </div>
+      </div>
+    </header>
   );
 }
 
@@ -169,24 +468,34 @@ export function ImportReviewPage() {
   const { importId: routeImportId } = useParams<{ importId: string }>();
   const [searchParams] = useSearchParams();
   
-  // Try to get importId from route, query params, or localStorage
+  // Try to get importId from route first, then query params, then localStorage
   const importId = routeImportId || searchParams.get('id') || getPendingImportId();
   
+  // Fetch import data - 100% backend-driven
   const { 
     batch, 
     items: transactions, 
     isLoading, 
     isError, 
-    error, 
+    error,
+    errorCode,
     isEmpty, 
     isExpired,
+    isProcessing,
+    isFailed,
+    isReviewing,
+    summary,
     refetch 
   } = useImportBatch(importId);
+
+  // Auto-poll when processing
+  useImportPolling(importId, isProcessing, refetch);
   
   const confirmImport = useConfirmImportBatch();
   const cancelImport = useCancelImportBatch();
   const updateTransaction = useUpdateImportItem();
   const deleteTransactions = useDeleteImportItems();
+  const retryImport = useRetryImport();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -194,6 +503,7 @@ export function ImportReviewPage() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Initialize selected IDs when transactions load
   useEffect(() => {
@@ -205,129 +515,172 @@ export function ImportReviewPage() {
     }
   }, [transactions]);
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
+
   const handleNewImport = () => {
     clearPendingImportId();
-    navigate('/app', { state: { openImport: true } });
+    navigate('/app/import');
   };
 
   const handleBack = () => {
     navigate('/app');
   };
 
-  // If no importId at all, show not found
+  const handleRetry = () => {
+    if (importId) {
+      retryImport.mutate(importId);
+    }
+  };
+
+  // ==========================================
+  // RENDER STATES (NEVER BLANK)
+  // ==========================================
+
+  // 1. NO IMPORT ID - Show not found
   if (!importId) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border/50">
-          <div className="container px-4 py-4">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={handleBack}>
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <h1 className="text-lg font-semibold">Revisar Importação</h1>
-            </div>
-          </div>
-        </header>
+        <PageHeader title="Revisar Importação" onBack={handleBack} />
         <main className="container px-4 py-6">
-          <NotFoundState onNewImport={handleNewImport} />
+          <NotFoundState onNewImport={handleNewImport} importId={null} />
         </main>
       </div>
     );
   }
 
-  // Loading state
+  // 2. LOADING - Show loader
   if (isLoading) {
-    return <ScreenLoader label="Carregando dados da importação..." />;
+    return <ScreenLoader label="Carregando importação..." />;
   }
 
-  // Error state
-  if (isError) {
+  // 3. NETWORK ERROR - Show error with retry
+  if (isError && !batch) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border/50">
-          <div className="container px-4 py-4">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={handleBack}>
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <h1 className="text-lg font-semibold">Revisar Importação</h1>
-            </div>
-          </div>
-        </header>
+        <PageHeader 
+          title="Revisar Importação" 
+          onBack={handleBack}
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing}
+        />
         <main className="container px-4 py-6">
-          <ErrorState error={error} onRetry={refetch} onNewImport={handleNewImport} />
+          <NetworkErrorState 
+            error={error} 
+            onRetry={handleRefresh} 
+            onNewImport={handleNewImport}
+            errorCode={errorCode}
+            importId={importId}
+          />
         </main>
       </div>
     );
   }
 
-  // Batch not found
+  // 4. BATCH NOT FOUND - Show not found
   if (!batch) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border/50">
-          <div className="container px-4 py-4">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={handleBack}>
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <h1 className="text-lg font-semibold">Revisar Importação</h1>
-            </div>
-          </div>
-        </header>
+        <PageHeader title="Revisar Importação" onBack={handleBack} />
         <main className="container px-4 py-6">
-          <NotFoundState onNewImport={handleNewImport} />
+          <NotFoundState onNewImport={handleNewImport} importId={importId} />
         </main>
       </div>
     );
   }
 
-  // Expired state
+  // 5. PROCESSING - Show progress with auto-refresh
+  if (isProcessing) {
+    return (
+      <div className="min-h-screen bg-background">
+        <PageHeader 
+          title="Processando..." 
+          subtitle={batch.file_name}
+          onBack={handleBack}
+        />
+        <main className="container px-4 py-6">
+          <ProcessingState 
+            onRefresh={handleRefresh} 
+            isRefreshing={isRefreshing}
+            batch={batch}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // 6. EXPIRED - Show expired state
   if (isExpired) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border/50">
-          <div className="container px-4 py-4">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={handleBack}>
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <h1 className="text-lg font-semibold">Revisar Importação</h1>
-            </div>
-          </div>
-        </header>
+        <PageHeader title="Importação Expirada" onBack={handleBack} />
         <main className="container px-4 py-6">
-          <ExpiredState onNewImport={handleNewImport} />
+          <ExpiredState 
+            onNewImport={handleNewImport} 
+            errorCode={errorCode}
+            importId={importId}
+          />
         </main>
       </div>
     );
   }
 
-  // Empty state
+  // 7. FAILED - Show error with retry
+  if (isFailed) {
+    return (
+      <div className="min-h-screen bg-background">
+        <PageHeader 
+          title="Erro na Importação" 
+          subtitle={batch.file_name}
+          onBack={handleBack}
+        />
+        <main className="container px-4 py-6">
+          <FailedState 
+            error={error}
+            errorMessage={batch.error_message}
+            errorCode={errorCode}
+            importId={importId}
+            onRetry={handleRetry}
+            onNewImport={handleNewImport}
+            isRetrying={retryImport.isPending}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // 8. EMPTY (REVIEWING but no items) - Show empty state
   if (isEmpty) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border/50">
-          <div className="container px-4 py-4">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={handleBack}>
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <h1 className="text-lg font-semibold">Revisar Importação</h1>
-            </div>
-          </div>
-        </header>
+        <PageHeader 
+          title="Revisar Importação" 
+          subtitle={batch.file_name}
+          onBack={handleBack}
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing}
+        />
         <main className="container px-4 py-6">
-          <EmptyState onRetry={refetch} onNewImport={handleNewImport} />
+          <EmptyState 
+            onRetry={handleRefresh} 
+            onNewImport={handleNewImport}
+            errorCode={errorCode}
+            importId={importId}
+          />
         </main>
       </div>
     );
   }
 
-  // Calculate stats
-  const duplicateCount = transactions.filter(t => t.is_duplicate).length;
+  // ==========================================
+  // 9. REVIEWING with items - Main review UI
+  // ==========================================
+
+  const { total, duplicateCount, needsReviewCount } = summary;
   const selectedCount = selectedIds.size;
-  const needsReviewCount = transactions.filter(t => t.needs_review).length;
 
   const toggleSelect = (id: string) => {
     const newSelected = new Set(selectedIds);
@@ -406,35 +759,24 @@ export function ImportReviewPage() {
   return (
     <div className="min-h-screen bg-background pb-32">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border/50">
-        <div className="container px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={handleBack}>
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <div>
-                <h1 className="text-lg font-semibold">Revisar Importação</h1>
-                <p className="text-xs text-muted-foreground">
-                  {batch.file_name}
-                </p>
-              </div>
-            </div>
-            <Button variant="ghost" size="icon" onClick={refetch}>
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Revisar Importação"
+        subtitle={batch.file_name}
+        onBack={handleBack}
+        onRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
+      />
 
       <main className="container px-4 py-6">
         <div className="space-y-4 max-w-lg mx-auto">
           {/* Detected Sources Handler */}
           <DetectedSourceHandler importId={importId} />
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          
+          {/* Summary Stats */}
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             <div className="flex-shrink-0 px-3 py-2 rounded-lg bg-muted">
               <p className="text-xs text-muted-foreground">Total</p>
-              <p className="font-semibold">{transactions.length}</p>
+              <p className="font-semibold">{total}</p>
             </div>
             <div className="flex-shrink-0 px-3 py-2 rounded-lg bg-primary/10">
               <p className="text-xs text-muted-foreground">Selecionados</p>
@@ -542,7 +884,7 @@ export function ImportReviewPage() {
                             <SelectTrigger className="h-8 mt-2 text-xs">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-background border-2 shadow-xl z-50">
                               {defaultCategories
                                 .filter(c => c.type === transaction.type)
                                 .map(cat => (
@@ -619,7 +961,7 @@ export function ImportReviewPage() {
             disabled={confirmImport.isPending || cancelImport.isPending}
             className="flex-1"
           >
-            Cancelar tudo
+            Cancelar
           </Button>
           <Button 
             onClick={handleConfirm}
