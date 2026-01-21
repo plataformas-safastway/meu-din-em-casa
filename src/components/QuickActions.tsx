@@ -1,5 +1,6 @@
-import { Plus, ArrowUpCircle, ArrowDownCircle, Target, Receipt } from "lucide-react";
+import { Plus, ArrowUpCircle, ArrowDownCircle, Target, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 interface QuickActionsProps {
   onAddIncome: () => void;
@@ -9,6 +10,12 @@ interface QuickActionsProps {
 }
 
 export function QuickActions({ onAddIncome, onAddExpense, onAddGoal, onViewReceipts }: QuickActionsProps) {
+  const navigate = useNavigate();
+
+  const handleImportClick = () => {
+    navigate("/import");
+  };
+
   const actions = [
     {
       id: "income",
@@ -32,10 +39,10 @@ export function QuickActions({ onAddIncome, onAddExpense, onAddGoal, onViewRecei
       className: "bg-info/10 text-info hover:bg-info/20",
     },
     {
-      id: "receipts",
-      label: "Recibos",
-      icon: Receipt,
-      onClick: onViewReceipts,
+      id: "import",
+      label: "Importar",
+      icon: Upload,
+      onClick: handleImportClick,
       className: "bg-warning/10 text-warning hover:bg-warning/20",
     },
   ];
@@ -61,6 +68,7 @@ export function QuickActions({ onAddIncome, onAddExpense, onAddGoal, onViewRecei
     </div>
   );
 }
+
 
 interface FabButtonProps {
   onClick: () => void;
