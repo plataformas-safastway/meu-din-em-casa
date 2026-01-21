@@ -114,6 +114,11 @@ export function ImportUploadPage() {
 
       const result: any = data;
 
+      // Handle backend-declared failure that still returns HTTP 200
+      if (result?.success === false) {
+        throw new Error(result?.error || 'Erro ao processar arquivo');
+      }
+
       // Save import ID to localStorage for recovery
       const importId = result?.import_id || result?.importId;
       if (!importId) {

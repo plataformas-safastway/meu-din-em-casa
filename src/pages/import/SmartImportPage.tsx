@@ -162,7 +162,12 @@ export function SmartImportPage({ onBack }: SmartImportPageProps) {
             return;
           }
 
-          const retryResult: any = retryData;
+           const retryResult: any = retryData;
+
+           // Handle backend-declared failure that still returns HTTP 200
+           if (retryResult?.success === false) {
+             throw new Error(retryResult?.error || "Erro ao processar arquivo");
+           }
           if (retryResult?.import_id || retryResult?.importId) {
             toast.success("Arquivo processado!", {
               description: `${retryResult?.transactions_count || 0} transações encontradas.`,
@@ -176,7 +181,12 @@ export function SmartImportPage({ onBack }: SmartImportPageProps) {
         throw new Error(errAny?.message || "Erro ao processar arquivo");
       }
 
-      const result: any = data;
+       const result: any = data;
+
+       // Handle backend-declared failure that still returns HTTP 200
+       if (result?.success === false) {
+         throw new Error(result?.error || "Erro ao processar arquivo");
+       }
       const importId = result?.import_id || result?.importId;
       if (importId) {
         toast.success("Arquivo processado!", {

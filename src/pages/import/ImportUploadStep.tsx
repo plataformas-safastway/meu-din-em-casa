@@ -127,6 +127,13 @@ export function ImportUploadStep({ onComplete }: ImportUploadStepProps) {
       }
 
       const result: any = data;
+
+      // When the backend returns a valid HTTP 200 but indicates failure,
+      // Supabase's invoke does NOT populate `error`.
+      if (result?.success === false) {
+        throw new Error(result?.error || 'Erro ao processar arquivo');
+      }
+
       const importId = result?.import_id || result?.importId;
       if (!importId) {
         throw new Error('Importação sem ID retornado pelo backend');

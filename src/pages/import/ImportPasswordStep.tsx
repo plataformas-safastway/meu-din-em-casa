@@ -63,9 +63,15 @@ export function ImportPasswordStep({
         throw new Error(errAny?.message || 'Erro ao processar arquivo');
       }
 
+      const result: any = data;
+
+      // Handle backend-declared failure that still returns HTTP 200
+      if (result?.success === false) {
+        throw new Error(result?.error || 'Erro ao processar arquivo');
+      }
+
       queryClient.invalidateQueries({ queryKey: ['imports'] });
       toast.success("Arquivo desbloqueado!");
-      const result: any = data;
       const importId = result?.import_id || result?.importId;
       if (!importId) throw new Error('Importação sem ID retornado pelo backend');
       onSuccess(importId);
@@ -117,9 +123,15 @@ export function ImportPasswordStep({
         throw new Error(errAny?.message || 'Erro ao processar arquivo');
       }
 
+      const result: any = data;
+
+      // Handle backend-declared failure that still returns HTTP 200
+      if (result?.success === false) {
+        throw new Error(result?.error || 'Erro ao processar arquivo');
+      }
+
       queryClient.invalidateQueries({ queryKey: ['imports'] });
       toast.success("Arquivo desbloqueado!");
-      const result: any = data;
       const importId = result?.import_id || result?.importId;
       if (!importId) throw new Error('Importação sem ID retornado pelo backend');
       onSuccess(importId);
