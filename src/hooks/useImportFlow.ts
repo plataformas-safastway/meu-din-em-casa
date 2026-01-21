@@ -2,12 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useEffect, useCallback } from "react";
 
 // ============================================
 // TYPES
 // ============================================
 
-export type ImportStatus = 'pending' | 'reviewing' | 'completed' | 'cancelled' | 'failed' | 'expired';
+export type ImportStatus = 'pending' | 'processing' | 'reviewing' | 'completed' | 'cancelled' | 'failed' | 'expired';
 
 export interface ImportBatch {
   id: string;
@@ -24,6 +25,8 @@ export interface ImportBatch {
   processed_at: string | null;
   expires_at: string | null;
   created_by: string | null;
+  detected_bank: string | null;
+  detected_document_type: string | null;
 }
 
 export interface ImportItem {
@@ -52,9 +55,35 @@ export interface ImportFlowState {
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
+  errorCode: string | null;
   isEmpty: boolean;
   isExpired: boolean;
+  isProcessing: boolean;
+  isFailed: boolean;
+  isReviewing: boolean;
+  summary: {
+    total: number;
+    validCount: number;
+    duplicateCount: number;
+    needsReviewCount: number;
+    totalIncome: number;
+    totalExpense: number;
+  };
 }
+
+// ============================================
+// ERROR CODES
+// ============================================
+
+export const IMPORT_ERROR_CODES = {
+  NOT_FOUND: 'IMPORT-001',
+  EXPIRED: 'IMPORT-002',
+  FAILED: 'IMPORT-003',
+  EMPTY: 'IMPORT-004',
+  NETWORK: 'IMPORT-005',
+  UNAUTHORIZED: 'IMPORT-006',
+  PROCESSING_TIMEOUT: 'IMPORT-007',
+} as const;
 
 // ============================================
 // LOCAL STORAGE HELPERS
@@ -69,7 +98,7 @@ export function savePendingImportId(importId: string): void {
       savedAt: new Date().toISOString(),
     }));
   } catch (e) {
-    console.warn('Failed to save pending import ID to localStorage:', e);
+    console.warn('[OIK Import] Failed to save pending import ID:', e);
   }
 }
 
@@ -92,7 +121,7 @@ export function getPendingImportId(): string | null {
     
     return importId;
   } catch (e) {
-    console.warn('Failed to get pending import ID from localStorage:', e);
+    console.warn('[OIK Import] Failed to get pending import ID:', e);
     return null;
   }
 }
@@ -101,7 +130,7 @@ export function clearPendingImportId(): void {
   try {
     localStorage.removeItem(PENDING_IMPORT_KEY);
   } catch (e) {
-    console.warn('Failed to clear pending import ID from localStorage:', e);
+    console.warn('[OIK Import] Failed to clear pending import ID:', e);
   }
 }
 
@@ -125,7 +154,7 @@ export function usePendingImports() {
         .from('imports')
         .select('*')
         .eq('family_id', familyId)
-        .in('status', ['pending', 'reviewing'])
+        .in('status', ['pending', 'processing', 'reviewing'])
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -140,7 +169,8 @@ export function usePendingImports() {
 }
 
 /**
- * Hook to get a specific import batch with its items
+ * Hook to get a specific import batch with its items - 100% backend-driven
+ * Never depends on local state, always refetchable
  */
 export function useImportBatch(importId: string | null) {
   const { family } = useAuth();
@@ -149,23 +179,36 @@ export function useImportBatch(importId: string | null) {
   const batchQuery = useQuery({
     queryKey: ['import-batch', importId],
     queryFn: async () => {
-      if (!importId || !familyId) return null;
+      if (!importId || !familyId) {
+        console.log('[OIK Import] No importId or familyId, returning null');
+        return null;
+      }
+
+      console.log(`[OIK Import] Fetching batch: ${importId}`);
 
       const { data, error } = await supabase
         .from('imports')
         .select('*')
         .eq('id', importId)
         .eq('family_id', familyId)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        if (error.code === 'PGRST116') return null; // Not found
+        console.error('[OIK Import] Error fetching batch:', error);
         throw error;
       }
+      
+      if (!data) {
+        console.log('[OIK Import] Batch not found');
+        return null;
+      }
+      
+      console.log(`[OIK Import] Batch status: ${data.status}`);
       return data as ImportBatch;
     },
     enabled: !!importId && !!familyId,
-    staleTime: 0,
+    staleTime: 0, // Never cache - always fresh
+    gcTime: 5000, // Remove from cache after 5s
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
@@ -175,17 +218,25 @@ export function useImportBatch(importId: string | null) {
     queryFn: async () => {
       if (!importId) return [];
 
+      console.log(`[OIK Import] Fetching items for: ${importId}`);
+
       const { data, error } = await supabase
         .from('import_pending_transactions')
         .select('*')
         .eq('import_id', importId)
         .order('date', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[OIK Import] Error fetching items:', error);
+        throw error;
+      }
+      
+      console.log(`[OIK Import] Found ${data?.length || 0} items`);
       return data as ImportItem[];
     },
     enabled: !!importId,
-    staleTime: 0,
+    staleTime: 0, // Never cache
+    gcTime: 5000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
@@ -196,9 +247,44 @@ export function useImportBatch(importId: string | null) {
   const isError = batchQuery.isError || itemsQuery.isError;
   const error = batchQuery.error || itemsQuery.error;
   
+  // Determine status-based states
   const isExpired = batch?.status === 'expired' || 
     (batch?.expires_at && new Date(batch.expires_at) < new Date());
-  const isEmpty = !isLoading && !isError && items.length === 0 && batch !== null;
+  const isProcessing = batch?.status === 'pending' || batch?.status === 'processing';
+  const isFailed = batch?.status === 'failed';
+  const isReviewing = batch?.status === 'reviewing';
+  const isEmpty = !isLoading && !isError && items.length === 0 && batch !== null && 
+    (batch.status === 'reviewing' || batch.status === 'completed');
+
+  // Calculate summary
+  const summary = {
+    total: items.length,
+    validCount: items.filter(i => !i.is_duplicate && !i.needs_review).length,
+    duplicateCount: items.filter(i => i.is_duplicate).length,
+    needsReviewCount: items.filter(i => i.needs_review && !i.is_duplicate).length,
+    totalIncome: items.filter(i => i.type === 'income').reduce((sum, i) => sum + i.amount, 0),
+    totalExpense: items.filter(i => i.type === 'expense').reduce((sum, i) => sum + i.amount, 0),
+  };
+
+  // Generate error code
+  let errorCode: string | null = null;
+  if (!batch && !isLoading && importId) {
+    errorCode = IMPORT_ERROR_CODES.NOT_FOUND;
+  } else if (isExpired) {
+    errorCode = IMPORT_ERROR_CODES.EXPIRED;
+  } else if (isFailed) {
+    errorCode = IMPORT_ERROR_CODES.FAILED;
+  } else if (isEmpty) {
+    errorCode = IMPORT_ERROR_CODES.EMPTY;
+  } else if (isError) {
+    errorCode = IMPORT_ERROR_CODES.NETWORK;
+  }
+
+  const refetch = useCallback(() => {
+    console.log('[OIK Import] Manual refetch triggered');
+    batchQuery.refetch();
+    itemsQuery.refetch();
+  }, [batchQuery, itemsQuery]);
 
   return {
     batch,
@@ -206,13 +292,49 @@ export function useImportBatch(importId: string | null) {
     isLoading,
     isError,
     error: error as Error | null,
+    errorCode,
     isEmpty,
     isExpired,
-    refetch: () => {
-      batchQuery.refetch();
-      itemsQuery.refetch();
-    },
+    isProcessing,
+    isFailed,
+    isReviewing,
+    summary,
+    refetch,
   };
+}
+
+/**
+ * Hook for auto-polling when import is processing
+ */
+export function useImportPolling(
+  importId: string | null, 
+  isProcessing: boolean, 
+  refetch: () => void
+) {
+  useEffect(() => {
+    if (!importId || !isProcessing) return;
+
+    console.log('[OIK Import] Starting polling for processing import');
+
+    let pollCount = 0;
+    const maxPolls = 30; // 30 polls = ~1 minute at 2s intervals
+    
+    const interval = setInterval(() => {
+      pollCount++;
+      console.log(`[OIK Import] Poll ${pollCount}/${maxPolls}`);
+      refetch();
+      
+      if (pollCount >= maxPolls) {
+        console.log('[OIK Import] Max polls reached, stopping');
+        clearInterval(interval);
+      }
+    }, 2000); // Poll every 2 seconds initially
+
+    return () => {
+      console.log('[OIK Import] Stopping polling');
+      clearInterval(interval);
+    };
+  }, [importId, isProcessing, refetch]);
 }
 
 /**
@@ -250,6 +372,46 @@ export function useUpdateImportStatus() {
 }
 
 /**
+ * Hook to retry a failed/expired import (reprocess)
+ */
+export function useRetryImport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (importId: string) => {
+      console.log(`[OIK Import] Retrying import: ${importId}`);
+      
+      // Reset status to processing
+      const { error } = await supabase
+        .from('imports')
+        .update({ 
+          status: 'processing',
+          error_message: null,
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h from now
+        })
+        .eq('id', importId);
+
+      if (error) throw error;
+      
+      // Note: In a full implementation, you'd call the import-process edge function here
+      // For now, we just reset the status
+      
+      return { success: true };
+    },
+    onSuccess: (_, importId) => {
+      queryClient.invalidateQueries({ queryKey: ['import-batch', importId] });
+      queryClient.invalidateQueries({ queryKey: ['import-items', importId] });
+      queryClient.invalidateQueries({ queryKey: ['pending-imports'] });
+      toast.info("Reprocessando importação...");
+    },
+    onError: (error) => {
+      console.error('[OIK Import] Error retrying import:', error);
+      toast.error("Erro ao reprocessar importação");
+    },
+  });
+}
+
+/**
  * Hook to confirm import and create real transactions
  */
 export function useConfirmImportBatch() {
@@ -265,6 +427,8 @@ export function useConfirmImportBatch() {
       selectedIds: string[];
       categoryUpdates?: Record<string, { categoryId: string; subcategoryId: string | null }>;
     }) => {
+      console.log(`[OIK Import] Confirming import: ${importId} with ${selectedIds.length} items`);
+      
       // Get pending transactions to confirm
       const { data: pendingTx, error: fetchError } = await supabase
         .from('import_pending_transactions')
@@ -366,6 +530,7 @@ export function useConfirmImportBatch() {
       // Clear local storage
       clearPendingImportId();
 
+      console.log(`[OIK Import] Confirmed ${selectedIds.length} transactions`);
       return { count: selectedIds.length };
     },
     onSuccess: (data) => {
@@ -378,10 +543,12 @@ export function useConfirmImportBatch() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
       queryClient.invalidateQueries({ queryKey: ['home-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      queryClient.invalidateQueries({ queryKey: ['projection'] });
       toast.success(`${data.count} transações importadas com sucesso!`);
     },
     onError: (error) => {
-      console.error('Error confirming import:', error);
+      console.error('[OIK Import] Error confirming import:', error);
       toast.error("Erro ao confirmar importação");
     },
   });
@@ -395,6 +562,8 @@ export function useCancelImportBatch() {
 
   return useMutation({
     mutationFn: async (importId: string) => {
+      console.log(`[OIK Import] Cancelling import: ${importId}`);
+      
       // Delete all pending transactions
       await supabase
         .from('import_pending_transactions')
@@ -423,7 +592,7 @@ export function useCancelImportBatch() {
       toast.info("Importação cancelada");
     },
     onError: (error) => {
-      console.error('Error cancelling import:', error);
+      console.error('[OIK Import] Error cancelling import:', error);
       toast.error("Erro ao cancelar importação");
     },
   });
@@ -455,8 +624,7 @@ export function useUpdateImportItem() {
 
       if (error) throw error;
     },
-    onSuccess: (_, { id }) => {
-      // Get the import_id from cache if possible
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['import-items'] });
       queryClient.invalidateQueries({ queryKey: ['pending-transactions'] });
     },

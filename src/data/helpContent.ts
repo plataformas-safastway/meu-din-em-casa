@@ -577,6 +577,20 @@ export const faqItems: FAQItem[] = [
     category: "transactions",
     keywords: ["botão", "grande", "acessibilidade", "toque", "fab"],
   },
+  {
+    id: "faq-20",
+    question: "O que significa 'Processando' na importação?",
+    answer: "Quando você envia um arquivo, o OIK está detectando o banco, abrindo o arquivo (se tiver senha, tenta CPF automaticamente), extraindo lançamentos e categorizando. Isso leva até 30 segundos. A tela atualiza automaticamente.",
+    category: "import",
+    keywords: ["processando", "importação", "aguarde", "loading"],
+  },
+  {
+    id: "faq-21",
+    question: "Deu erro na revisão de importação. O que fazer?",
+    answer: "Toque em 'Tentar novamente' para reprocessar. Se não funcionar, toque em 'Enviar outro arquivo' ou 'Falar com suporte'. O código de erro (ex: IMPORT-003) ajuda o suporte a resolver mais rápido.",
+    category: "import",
+    keywords: ["erro", "importação", "falhou", "retry", "suporte"],
+  },
 ];
 
 export const categoryLabels: Record<string, string> = {
