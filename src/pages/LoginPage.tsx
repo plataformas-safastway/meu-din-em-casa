@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import oikLogo from "@/assets/oik-logo.png";
 
 type Mode = "login" | "forgot" | "reset";
 
@@ -73,7 +74,7 @@ export function LoginPage() {
       }
     }
 
-    toast.success("Bem-vindos de volta! 👋");
+    toast.success("Bem-vindos de volta");
     navigate(redirectTo, { replace: true });
 
   };
@@ -135,12 +136,17 @@ export function LoginPage() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-sm space-y-8">
+          {/* Logo */}
+          <div className="flex justify-center">
+            <img src={oikLogo} alt="Oik" className="w-12 h-12 object-contain opacity-80" />
+          </div>
+
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-semibold text-foreground">
-              Recuperar senha
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+              Recuperar acesso
             </h1>
             <p className="text-muted-foreground text-sm">
-              Enviaremos um link para redefinir sua senha
+              Enviaremos um link para seu e-mail
             </p>
           </div>
 
@@ -148,17 +154,17 @@ export function LoginPage() {
             <form onSubmit={handleForgotPassword} className="space-y-6">
               <Input
                 type="email"
-                placeholder="E-mail"
+                placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12"
+                className="h-12 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
                 autoComplete="email"
                 required
               />
 
               <Button 
                 type="submit" 
-                className="w-full h-12"
+                className="w-full h-12 rounded-xl font-medium transition-all duration-300"
                 disabled={loading}
               >
                 {loading ? (
@@ -171,11 +177,11 @@ export function LoginPage() {
           ) : (
             <div className="text-center space-y-4">
               <p className="text-sm text-muted-foreground">
-                E-mail enviado para <strong>{email}</strong>. Verifique sua caixa de entrada.
+                E-mail enviado para <span className="text-foreground font-medium">{email}</span>
               </p>
               <Button 
                 variant="outline"
-                className="w-full h-12"
+                className="w-full h-12 rounded-xl"
                 onClick={() => {
                   setEmailSent(false);
                   setEmail("");
@@ -192,9 +198,9 @@ export function LoginPage() {
               setMode("login");
               setEmailSent(false);
             }}
-            className="block w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="block w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
           >
-            Voltar ao login
+            Voltar
           </button>
         </div>
       </div>
@@ -206,12 +212,17 @@ export function LoginPage() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-sm space-y-8">
+          {/* Logo */}
+          <div className="flex justify-center">
+            <img src={oikLogo} alt="Oik" className="w-12 h-12 object-contain opacity-80" />
+          </div>
+
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-semibold text-foreground">
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight">
               Nova senha
             </h1>
             <p className="text-muted-foreground text-sm">
-              Crie uma nova senha para sua conta
+              Escolha uma senha segura
             </p>
           </div>
 
@@ -223,14 +234,14 @@ export function LoginPage() {
                   placeholder="Nova senha"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="h-12 pr-10"
+                  className="h-12 pr-10 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
                   autoComplete="new-password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -241,14 +252,14 @@ export function LoginPage() {
                 placeholder="Confirmar senha"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="h-12"
+                className="h-12 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
                 autoComplete="new-password"
                 required
               />
 
               <Button 
                 type="submit" 
-                className="w-full h-12"
+                className="w-full h-12 rounded-xl font-medium transition-all duration-300"
                 disabled={loading}
               >
                 {loading ? (
@@ -261,16 +272,16 @@ export function LoginPage() {
           ) : (
             <div className="text-center space-y-4">
               <p className="text-sm text-muted-foreground">
-                Senha alterada com sucesso!
+                Senha alterada com sucesso
               </p>
               <Button 
-                className="w-full h-12"
+                className="w-full h-12 rounded-xl font-medium"
                 onClick={() => {
                   setMode("login");
                   setPasswordReset(false);
                 }}
               >
-                Ir para o login
+                Continuar
               </Button>
             </div>
           )}
@@ -279,27 +290,35 @@ export function LoginPage() {
     );
   }
 
-  // Main Login View - ULTRA CLEAN
+  // Main Login View - OIK PREMIUM
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Main Content - Centered */}
       <main className="flex-1 flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-sm space-y-10">
-          {/* 1. App Name */}
-          <h1 className="text-center text-3xl font-medium text-foreground tracking-tight">
-            Nome do APP
-          </h1>
-
-          {/* 2. Fixed Institutional Text */}
-          <p className="text-center text-base text-muted-foreground leading-relaxed">
-            Sem julgamentos. Sem complicação.
-            <br />
-            Apenas informação clara para decisões melhores.
-          </p>
-
-          {/* 3. Login Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
+          {/* Logo + Brand */}
+          <div className="text-center space-y-6">
+            <div className="flex justify-center">
+              <img 
+                src={oikLogo} 
+                alt="Oik" 
+                className="w-16 h-16 object-contain"
+              />
+            </div>
+            
             <div className="space-y-2">
+              <h1 className="text-3xl font-semibold text-foreground tracking-tight">
+                Oik
+              </h1>
+              <p className="text-base text-muted-foreground">
+                Inteligência financeira da sua casa
+              </p>
+            </div>
+          </div>
+
+          {/* Login Form */}
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-1.5">
               <label htmlFor="email" className="text-sm font-medium text-foreground">
                 E-mail
               </label>
@@ -309,13 +328,13 @@ export function LoginPage() {
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12 rounded-xl"
+                className="h-12 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
                 autoComplete="email"
                 required
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label htmlFor="password" className="text-sm font-medium text-foreground">
                 Senha
               </label>
@@ -326,70 +345,71 @@ export function LoginPage() {
                   placeholder="••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 pr-10 rounded-xl"
+                  className="h-12 pr-10 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
                   autoComplete="current-password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full h-12 font-medium rounded-xl"
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                "Entrar"
-              )}
-            </Button>
+            <div className="pt-2">
+              <Button 
+                type="submit" 
+                className="w-full h-12 font-medium rounded-xl transition-all duration-300"
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Entrar"
+                )}
+              </Button>
+            </div>
           </form>
 
-          {/* 4. Secondary Actions - Side by Side */}
-          <div className="flex items-center justify-between">
+          {/* Secondary Actions */}
+          <div className="flex items-center justify-between text-sm">
             <Link 
               to="/signup" 
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
               Criar conta
             </Link>
             <button
               type="button"
               onClick={() => setMode("forgot")}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
-              Recuperar senha
+              Esqueci a senha
             </button>
           </div>
         </div>
       </main>
 
-      {/* 5. Footer - Consent and Legal Links */}
+      {/* Footer */}
       <footer className="pb-8 px-6 text-center">
-        <p className="text-xs text-muted-foreground/70 leading-relaxed">
-          Ao continuar, vocês concordam com nossos{" "}
+        <p className="text-xs text-muted-foreground/60 leading-relaxed">
+          Ao continuar, você concorda com os{" "}
           <Link 
             to="/termos" 
-            className="underline hover:text-foreground transition-colors"
+            className="underline underline-offset-2 hover:text-muted-foreground transition-colors duration-300"
           >
-            Termos de Uso
+            Termos
           </Link>
           {" e "}
           <Link 
             to="/privacidade" 
-            className="underline hover:text-foreground transition-colors"
+            className="underline underline-offset-2 hover:text-muted-foreground transition-colors duration-300"
           >
-            Política de Privacidade
+            Privacidade
           </Link>
-          .
         </p>
       </footer>
     </div>

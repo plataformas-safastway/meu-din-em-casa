@@ -9,9 +9,9 @@ export function LandingPage() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Main Content - Centered */}
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        <div className="w-full max-w-sm text-center space-y-8">
+        <div className="w-full max-w-sm text-center space-y-10">
           {/* Logo */}
-          <div className="flex justify-center">
+          <div className="flex justify-center animate-fade-in">
             <img 
               src={oikLogo} 
               alt="Oik" 
@@ -19,37 +19,33 @@ export function LandingPage() {
             />
           </div>
 
-          {/* 1. App Name */}
-          <h1 className="text-4xl font-semibold text-foreground tracking-tight">
+          {/* Brand Name */}
+          <h1 className="text-4xl font-semibold text-foreground tracking-tight animate-fade-in">
             Oik
           </h1>
 
-          {/* 2. Slogan / Purpose */}
-          <p className="text-lg text-muted-foreground leading-relaxed">
-            Inteligência financeira familiar.
-            <br />
-            Ordem, clareza e tranquilidade.
-          </p>
+          {/* Slogan - Silent & Premium */}
+          <div className="space-y-4 animate-fade-in">
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              Inteligência financeira da sua casa
+            </p>
+            <p className="text-base text-muted-foreground/70">
+              Ordem e clareza, sem esforço.
+            </p>
+          </div>
 
-          {/* 3. Complementary Text */}
-          <p className="text-base text-muted-foreground/80 leading-relaxed">
-            O sistema silencioso que organiza
-            <br />
-            a vida financeira da sua casa.
-          </p>
-
-          {/* 4. Primary CTA */}
-          <div className="pt-6">
+          {/* Primary CTA */}
+          <div className="pt-4 animate-slide-up">
             <Button 
               size="lg" 
               className="w-full h-14 text-base font-medium rounded-xl transition-all duration-300"
               onClick={() => navigate("/signup")}
             >
-              Criar conta
+              Começar
             </Button>
           </div>
 
-          {/* 5. Secondary Action */}
+          {/* Secondary Action */}
           <button
             onClick={() => navigate("/login")}
             className="text-base text-muted-foreground hover:text-foreground transition-colors duration-300"
@@ -59,25 +55,22 @@ export function LandingPage() {
         </div>
       </main>
 
-      {/* 6. Footer with Policies */}
+      {/* Footer - Minimal */}
       <footer className="px-6 pb-8 pt-4">
-        <p className="text-center text-sm text-muted-foreground/70 leading-relaxed">
-          Ao continuar, vocês concordam com nossos
-          <br />
+        <p className="text-center text-xs text-muted-foreground/50 leading-relaxed">
           <Link 
             to="/termos" 
-            className="text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors duration-300"
+            className="hover:text-muted-foreground underline underline-offset-2 transition-colors duration-300"
           >
-            Termos de Uso
+            Termos
           </Link>
-          {" e "}
+          {" · "}
           <Link 
             to="/privacidade" 
-            className="text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors duration-300"
+            className="hover:text-muted-foreground underline underline-offset-2 transition-colors duration-300"
           >
-            Política de Privacidade
+            Privacidade
           </Link>
-          .
         </p>
       </footer>
     </div>
