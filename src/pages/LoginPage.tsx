@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import oikLogo from "@/assets/oik-logo.png";
+import oikMarca from "@/assets/oik-marca.png";
 
 type Mode = "login" | "forgot" | "reset";
 
@@ -138,7 +138,7 @@ export function LoginPage() {
         <div className="w-full max-w-sm space-y-8">
           {/* Logo */}
           <div className="flex justify-center">
-            <img src={oikLogo} alt="Oik" className="w-12 h-12 object-contain opacity-80" />
+            <img src={oikMarca} alt="Oik" className="h-10 object-contain opacity-80" />
           </div>
 
           <div className="text-center space-y-2">
@@ -214,7 +214,7 @@ export function LoginPage() {
         <div className="w-full max-w-sm space-y-8">
           {/* Logo */}
           <div className="flex justify-center">
-            <img src={oikLogo} alt="Oik" className="w-12 h-12 object-contain opacity-80" />
+            <img src={oikMarca} alt="Oik" className="h-10 object-contain opacity-80" />
           </div>
 
           <div className="text-center space-y-2">
@@ -300,20 +300,15 @@ export function LoginPage() {
           <div className="text-center space-y-6">
             <div className="flex justify-center">
               <img 
-                src={oikLogo} 
+                src={oikMarca} 
                 alt="Oik" 
-                className="w-16 h-16 object-contain"
+                className="h-12 object-contain"
               />
             </div>
             
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold text-foreground tracking-tight">
-                Oik
-              </h1>
-              <p className="text-base text-muted-foreground">
-                Tudo no lugar. Os objetivos da família em ordem.
-              </p>
-            </div>
+            <p className="text-base text-muted-foreground">
+              Tudo no lugar. Os objetivos da família em ordem.
+            </p>
           </div>
 
           {/* Login Form */}

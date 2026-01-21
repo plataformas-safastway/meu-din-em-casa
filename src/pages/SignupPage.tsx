@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { OnboardingCategoriesPage } from "./OnboardingCategoriesPage";
 import { OnboardingImportStep } from "@/components/OnboardingImportStep";
-import oikLogo from "@/assets/oik-logo.png";
+import oikMarca from "@/assets/oik-marca.png";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -329,7 +329,7 @@ export function SignupPage() {
               {/* Logo + Header */}
               <div className="text-center mb-10">
                 <div className="flex justify-center mb-6">
-                  <img src={oikLogo} alt="Oik" className="w-12 h-12 object-contain opacity-80" />
+                  <img src={oikMarca} alt="Oik" className="h-10 object-contain opacity-80" />
                 </div>
                 <h1 className="text-2xl font-semibold text-foreground mb-2 tracking-tight">
                   {user ? "Completar cadastro" : "Criar sua conta"}
