@@ -22,7 +22,7 @@ export function LandingPage() {
           {/* Slogan - Silent & Premium */}
           <div className="space-y-4 animate-fade-in">
             <p className="text-lg text-muted-foreground leading-relaxed">
-              Tudo no lugar. Os objetivos da família em ordem.
+              Tudo no lugar. Família em controle.
             </p>
           </div>
 

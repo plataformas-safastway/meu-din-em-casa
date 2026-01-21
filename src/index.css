@@ -5,30 +5,30 @@
 @tailwind utilities;
 @layer base {
   :root {
-    /* Oik Premium Palette - Sóbria, elegante e atemporal */
-    --background: 210 20% 98%;
-    --foreground: 220 25% 12%;
+    /* Oik Premium Palette - Verde elegante, harmonia e confiança */
+    --background: 145 15% 98%;
+    --foreground: 150 30% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 12%;
+    --card-foreground: 150 30% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 12%;
+    --popover-foreground: 150 30% 12%;
 
-    /* Deep Navy Blue - Primary */
-    --primary: 220 45% 20%;
-    --primary-foreground: 40 20% 98%;
+    /* Forest Green - Primary (matches brand) */
+    --primary: 140 35% 28%;
+    --primary-foreground: 0 0% 100%;
 
     /* Warm Off-white secondary */
-    --secondary: 40 25% 96%;
-    --secondary-foreground: 220 25% 12%;
+    --secondary: 145 15% 96%;
+    --secondary-foreground: 150 30% 12%;
 
-    --muted: 210 15% 94%;
-    --muted-foreground: 220 12% 45%;
+    --muted: 145 12% 94%;
+    --muted-foreground: 150 15% 45%;
 
-    /* Dark Green accent */
-    --accent: 160 35% 30%;
-    --accent-foreground: 40 20% 98%;
+    /* Olive Green accent */
+    --accent: 78 25% 35%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 65% 45%;
     --destructive-foreground: 0 0% 100%;
@@ -45,87 +45,87 @@
     --info: 210 60% 45%;
     --info-foreground: 0 0% 100%;
 
-    --border: 210 15% 88%;
-    --input: 210 15% 88%;
-    --ring: 220 45% 20%;
+    --border: 145 12% 88%;
+    --input: 145 12% 88%;
+    --ring: 140 35% 28%;
 
     --radius: 0.75rem;
 
-    /* Chart colors - sophisticated palette */
-    --chart-1: 220 45% 25%;
-    --chart-2: 160 35% 35%;
-    --chart-3: 210 60% 45%;
+    /* Chart colors - harmonious green palette */
+    --chart-1: 140 35% 28%;
+    --chart-2: 78 25% 35%;
+    --chart-3: 150 40% 40%;
     --chart-4: 38 80% 50%;
-    --chart-5: 280 30% 45%;
+    --chart-5: 160 30% 45%;
     --chart-6: 340 40% 45%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(220 45% 20%) 0%, hsl(220 45% 15%) 100%);
-    --gradient-warm: linear-gradient(135deg, hsl(210 20% 98%) 0%, hsl(40 25% 96%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 15% 98%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(140 35% 28%) 0%, hsl(140 40% 22%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(145 15% 98%) 0%, hsl(145 15% 96%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(145 12% 98%) 100%);
 
     /* Shadows - subtle and elegant */
-    --shadow-sm: 0 1px 2px 0 hsl(220 25% 12% / 0.04);
-    --shadow-md: 0 4px 6px -1px hsl(220 25% 12% / 0.06), 0 2px 4px -2px hsl(220 25% 12% / 0.04);
-    --shadow-lg: 0 10px 15px -3px hsl(220 25% 12% / 0.06), 0 4px 6px -4px hsl(220 25% 12% / 0.03);
-    --shadow-card: 0 4px 24px -4px hsl(220 45% 20% / 0.08);
+    --shadow-sm: 0 1px 2px 0 hsl(150 30% 12% / 0.04);
+    --shadow-md: 0 4px 6px -1px hsl(150 30% 12% / 0.06), 0 2px 4px -2px hsl(150 30% 12% / 0.04);
+    --shadow-lg: 0 10px 15px -3px hsl(150 30% 12% / 0.06), 0 4px 6px -4px hsl(150 30% 12% / 0.03);
+    --shadow-card: 0 4px 24px -4px hsl(140 35% 28% / 0.08);
 
     --sidebar-background: 0 0% 99%;
-    --sidebar-foreground: 220 25% 12%;
-    --sidebar-primary: 220 45% 20%;
-    --sidebar-primary-foreground: 40 20% 98%;
-    --sidebar-accent: 210 15% 96%;
-    --sidebar-accent-foreground: 220 25% 12%;
-    --sidebar-border: 210 15% 90%;
-    --sidebar-ring: 220 45% 20%;
+    --sidebar-foreground: 150 30% 12%;
+    --sidebar-primary: 140 35% 28%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 145 15% 96%;
+    --sidebar-accent-foreground: 150 30% 12%;
+    --sidebar-border: 145 12% 90%;
+    --sidebar-ring: 140 35% 28%;
   }
 
   .dark {
-    --background: 220 25% 8%;
-    --foreground: 40 15% 95%;
+    --background: 150 25% 8%;
+    --foreground: 145 15% 95%;
 
-    --card: 220 22% 12%;
-    --card-foreground: 40 15% 95%;
+    --card: 150 22% 12%;
+    --card-foreground: 145 15% 95%;
 
-    --popover: 220 22% 12%;
-    --popover-foreground: 40 15% 95%;
+    --popover: 150 22% 12%;
+    --popover-foreground: 145 15% 95%;
 
-    --primary: 210 50% 60%;
-    --primary-foreground: 220 25% 8%;
+    --primary: 140 40% 50%;
+    --primary-foreground: 150 30% 8%;
 
-    --secondary: 220 18% 18%;
-    --secondary-foreground: 40 15% 95%;
+    --secondary: 150 18% 18%;
+    --secondary-foreground: 145 15% 95%;
 
-    --muted: 220 18% 20%;
-    --muted-foreground: 210 12% 55%;
+    --muted: 150 18% 20%;
+    --muted-foreground: 145 12% 55%;
 
-    --accent: 160 35% 45%;
-    --accent-foreground: 220 25% 8%;
+    --accent: 78 30% 45%;
+    --accent-foreground: 150 30% 8%;
 
     --destructive: 0 60% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 160 35% 45%;
-    --success-foreground: 220 25% 8%;
+    --success: 140 40% 45%;
+    --success-foreground: 150 30% 8%;
 
     --warning: 38 80% 55%;
-    --warning-foreground: 220 25% 8%;
+    --warning-foreground: 150 30% 8%;
 
-    --info: 210 60% 55%;
-    --info-foreground: 220 25% 8%;
+    --info: 145 50% 55%;
+    --info-foreground: 150 30% 8%;
 
-    --border: 220 18% 20%;
-    --input: 220 18% 20%;
-    --ring: 210 50% 60%;
+    --border: 150 18% 20%;
+    --input: 150 18% 20%;
+    --ring: 140 40% 50%;
 
-    --sidebar-background: 220 25% 10%;
-    --sidebar-foreground: 40 15% 95%;
-    --sidebar-primary: 210 50% 60%;
-    --sidebar-primary-foreground: 220 25% 8%;
-    --sidebar-accent: 220 18% 16%;
-    --sidebar-accent-foreground: 40 15% 95%;
-    --sidebar-border: 220 18% 18%;
-    --sidebar-ring: 210 50% 60%;
+    --sidebar-background: 150 25% 10%;
+    --sidebar-foreground: 145 15% 95%;
+    --sidebar-primary: 140 40% 50%;
+    --sidebar-primary-foreground: 150 30% 8%;
+    --sidebar-accent: 150 18% 16%;
+    --sidebar-accent-foreground: 145 15% 95%;
+    --sidebar-border: 150 18% 18%;
+    --sidebar-ring: 140 40% 50%;
   }
 }
 
