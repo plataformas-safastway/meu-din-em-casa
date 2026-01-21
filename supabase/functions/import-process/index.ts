@@ -735,15 +735,126 @@ function parsePDF(content: string, password?: string): { transactions: ParsedTra
   }
 }
 
+// High-priority header identifiers that strongly indicate the source bank
+// These should be found in headers, titles, or bank logos - NOT in transaction descriptions
+const HEADER_PRIORITY_IDENTIFIERS: Record<string, string[]> = {
+  "Itaú": ["itaú unibanco", "itau unibanco", "banco itau s.a", "itaú-unibanco", "personnalit"],
+  "Bradesco": ["bradesco internet banking", "banco bradesco s.a", "agência bradesco"],
+  "Santander": ["internet banking santander", "banco santander s.a", "santander brasil"],
+  "Banco do Brasil": ["banco do brasil s.a", "agência bb", "bb internet"],
+  "Caixa Econômica Federal": ["caixa economica federal", "cef internet", "caixa tem"],
+  "Nubank": ["nu pagamentos", "nu financeira", "nu s.a"],
+  "Banco Inter": ["banco inter s.a", "intermedium"],
+  "BTG Pactual": ["btg pactual", "eqi investimentos", "banco btg"],
+  "Sicredi": ["banco sicredi", "sicredi cooperativo"],
+  "Sicoob": ["banco sicoob", "sicoob cooperativo"],
+  "Mercado Pago": ["mercado pago", "mercadopago", "conta mercado pago"],
+  "C6 Bank": ["c6 bank", "c6 s.a"],
+  "PagBank/PagSeguro": ["pagbank", "pagseguro", "pag bank"],
+  "PicPay": ["picpay", "pic pay servicos"],
+  "Neon": ["banco neon", "neon pagamentos"],
+};
+
+// Words that indicate a mention is likely a transaction description, not a bank header
+const TRANSACTION_DESCRIPTION_INDICATORS = [
+  "pago", "paga", "pagamento", "debito", "débito",
+  "saude", "saúde", "seguro", "seguros", 
+  "convenio", "convênio", "boleto", "conta",
+  "cartao", "cartão", "fatura", "parcela",
+  "transferencia", "transferência", "pix", "ted", "doc",
+  "compra", "assinatura", "mensalidade",
+];
+
 function detectBankFromContent(text: string): BankPattern | null {
   const lowerText = text.toLowerCase();
   
+  // Calculate scores for each bank
+  const scores: Array<{ pattern: BankPattern; score: number; matchType: string }> = [];
+  
   for (const pattern of BRAZILIAN_BANK_PATTERNS) {
-    for (const identifier of pattern.identifiers) {
-      if (lowerText.includes(identifier.toLowerCase())) {
-        return pattern;
+    let score = 0;
+    let matchType = "none";
+    
+    // Phase 1: Check for high-priority header identifiers (strongest signal)
+    const headerIds = HEADER_PRIORITY_IDENTIFIERS[pattern.name];
+    if (headerIds) {
+      for (const headerId of headerIds) {
+        const headerLower = headerId.toLowerCase();
+        const headerIndex = lowerText.indexOf(headerLower);
+        
+        if (headerIndex !== -1) {
+          // Check if this appears early in the document (likely a header)
+          const isNearStart = headerIndex < 2000;
+          // Check if it's not in a transaction context
+          const surroundingText = lowerText.substring(
+            Math.max(0, headerIndex - 50),
+            Math.min(lowerText.length, headerIndex + headerId.length + 50)
+          );
+          
+          const isTransactionContext = TRANSACTION_DESCRIPTION_INDICATORS.some(
+            ind => surroundingText.includes(ind)
+          );
+          
+          if (!isTransactionContext) {
+            score += isNearStart ? 100 : 50;
+            matchType = "header";
+          }
+        }
       }
     }
+    
+    // Phase 2: Check regular identifiers with context analysis
+    for (const identifier of pattern.identifiers) {
+      const idLower = identifier.toLowerCase();
+      let searchIndex = 0;
+      
+      while (true) {
+        const foundIndex = lowerText.indexOf(idLower, searchIndex);
+        if (foundIndex === -1) break;
+        
+        // Get surrounding context
+        const contextStart = Math.max(0, foundIndex - 100);
+        const contextEnd = Math.min(lowerText.length, foundIndex + identifier.length + 100);
+        const context = lowerText.substring(contextStart, contextEnd);
+        
+        // Check if this looks like a transaction description
+        const isTransactionContext = TRANSACTION_DESCRIPTION_INDICATORS.some(
+          ind => context.includes(ind)
+        );
+        
+        // Check if it's a brand/product mention (e.g., "Bradesco Saúde")
+        const isBrandMention = /saude|saúde|seguros?|dental|vida|previdencia|previdência|capitaliza/i.test(context);
+        
+        if (isTransactionContext || isBrandMention) {
+          // This is likely a transaction, not a bank identifier
+          score += 1; // Minimal weight
+        } else {
+          // Check position in document
+          const isEarlyInDoc = foundIndex < 3000;
+          score += isEarlyInDoc ? 20 : 10;
+          if (matchType === "none") matchType = "identifier";
+        }
+        
+        searchIndex = foundIndex + 1;
+      }
+    }
+    
+    if (score > 0) {
+      scores.push({ pattern, score, matchType });
+    }
+  }
+  
+  // Sort by score descending
+  scores.sort((a, b) => b.score - a.score);
+  
+  // Log detection results for debugging
+  if (scores.length > 0) {
+    console.log(`Bank detection scores: ${scores.slice(0, 3).map(s => `${s.pattern.name}=${s.score}(${s.matchType})`).join(", ")}`);
+  }
+  
+  // Return the highest scoring bank if it has a meaningful score
+  if (scores.length > 0 && scores[0].score >= 10) {
+    return scores[0].pattern;
   }
   
   return null;
