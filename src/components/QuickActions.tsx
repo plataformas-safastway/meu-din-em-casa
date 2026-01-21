@@ -13,7 +13,7 @@ export function QuickActions({ onAddIncome, onAddExpense, onAddGoal, onViewRecei
   const navigate = useNavigate();
 
   const handleImportClick = () => {
-    navigate("/import");
+    navigate("/app/import");
   };
 
   const actions = [
