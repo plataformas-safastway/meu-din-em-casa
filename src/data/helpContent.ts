@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 19/01/2026
-export const HELP_CENTER_VERSION = "19/01/2026";
+// Última atualização: 21/01/2026
+export const HELP_CENTER_VERSION = "21/01/2026";
 
 export const helpArticles: HelpArticle[] = [
   // ===== PRIMEIROS PASSOS =====
@@ -31,7 +31,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Primeiros Passos",
     category: "getting-started",
     icon: "🚀",
-    summary: "Aprenda o básico para começar a usar o app",
+    summary: "Aprenda o básico para começar a usar o Oik",
     steps: [
       {
         title: "Crie sua conta",
@@ -52,7 +52,7 @@ export const helpArticles: HelpArticle[] = [
         description: "Vá em Metas e crie limites para cada categoria de gasto. Vocês receberão alertas ao se aproximar do limite.",
       },
     ],
-    keywords: ["começar", "início", "cadastro", "primeiro", "tutorial", "básico", "criar conta", "login"],
+    keywords: ["começar", "início", "cadastro", "primeiro", "tutorial", "básico", "criar conta", "login", "oik"],
   },
 
   // ===== TELA INICIAL =====
@@ -61,7 +61,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Tela Inicial: Saldo e Timeline",
     category: "home",
     icon: "🏠",
-    summary: "Entenda cada elemento da tela inicial",
+    summary: "Entenda cada elemento da tela inicial do Oik",
     steps: [
       {
         title: "Card de Saldo",
@@ -99,7 +99,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Inserir Receita ou Despesa",
     category: "transactions",
     icon: "➕",
-    summary: "Como registrar lançamentos financeiros",
+    summary: "Como registrar lançamentos financeiros no Oik",
     steps: [
       {
         title: "Toque no botão +",
@@ -141,7 +141,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Extrato e Filtros",
     category: "transactions",
     icon: "📋",
-    summary: "Visualize e filtre seus lançamentos",
+    summary: "Visualize e filtre seus lançamentos no Oik",
     steps: [
       {
         title: "Acesse o Extrato",
@@ -171,7 +171,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Categorias e Subcategorias",
     category: "categories",
     icon: "📊",
-    summary: "Como os valores são calculados por categoria",
+    summary: "Como os valores são calculados por categoria no Oik",
     steps: [
       {
         title: "Visualize suas categorias",
@@ -206,7 +206,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Objetivos Financeiros",
     category: "objectives",
     icon: "🎯",
-    summary: "Crie e acompanhe objetivos de poupança",
+    summary: "Crie e acompanhe objetivos de poupança no Oik",
     steps: [
       {
         title: "Crie um objetivo",
@@ -241,7 +241,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Metas de Orçamento",
     category: "budgets",
     icon: "💰",
-    summary: "Defina limites e receba alertas",
+    summary: "Defina limites e receba alertas no Oik",
     steps: [
       {
         title: "Crie uma meta",
@@ -271,7 +271,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Importar Extratos",
     category: "import",
     icon: "📥",
-    summary: "Importe arquivos OFX, XLSX ou PDF",
+    summary: "Importe arquivos OFX, XLSX ou PDF no Oik",
     steps: [
       {
         title: "Formatos suportados",
@@ -283,7 +283,7 @@ export const helpArticles: HelpArticle[] = [
       },
       {
         title: "Arquivos com senha",
-        description: "Se o arquivo estiver protegido, o app tentará desbloquear automaticamente usando seu CPF (11 dígitos), CPF sem os 2 primeiros dígitos, ou data de nascimento (DDMMYYYY).",
+        description: "Se o arquivo estiver protegido, o Oik tentará desbloquear automaticamente usando seu CPF (11 dígitos), CPF sem os 2 primeiros dígitos, ou data de nascimento (DDMMYYYY).",
         tip: "Vocês também podem digitar a senha manualmente se as tentativas automáticas falharem.",
       },
       {
@@ -292,8 +292,8 @@ export const helpArticles: HelpArticle[] = [
       },
       {
         title: "Categorização automática",
-        description: "O app sugere categorias baseado em palavras-chave (ex: 'IFOOD' → Lazer > Restaurantes).",
-        tip: "Ao corrigir uma categoria, o app aprende para próximas importações.",
+        description: "O Oik sugere categorias baseado em palavras-chave (ex: 'IFOOD' → Lazer > Restaurantes).",
+        tip: "Ao corrigir uma categoria, o Oik aprende para próximas importações.",
       },
       {
         title: "Deduplicação",
@@ -310,7 +310,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Privacidade e Segurança",
     category: "privacy",
     icon: "🔒",
-    summary: "Como tratamos seus dados e senhas",
+    summary: "Como o Oik trata seus dados e senhas",
     steps: [
       {
         title: "Senhas de arquivo",
@@ -334,7 +334,7 @@ export const helpArticles: HelpArticle[] = [
         description: "Cada família só acessa seus próprios dados. Não há compartilhamento entre famílias.",
       },
     ],
-    keywords: ["privacidade", "lgpd", "dados", "exportar", "excluir", "segurança", "proteção", "senha", "criptografia"],
+    keywords: ["privacidade", "lgpd", "dados", "exportar", "excluir", "segurança", "proteção", "senha", "criptografia", "oik"],
     deepLink: "settings",
   },
 
@@ -344,7 +344,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Família e Permissões",
     category: "family",
     icon: "👨‍👩‍👧‍👦",
-    summary: "Convide membros e gerencie permissões",
+    summary: "Convide membros e gerencie permissões no Oik",
     steps: [
       {
         title: "Convide familiares",
@@ -357,7 +357,7 @@ export const helpArticles: HelpArticle[] = [
       {
         title: "Compartilhamento",
         description: "Todos os membros da família veem os mesmos dados financeiros.",
-        tip: "Conversem em família sobre o uso do app para melhor organização.",
+        tip: "Conversem em família sobre o uso do Oik para melhor organização.",
       },
     ],
     keywords: ["família", "membro", "convidar", "permissão", "compartilhar"],
@@ -370,7 +370,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Configurações e Perfil",
     category: "settings",
     icon: "⚙️",
-    summary: "Personalize sua experiência",
+    summary: "Personalize sua experiência no Oik",
     steps: [
       {
         title: "Acesse Configurações",
@@ -399,7 +399,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Consultoria via WhatsApp",
     category: "home",
     icon: "💬",
-    summary: "Agende consultoria financeira",
+    summary: "Agende consultoria financeira com o Oik",
     steps: [
       {
         title: "Botão WhatsApp",
@@ -414,23 +414,30 @@ export const helpArticles: HelpArticle[] = [
         description: "Ao clicar, a mensagem já vem pronta para agendar 1 hora de consultoria financeira familiar.",
       },
     ],
-    keywords: ["whatsapp", "consultoria", "ajuda", "suporte", "atendimento"],
+    keywords: ["whatsapp", "consultoria", "ajuda", "suporte", "atendimento", "oik"],
     deepLink: "dashboard",
   },
 ];
 
 export const faqItems: FAQItem[] = [
   {
+    id: "faq-0",
+    question: "O que é o Oik?",
+    answer: "O Oik é uma plataforma premium de inteligência financeira familiar. Utilizamos inteligência artificial para acompanhar o dia a dia financeiro, integrar dados, gerar relatórios e promover educação financeira, trazendo harmonia ao lar e eliminando a ansiedade causada pelo dinheiro.",
+    category: "general",
+    keywords: ["oik", "o que é", "sobre", "plataforma", "inteligência"],
+  },
+  {
     id: "faq-1",
     question: "Como adicionar uma despesa parcelada?",
-    answer: "Ao adicionar uma despesa, selecione o método de pagamento 'Crédito' e informe o número de parcelas. O app criará automaticamente os lançamentos futuros.",
+    answer: "Ao adicionar uma despesa, selecione o método de pagamento 'Crédito' e informe o número de parcelas. O Oik criará automaticamente os lançamentos futuros.",
     category: "transactions",
     keywords: ["parcela", "parcelado", "cartão", "crédito"],
   },
   {
     id: "faq-2",
-    question: "Posso usar o app sem internet?",
-    answer: "O app precisa de internet para sincronizar dados. No entanto, vocês podem visualizar dados já carregados mesmo offline.",
+    question: "Posso usar o Oik sem internet?",
+    answer: "O Oik precisa de internet para sincronizar dados. No entanto, vocês podem visualizar dados já carregados mesmo offline.",
     category: "general",
     keywords: ["offline", "internet", "conexão"],
   },
@@ -444,21 +451,21 @@ export const faqItems: FAQItem[] = [
   {
     id: "faq-4",
     question: "Como convidar minha família?",
-    answer: "Vá em Configurações > Família e toque em 'Convidar membro'. Um convite será enviado por email e a pessoa poderá criar a conta e acessar os mesmos dados.",
+    answer: "Vá em Configurações > Família e toque em 'Convidar membro'. Um convite será enviado por email e a pessoa poderá criar a conta e acessar os mesmos dados no Oik.",
     category: "family",
     keywords: ["convidar", "família", "membro", "compartilhar"],
   },
   {
     id: "faq-5",
-    question: "Meus dados estão seguros?",
-    answer: "Sim! Utilizamos criptografia e seguimos as melhores práticas de segurança. Seus dados são armazenados de forma segura e nunca são vendidos a terceiros. Senhas de arquivos de importação nunca são salvas.",
+    question: "Meus dados estão seguros no Oik?",
+    answer: "Sim! O Oik utiliza criptografia e segue as melhores práticas de segurança. Seus dados são armazenados de forma segura e nunca são vendidos a terceiros. Senhas de arquivos de importação nunca são salvas.",
     category: "privacy",
     keywords: ["segurança", "dados", "privacidade", "criptografia", "senha"],
   },
   {
     id: "faq-6",
     question: "Como importar meu extrato bancário?",
-    answer: "Vá em Configurações > Importar Dados. Vocês podem importar arquivos OFX, Excel (XLSX/XLS) ou PDF. Se o arquivo tiver senha, o app tentará usar CPF ou data de nascimento automaticamente.",
+    answer: "Vá em Configurações > Importar Dados. Vocês podem importar arquivos OFX, Excel (XLSX/XLS) ou PDF. Se o arquivo tiver senha, o Oik tentará usar CPF ou data de nascimento automaticamente.",
     category: "import",
     keywords: ["importar", "extrato", "banco", "ofx", "excel", "pdf", "senha"],
   },
@@ -513,17 +520,24 @@ export const faqItems: FAQItem[] = [
   },
   {
     id: "faq-14",
-    question: "Como funciona o WhatsApp do app?",
+    question: "Como funciona o WhatsApp do Oik?",
     answer: "O botão WhatsApp na tela inicial abre uma conversa com o número +55 48 98848-3333. A mensagem já vem pré-preenchida para agendar consultoria financeira familiar.",
     category: "home",
     keywords: ["whatsapp", "consultoria", "número"],
   },
   {
     id: "faq-15",
-    question: "Como excluir minha conta?",
+    question: "Como excluir minha conta no Oik?",
     answer: "Em Configurações > Meus Dados > Privacidade, vocês encontram a opção de excluir conta. Esta ação é irreversível e remove todos os dados permanentemente.",
     category: "privacy",
     keywords: ["excluir", "deletar", "conta", "remover"],
+  },
+  {
+    id: "faq-16",
+    question: "O que significa Oik?",
+    answer: "Oik vem do conceito grego 'oikonomía', que significa a organização inteligente da casa. O Oik representa ordem, clareza e tranquilidade para a vida financeira da sua família.",
+    category: "general",
+    keywords: ["oik", "nome", "significado", "oikonomia"],
   },
 ];
 
