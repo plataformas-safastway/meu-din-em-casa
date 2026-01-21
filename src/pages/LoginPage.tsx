@@ -292,28 +292,41 @@ export function LoginPage() {
 
   // Main Login View - OIK PREMIUM
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen relative flex flex-col overflow-hidden">
+      {/* Subtle gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-primary/5" />
+      
+      {/* Organic shape accent */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/3 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+
       {/* Main Content - Centered */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6">
+      <main className="relative flex-1 flex flex-col items-center justify-center px-6 z-10">
         <div className="w-full max-w-sm space-y-10">
-          {/* Logo - Prominent and harmonious */}
-          <div className="text-center space-y-8">
+          {/* Brand Block - More prominence */}
+          <div className="text-center space-y-6">
             <div className="flex justify-center">
               <img 
                 src={oikMarca} 
                 alt="Oik" 
-                className="h-16 sm:h-20 object-contain"
+                className="h-20 sm:h-24 object-contain drop-shadow-sm"
               />
             </div>
             
-            <p className="text-lg text-muted-foreground font-light tracking-wide">
-              Tudo no lugar. Família em controle.
-            </p>
+            {/* Slogan in 2 lines with more presence */}
+            <div className="space-y-1">
+              <p className="text-lg text-foreground/80 font-medium tracking-wide">
+                Você não precisa amar planilhas.
+              </p>
+              <p className="text-lg text-muted-foreground font-normal tracking-wide">
+                Só precisa saber onde está pisando.
+              </p>
+            </div>
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-1.5">
+          {/* Login Form - Premium inputs */}
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium text-foreground">
                 E-mail
               </label>
@@ -323,13 +336,13 @@ export function LoginPage() {
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
+                className="h-12 rounded-xl bg-secondary/40 border border-border/50 placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary/50 transition-all duration-300"
                 autoComplete="email"
                 required
               />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium text-foreground">
                 Senha
               </label>
@@ -340,47 +353,54 @@ export function LoginPage() {
                   placeholder="••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 pr-10 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
+                  className="h-12 pr-12 rounded-xl bg-secondary/40 border border-border/50 placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary/50 transition-all duration-300"
                   autoComplete="current-password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors duration-300"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors duration-300 p-1"
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-3 space-y-4">
+              {/* Premium Button with gradient and shadow */}
               <Button 
                 type="submit" 
-                className="w-full h-12 font-medium rounded-xl transition-all duration-300"
+                className="w-full h-12 font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/90 hover:from-primary/95 hover:to-primary/85 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/25 active:scale-[0.98] transition-all duration-300"
                 disabled={loading}
               >
                 {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   "Entrar"
                 )}
               </Button>
+              
+              {/* Emotional microcopy */}
+              <p className="text-center text-sm text-muted-foreground/70 font-light">
+                Organizar a vida financeira pode ser mais leve.
+              </p>
             </div>
           </form>
 
           {/* Secondary Actions */}
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-sm pt-2">
             <Link 
               to="/signup" 
-              className="text-muted-foreground hover:text-foreground transition-colors duration-300"
+              className="text-muted-foreground hover:text-primary transition-colors duration-300 font-medium"
             >
               Criar conta
             </Link>
             <button
               type="button"
               onClick={() => setMode("forgot")}
-              className="text-muted-foreground hover:text-foreground transition-colors duration-300"
+              className="text-muted-foreground hover:text-primary transition-colors duration-300"
             >
               Esqueci a senha
             </button>
@@ -389,8 +409,8 @@ export function LoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="pb-8 px-6 text-center">
-        <p className="text-xs text-muted-foreground/60 leading-relaxed">
+      <footer className="relative pb-8 px-6 text-center z-10">
+        <p className="text-xs text-muted-foreground/50 leading-relaxed">
           Ao continuar, você concorda com os{" "}
           <Link 
             to="/termos" 
