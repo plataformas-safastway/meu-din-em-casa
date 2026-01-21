@@ -17,6 +17,8 @@ interface FamilyMember {
   display_name: string;
   role: 'owner' | 'member';
   avatar_url?: string | null;
+  phone_e164?: string | null;
+  phone_country?: string | null;
 }
 
 interface AuthContextType {

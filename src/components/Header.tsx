@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getGreeting } from "@/lib/formatters";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Sheet,
   SheetContent,
@@ -15,9 +16,21 @@ interface HeaderProps {
   onNotificationsClick?: () => void;
 }
 
-export function Header({ userName = "Usuário", onSettingsClick, onNotificationsClick }: HeaderProps) {
+export function Header({ userName, onSettingsClick, onNotificationsClick }: HeaderProps) {
+  const { familyMember } = useAuth();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const greeting = getGreeting();
+
+  // Use familyMember display_name as fallback
+  const displayName = userName || familyMember?.display_name || "Usuário";
+  const avatarUrl = familyMember?.avatar_url;
+  
+  const initials = displayName
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "U";
 
   const handleNotificationsClick = () => {
     if (onNotificationsClick) {
@@ -32,10 +45,25 @@ export function Header({ userName = "Usuário", onSettingsClick, onNotifications
       <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border/50 safe-area-inset-top">
         <div className="container px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <h1 className="text-lg font-semibold text-foreground">
-                {greeting}, {userName}! 👋
-              </h1>
+            <div className="flex items-center gap-3">
+              {/* User Avatar */}
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-sm font-bold text-primary-foreground overflow-hidden shadow-md">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={displayName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  initials
+                )}
+              </div>
+              <div className="space-y-0.5">
+                <h1 className="text-lg font-semibold text-foreground">
+                  {greeting}! 👋
+                </h1>
+                <p className="text-sm text-muted-foreground">{displayName}</p>
+              </div>
             </div>
             
             <div className="flex items-center gap-1">
