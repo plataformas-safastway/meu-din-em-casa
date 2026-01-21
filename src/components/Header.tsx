@@ -9,6 +9,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import oikMarca from "@/assets/oik-marca.png";
 
 interface HeaderProps {
   userName?: string;
@@ -43,29 +44,18 @@ export function Header({ userName, onSettingsClick, onNotificationsClick }: Head
   return (
     <>
       <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border/50 safe-area-inset-top">
-        <div className="container px-4 py-4">
+        <div className="container px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* User Avatar */}
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-sm font-bold text-primary-foreground overflow-hidden shadow-md">
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={displayName}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  initials
-                )}
-              </div>
-              <div className="space-y-0.5">
-                <h1 className="text-lg font-semibold text-foreground">
-                  {greeting}! 👋
-                </h1>
-                <p className="text-sm text-muted-foreground">{displayName}</p>
-              </div>
+            {/* Left: Brand Mark */}
+            <div className="flex items-center">
+              <img 
+                src={oikMarca} 
+                alt="Oik" 
+                className="h-7 object-contain"
+              />
             </div>
             
+            {/* Right: Actions */}
             <div className="flex items-center gap-1">
               <Button 
                 variant="ghost" 

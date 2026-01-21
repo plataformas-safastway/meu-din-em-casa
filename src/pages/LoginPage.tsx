@@ -138,7 +138,7 @@ export function LoginPage() {
         <div className="w-full max-w-sm space-y-8">
           {/* Logo */}
           <div className="flex justify-center">
-            <img src={oikMarca} alt="Oik" className="h-10 object-contain opacity-80" />
+            <img src={oikMarca} alt="Oik" className="h-12 object-contain opacity-90" />
           </div>
 
           <div className="text-center space-y-2">
@@ -214,7 +214,7 @@ export function LoginPage() {
         <div className="w-full max-w-sm space-y-8">
           {/* Logo */}
           <div className="flex justify-center">
-            <img src={oikMarca} alt="Oik" className="h-10 object-contain opacity-80" />
+            <img src={oikMarca} alt="Oik" className="h-12 object-contain opacity-90" />
           </div>
 
           <div className="text-center space-y-2">
@@ -296,17 +296,17 @@ export function LoginPage() {
       {/* Main Content - Centered */}
       <main className="flex-1 flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-sm space-y-10">
-          {/* Logo + Brand */}
-          <div className="text-center space-y-6">
+          {/* Logo - Prominent and harmonious */}
+          <div className="text-center space-y-8">
             <div className="flex justify-center">
               <img 
                 src={oikMarca} 
                 alt="Oik" 
-                className="h-12 object-contain"
+                className="h-16 sm:h-20 object-contain"
               />
             </div>
             
-            <p className="text-base text-muted-foreground">
+            <p className="text-lg text-muted-foreground font-light tracking-wide">
               Tudo no lugar. Os objetivos da família em ordem.
             </p>
           </div>
