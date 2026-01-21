@@ -1,6 +1,6 @@
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import oikLogo from "@/assets/oik-logo.png";
+import oikMarca from "@/assets/oik-marca.png";
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -10,19 +10,14 @@ export function LandingPage() {
       {/* Main Content - Centered */}
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm text-center space-y-10">
-          {/* Logo */}
+          {/* Marca Oik */}
           <div className="flex justify-center animate-fade-in">
             <img 
-              src={oikLogo} 
+              src={oikMarca} 
               alt="Oik" 
-              className="w-20 h-20 object-contain"
+              className="h-14 object-contain"
             />
           </div>
-
-          {/* Brand Name */}
-          <h1 className="text-4xl font-semibold text-foreground tracking-tight animate-fade-in">
-            Oik
-          </h1>
 
           {/* Slogan - Silent & Premium */}
           <div className="space-y-4 animate-fade-in">
