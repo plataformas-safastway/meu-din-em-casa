@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { ArrowUpCircle, ArrowDownCircle, Check, ChevronRight, Building2, CreditCard } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ArrowUpCircle, ArrowDownCircle, Check, ChevronRight, Building2, CreditCard, Calendar, FileText } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,9 @@ export function AddTransactionSheet({
   const [description, setDescription] = useState("");
   const [checkNumber, setCheckNumber] = useState("");
   const [showSubcategories, setShowSubcategories] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const amountInputRef = useRef<HTMLInputElement>(null);
 
   const { data: bankAccounts = [] } = useBankAccounts();
   const { data: creditCards = [] } = useCreditCards();
@@ -58,6 +61,15 @@ export function AddTransactionSheet({
 
   // Get payment methods based on transaction type
   const availablePaymentMethods = type === "income" ? incomePaymentMethods : expensePaymentMethods;
+
+  // Auto-focus amount input when sheet opens
+  useEffect(() => {
+    if (open && amountInputRef.current) {
+      setTimeout(() => {
+        amountInputRef.current?.focus();
+      }, 100);
+    }
+  }, [open]);
 
   // Reset subcategory when category changes
   useEffect(() => {
@@ -100,7 +112,7 @@ export function AddTransactionSheet({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!amount || !category) return;
@@ -110,31 +122,37 @@ export function AddTransactionSheet({
       return;
     }
 
-    onSubmit({
-      type,
-      expenseType: type === "expense" ? expenseType : undefined,
-      amount: parseFloat(amount.replace(",", ".")),
-      category,
-      subcategory: subcategory || undefined,
-      date,
-      paymentMethod,
-      bankAccountId: bankAccountId || undefined,
-      creditCardId: creditCardId || undefined,
-      description: description || undefined,
-      checkNumber: paymentMethod === "cheque" ? checkNumber.trim() : undefined,
-    });
+    setIsSaving(true);
 
-    // Reset form
-    setAmount("");
-    setCategory("");
-    setSubcategory("");
-    setDescription("");
-    setExpenseType("variable");
-    setBankAccountId("");
-    setCreditCardId("");
-    setCheckNumber("");
-    setShowSubcategories(false);
-    onOpenChange(false);
+    try {
+      await onSubmit({
+        type,
+        expenseType: type === "expense" ? expenseType : undefined,
+        amount: parseFloat(amount.replace(",", ".")),
+        category,
+        subcategory: subcategory || undefined,
+        date,
+        paymentMethod,
+        bankAccountId: bankAccountId || undefined,
+        creditCardId: creditCardId || undefined,
+        description: description || undefined,
+        checkNumber: paymentMethod === "cheque" ? checkNumber.trim() : undefined,
+      });
+
+      // Reset form
+      setAmount("");
+      setCategory("");
+      setSubcategory("");
+      setDescription("");
+      setExpenseType("variable");
+      setBankAccountId("");
+      setCreditCardId("");
+      setCheckNumber("");
+      setShowSubcategories(false);
+      onOpenChange(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const formatAmount = (value: string) => {
@@ -146,34 +164,56 @@ export function AddTransactionSheet({
   const needsCreditCard = paymentMethod === "credit";
   const needsCheckNumber = paymentMethod === "cheque";
 
+  // Get display name for bank account with more info
+  const getBankAccountDisplay = (account: typeof bankAccounts[0]) => {
+    const typeLabel = account.account_type === "checking" ? "CC" : 
+                      account.account_type === "savings" ? "Poup" : 
+                      account.account_type === "digital" ? "Digital" : "Sal";
+    return `${account.nickname} (${typeLabel})`;
+  };
+
+  // Get display name for credit card with more info
+  const getCreditCardDisplay = (card: typeof creditCards[0]) => {
+    const brandLabel = card.brand?.toUpperCase() || "";
+    return `${card.card_name}${brandLabel ? ` • ${brandLabel}` : ""}`;
+  };
+
+  // Format today's date for display
+  const formatDateDisplay = (dateStr: string) => {
+    const today = new Date().toISOString().split("T")[0];
+    if (dateStr === today) return "Hoje";
+    const d = new Date(dateStr + "T12:00:00");
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl">
-        <SheetHeader className="pb-4">
+      <SheetContent side="bottom" className="h-[92vh] rounded-t-3xl">
+        <SheetHeader className="pb-3">
           <SheetTitle className="text-center">
             {showSubcategories && selectedCategory ? (
               <button
                 onClick={() => setShowSubcategories(false)}
-                className="flex items-center gap-2 mx-auto text-muted-foreground hover:text-foreground"
+                className="flex items-center gap-2 mx-auto text-muted-foreground hover:text-foreground min-h-[44px]"
               >
-                <ChevronRight className="w-4 h-4 rotate-180" />
+                <ChevronRight className="w-5 h-5 rotate-180" />
                 <span className="text-lg font-semibold text-foreground">
                   {selectedCategory.icon} {selectedCategory.name}
                 </span>
               </button>
             ) : (
-              "Novo Lançamento"
+              <span className="text-xl font-bold">Novo Lançamento</span>
             )}
           </SheetTitle>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col h-[calc(100%-60px)]">
+        <form onSubmit={handleSubmit} className="flex flex-col h-[calc(100%-50px)]">
           <ScrollArea className="flex-1 -mx-6 px-6">
-            <div className="space-y-6 pb-6">
+            <div className="space-y-5 pb-6">
               {/* Subcategory Selection View */}
               {showSubcategories && selectedCategory ? (
                 <div className="space-y-4">
-                  <Label>Subcategoria</Label>
+                  <Label className="text-base">Subcategoria</Label>
                   <div className="grid gap-2">
                     {selectedCategory.subcategories.map((sub) => (
                       <button
@@ -184,13 +224,13 @@ export function AddTransactionSheet({
                           setShowSubcategories(false);
                         }}
                         className={cn(
-                          "flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left",
+                          "flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left min-h-[52px]",
                           subcategory === sub.id
                             ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
+                            : "border-border hover:border-primary/50 active:scale-[0.98]"
                         )}
                       >
-                        <span className="font-medium">{sub.name}</span>
+                        <span className="font-medium text-base">{sub.name}</span>
                         {subcategory === sub.id && <Check className="w-5 h-5 text-primary" />}
                       </button>
                     ))}
@@ -198,52 +238,54 @@ export function AddTransactionSheet({
                 </div>
               ) : (
                 <>
-                  {/* Type Toggle */}
-                  <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-xl">
+                  {/* Type Toggle - BIGGER and CLEARER */}
+                  <div className="grid grid-cols-2 gap-3 p-1.5 bg-muted/50 rounded-2xl">
                     <button
                       type="button"
                       onClick={() => setType("income")}
                       className={cn(
-                        "flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-all",
+                        "flex items-center justify-center gap-2 py-4 rounded-xl font-semibold transition-all min-h-[56px] text-base",
                         type === "income"
-                          ? "bg-success text-success-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
+                          ? "bg-success text-success-foreground shadow-md"
+                          : "text-muted-foreground hover:text-foreground active:bg-muted/80"
                       )}
                     >
-                      <ArrowUpCircle className="w-5 h-5" />
+                      <ArrowUpCircle className="w-6 h-6" />
                       Receita
                     </button>
                     <button
                       type="button"
                       onClick={() => setType("expense")}
                       className={cn(
-                        "flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-all",
+                        "flex items-center justify-center gap-2 py-4 rounded-xl font-semibold transition-all min-h-[56px] text-base",
                         type === "expense"
-                          ? "bg-destructive text-destructive-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
+                          ? "bg-destructive text-destructive-foreground shadow-md"
+                          : "text-muted-foreground hover:text-foreground active:bg-muted/80"
                       )}
                     >
-                      <ArrowDownCircle className="w-5 h-5" />
+                      <ArrowDownCircle className="w-6 h-6" />
                       Despesa
                     </button>
                   </div>
 
-                  {/* Amount */}
+                  {/* Amount - FIRST FIELD, BIGGER, AUTO-FOCUS */}
                   <div className="space-y-2">
-                    <Label htmlFor="amount">Valor</Label>
+                    <Label htmlFor="amount" className="text-base font-medium">Valor</Label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-muted-foreground font-semibold">
                         R$
                       </span>
                       <Input
+                        ref={amountInputRef}
                         id="amount"
                         type="text"
                         inputMode="decimal"
                         placeholder="0,00"
                         value={amount}
                         onChange={(e) => formatAmount(e.target.value)}
-                        className="pl-12 text-2xl font-bold h-14 text-center"
+                        className="pl-14 text-3xl font-bold h-16 text-center rounded-xl border-2 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary"
                         required
+                        autoComplete="off"
                       />
                     </div>
                   </div>
@@ -251,16 +293,16 @@ export function AddTransactionSheet({
                   {/* Expense Type (only for expenses) */}
                   {type === "expense" && (
                     <div className="space-y-2">
-                      <Label>Tipo de Despesa</Label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <Label className="text-base">Tipo de Despesa</Label>
+                      <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
                           onClick={() => setExpenseType("fixed")}
                           className={cn(
-                            "py-3 px-4 rounded-xl border-2 font-medium transition-all",
+                            "py-3.5 px-4 rounded-xl border-2 font-medium transition-all min-h-[48px] text-base",
                             expenseType === "fixed"
                               ? "border-primary bg-primary/5 text-primary"
-                              : "border-border text-muted-foreground hover:border-primary/50"
+                              : "border-border text-muted-foreground hover:border-primary/50 active:scale-[0.98]"
                           )}
                         >
                           🔒 Fixa
@@ -269,10 +311,10 @@ export function AddTransactionSheet({
                           type="button"
                           onClick={() => setExpenseType("variable")}
                           className={cn(
-                            "py-3 px-4 rounded-xl border-2 font-medium transition-all",
+                            "py-3.5 px-4 rounded-xl border-2 font-medium transition-all min-h-[48px] text-base",
                             expenseType === "variable"
                               ? "border-primary bg-primary/5 text-primary"
-                              : "border-border text-muted-foreground hover:border-primary/50"
+                              : "border-border text-muted-foreground hover:border-primary/50 active:scale-[0.98]"
                           )}
                         >
                           🔄 Variável
@@ -283,7 +325,7 @@ export function AddTransactionSheet({
 
                   {/* Category */}
                   <div className="space-y-2">
-                    <Label>Categoria</Label>
+                    <Label className="text-base">Categoria</Label>
                     <div className="grid grid-cols-3 gap-2">
                       {filteredCategories.map((cat) => (
                         <button
@@ -291,24 +333,24 @@ export function AddTransactionSheet({
                           type="button"
                           onClick={() => handleCategorySelect(cat.id)}
                           className={cn(
-                            "relative flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all",
+                            "relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all min-h-[72px] active:scale-[0.97]",
                             category === cat.id
                               ? "border-primary bg-primary/5"
                               : "border-border hover:border-primary/50"
                           )}
                         >
                           <span className="text-2xl">{cat.icon}</span>
-                          <span className="text-[10px] text-center leading-tight text-muted-foreground font-medium">
+                          <span className="text-[11px] text-center leading-tight text-muted-foreground font-medium line-clamp-2">
                             {cat.name}
                           </span>
                           {category === cat.id && (
-                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                              <Check className="w-3 h-3 text-primary-foreground" />
+                            <div className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
+                              <Check className="w-3.5 h-3.5 text-primary-foreground" />
                             </div>
                           )}
                           {cat.subcategories.length > 0 && (
-                            <div className="absolute bottom-1 right-1">
-                              <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                            <div className="absolute bottom-1.5 right-1.5">
+                              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
                             </div>
                           )}
                         </button>
@@ -319,37 +361,37 @@ export function AddTransactionSheet({
                   {/* Selected Subcategory Display */}
                   {subcategory && selectedCategory && (
                     <div className="space-y-2">
-                      <Label>Subcategoria selecionada</Label>
+                      <Label className="text-base">Subcategoria</Label>
                       <button
                         type="button"
                         onClick={() => setShowSubcategories(true)}
-                        className="w-full flex items-center justify-between p-3 rounded-xl border-2 border-primary bg-primary/5"
+                        className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-primary bg-primary/5 min-h-[52px]"
                       >
-                        <span className="font-medium">
+                        <span className="font-medium text-base">
                           {selectedCategory.subcategories.find((s) => s.id === subcategory)?.name}
                         </span>
-                        <ChevronRight className="w-4 h-4 text-primary" />
+                        <ChevronRight className="w-5 h-5 text-primary" />
                       </button>
                     </div>
                   )}
 
-                  {/* Payment Method */}
+                  {/* Payment Method - Horizontal scroll with better touch targets */}
                   <div className="space-y-2">
-                    <Label>{type === "income" ? "Meio de Recebimento" : "Forma de Pagamento"}</Label>
-                    <div className="flex gap-2 overflow-x-auto pb-2">
+                    <Label className="text-base">{type === "income" ? "Como recebeu?" : "Como pagou?"}</Label>
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
                       {availablePaymentMethods.map((method) => (
                         <button
                           key={method.id}
                           type="button"
                           onClick={() => setPaymentMethod(method.id as PaymentMethod)}
                           className={cn(
-                            "flex items-center gap-2 py-2 px-4 rounded-full border-2 whitespace-nowrap transition-all",
+                            "flex items-center gap-2 py-3 px-4 rounded-full border-2 whitespace-nowrap transition-all min-h-[48px] active:scale-[0.97]",
                             paymentMethod === method.id
                               ? "border-primary bg-primary/5 text-primary"
                               : "border-border text-muted-foreground hover:border-primary/50"
                           )}
                         >
-                          <span>{method.icon}</span>
+                          <span className="text-lg">{method.icon}</span>
                           <span className="text-sm font-medium">{method.name}</span>
                         </button>
                       ))}
@@ -359,34 +401,41 @@ export function AddTransactionSheet({
                   {/* Check Number (for cheque payment) */}
                   {needsCheckNumber && (
                     <div className="space-y-2">
-                      <Label htmlFor="checkNumber">Número do Cheque *</Label>
+                      <Label htmlFor="checkNumber" className="text-base flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        Número do Cheque *
+                      </Label>
                       <Input
                         id="checkNumber"
                         type="text"
-                        placeholder="Digite o número do cheque"
+                        placeholder="Ex: 000123"
                         value={checkNumber}
                         onChange={(e) => setCheckNumber(e.target.value)}
-                        className="h-12"
+                        className="h-12 text-base rounded-xl border-2 focus-visible:ring-2 focus-visible:ring-primary/30"
                         required
                       />
                     </div>
                   )}
 
-                  {/* Bank Account Selection */}
+                  {/* Bank Account Selection - Better display */}
                   {needsBankAccount && bankAccounts.length > 0 && (
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
+                      <Label className="flex items-center gap-2 text-base">
                         <Building2 className="w-4 h-4" />
                         Conta bancária
                       </Label>
                       <Select value={bankAccountId} onValueChange={setBankAccountId}>
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Selecione a conta (opcional)" />
+                        <SelectTrigger className="h-12 rounded-xl border-2 text-base">
+                          <SelectValue placeholder="Selecione (opcional)" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-background border-2 shadow-xl z-50">
                           {bankAccounts.map((account) => (
-                            <SelectItem key={account.id} value={account.id}>
-                              {account.nickname}
+                            <SelectItem 
+                              key={account.id} 
+                              value={account.id}
+                              className="py-3 text-base cursor-pointer"
+                            >
+                              {getBankAccountDisplay(account)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -394,21 +443,25 @@ export function AddTransactionSheet({
                     </div>
                   )}
 
-                  {/* Credit Card Selection */}
+                  {/* Credit Card Selection - Better display */}
                   {needsCreditCard && creditCards.length > 0 && (
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
+                      <Label className="flex items-center gap-2 text-base">
                         <CreditCard className="w-4 h-4" />
                         Cartão de crédito
                       </Label>
                       <Select value={creditCardId} onValueChange={setCreditCardId}>
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Selecione o cartão (opcional)" />
+                        <SelectTrigger className="h-12 rounded-xl border-2 text-base">
+                          <SelectValue placeholder="Selecione (opcional)" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-background border-2 shadow-xl z-50">
                           {creditCards.map((card) => (
-                            <SelectItem key={card.id} value={card.id}>
-                              {card.card_name}
+                            <SelectItem 
+                              key={card.id} 
+                              value={card.id}
+                              className="py-3 text-base cursor-pointer"
+                            >
+                              {getCreditCardDisplay(card)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -416,27 +469,35 @@ export function AddTransactionSheet({
                     </div>
                   )}
 
-                  {/* Date */}
+                  {/* Date - Compact with today indicator */}
                   <div className="space-y-2">
-                    <Label htmlFor="date">Data</Label>
+                    <Label htmlFor="date" className="flex items-center gap-2 text-base">
+                      <Calendar className="w-4 h-4" />
+                      Data
+                      <span className="text-xs text-muted-foreground font-normal">
+                        ({formatDateDisplay(date)})
+                      </span>
+                    </Label>
                     <Input
                       id="date"
                       type="date"
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
-                      className="h-12"
+                      className="h-12 rounded-xl border-2 text-base focus-visible:ring-2 focus-visible:ring-primary/30"
                     />
                   </div>
 
-                  {/* Description */}
+                  {/* Description - Clear optional label */}
                   <div className="space-y-2">
-                    <Label htmlFor="description">Observações (opcional)</Label>
+                    <Label htmlFor="description" className="text-base text-muted-foreground">
+                      Observações <span className="text-xs">(opcional)</span>
+                    </Label>
                     <Textarea
                       id="description"
-                      placeholder="Ex: Compras do mês no supermercado"
+                      placeholder="Ex: Supermercado, farmácia..."
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="resize-none"
+                      className="resize-none rounded-xl border-2 text-base focus-visible:ring-2 focus-visible:ring-primary/30"
                       rows={2}
                     />
                   </div>
@@ -445,17 +506,34 @@ export function AddTransactionSheet({
             </div>
           </ScrollArea>
 
-          {/* Submit Button - Fixed at bottom */}
+          {/* Submit Button - Fixed at bottom with better feedback */}
           {!showSubcategories && (
-            <div className="pt-4 border-t border-border">
+            <div className="pt-4 border-t border-border space-y-3">
               <Button
                 type="submit"
                 size="lg"
-                className="w-full h-14 text-base font-semibold"
-                disabled={!amount || !category || (paymentMethod === "cheque" && !checkNumber.trim())}
+                className={cn(
+                  "w-full h-14 text-lg font-semibold rounded-xl shadow-lg transition-all duration-200",
+                  isSaving 
+                    ? "opacity-80" 
+                    : "active:scale-[0.98] shadow-primary/20 hover:shadow-xl hover:shadow-primary/30"
+                )}
+                disabled={!amount || !category || (paymentMethod === "cheque" && !checkNumber.trim()) || isSaving}
               >
-                Salvar Lançamento
+                {isSaving ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    Salvando...
+                  </span>
+                ) : (
+                  "Salvar Lançamento"
+                )}
               </Button>
+              
+              {/* Emotional microcopy */}
+              <p className="text-center text-xs text-muted-foreground/70">
+                Lançar em menos de 10 segundos 🚀
+              </p>
             </div>
           )}
         </form>

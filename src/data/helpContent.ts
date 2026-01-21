@@ -556,6 +556,27 @@ export const faqItems: FAQItem[] = [
     category: "general",
     keywords: ["oik", "nome", "significado", "oikonomia"],
   },
+  {
+    id: "faq-17",
+    question: "Como lançar despesas rápido no celular?",
+    answer: "Toque no botão + flutuante (canto inferior direito). O valor é o primeiro campo com teclado numérico automático. Escolha categoria com um toque, a data já vem como 'Hoje' e o botão Salvar fica sempre visível. Você consegue lançar em menos de 10 segundos!",
+    category: "transactions",
+    keywords: ["rápido", "celular", "mobile", "lançar", "despesa", "velocidade"],
+  },
+  {
+    id: "faq-18",
+    question: "Dica: como usar o Oik com uma mão só?",
+    answer: "O botão + fica na zona do polegar. O valor é o primeiro campo (foco automático). Categorias têm alvos grandes. Deslize horizontalmente para escolher forma de pagamento. O botão Salvar fica fixo na parte inferior. Tudo foi pensado para uso com uma mão!",
+    category: "transactions",
+    keywords: ["uma mão", "polegar", "mobile", "acessibilidade", "ergonomia"],
+  },
+  {
+    id: "faq-19",
+    question: "Por que o botão + é tão grande?",
+    answer: "O botão flutuante tem 56px de diâmetro (mínimo recomendado é 44px) para garantir toque preciso mesmo em movimento. Ele fica posicionado na 'zona do polegar' para acesso fácil com uma mão.",
+    category: "transactions",
+    keywords: ["botão", "grande", "acessibilidade", "toque", "fab"],
+  },
 ];
 
 export const categoryLabels: Record<string, string> = {

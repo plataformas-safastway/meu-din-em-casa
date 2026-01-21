@@ -78,10 +78,10 @@ export function FabButton({ onClick }: FabButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="btn-fab"
-      aria-label="Adicionar lançamento"
+      className="fixed right-4 bottom-20 z-50 w-14 h-14 min-w-[56px] min-h-[56px] bg-primary text-primary-foreground rounded-full shadow-xl shadow-primary/30 flex items-center justify-center transition-all duration-200 active:scale-95 hover:shadow-2xl hover:shadow-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/30"
+      aria-label="Adicionar receita ou despesa"
     >
-      <Plus className="w-6 h-6" />
+      <Plus className="w-7 h-7" strokeWidth={2.5} />
     </button>
   );
 }
