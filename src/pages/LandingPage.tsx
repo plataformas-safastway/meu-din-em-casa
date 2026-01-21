@@ -27,10 +27,7 @@ export function LandingPage() {
           {/* Slogan - Silent & Premium */}
           <div className="space-y-4 animate-fade-in">
             <p className="text-lg text-muted-foreground leading-relaxed">
-              Inteligência financeira da sua casa
-            </p>
-            <p className="text-base text-muted-foreground/70">
-              Ordem e clareza, sem esforço.
+              Tudo no lugar. Os objetivos da família em ordem.
             </p>
           </div>
 

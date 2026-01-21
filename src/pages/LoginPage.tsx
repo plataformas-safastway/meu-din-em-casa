@@ -311,7 +311,7 @@ export function LoginPage() {
                 Oik
               </h1>
               <p className="text-base text-muted-foreground">
-                Inteligência financeira da sua casa
+                Tudo no lugar. Os objetivos da família em ordem.
               </p>
             </div>
           </div>
