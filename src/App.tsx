@@ -6,6 +6,9 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useUserRole, useHasAnyAdmin } from "@/hooks/useUserRole";
 import { ScreenLoader } from "@/components/ui/money-loader";
+import { useAppLifecycle } from "@/hooks/useAppLifecycle";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { STALE_TIMES, GC_TIMES } from "@/lib/queryConfig";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { TermosPage } from "./pages/TermosPage";
@@ -15,7 +18,23 @@ import { AdminDashboard, AdminSetupPage } from "./pages/admin";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Default stale time - data is considered fresh for this duration
+      staleTime: STALE_TIMES.transactions,
+      // Garbage collection time - how long to keep unused data in cache
+      gcTime: GC_TIMES.default,
+      // Refetch on window focus for multi-device sync
+      refetchOnWindowFocus: true,
+      // Refetch on reconnect for offline support
+      refetchOnReconnect: true,
+      // Retry failed requests
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    },
+  },
+});
 
 function LoadingSpinner() {
   return <ScreenLoader label="Carregando..." />
@@ -93,6 +112,12 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Component to handle app lifecycle events
+function AppLifecycleHandler({ children }: { children: React.ReactNode }) {
+  useAppLifecycle();
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -146,7 +171,10 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <AppLifecycleHandler>
+            <AppRoutes />
+            <InstallPrompt />
+          </AppLifecycleHandler>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

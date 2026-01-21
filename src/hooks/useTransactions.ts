@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { STALE_TIMES, invalidateQueryGroup } from "@/lib/queryConfig";
 
 export interface TransactionInput {
   type: "income" | "expense";
@@ -42,6 +43,7 @@ export function useTransactions(month?: number, year?: number) {
       return data;
     },
     enabled: !!family,
+    staleTime: STALE_TIMES.transactions,
   });
 }
 
@@ -146,8 +148,8 @@ export function useCreateTransaction() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+      // Invalidate all transaction-related queries for multi-device sync
+      invalidateQueryGroup(queryClient, 'transactionMutation');
     },
   });
 }
@@ -172,8 +174,7 @@ export function useUpdateTransaction() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+      invalidateQueryGroup(queryClient, 'transactionMutation');
     },
   });
 }
@@ -187,8 +188,7 @@ export function useDeleteTransaction() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["finance-summary"] });
+      invalidateQueryGroup(queryClient, 'transactionMutation');
     },
   });
 }
