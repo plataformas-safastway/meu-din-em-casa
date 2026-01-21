@@ -133,32 +133,14 @@ export function SmartImportPage({ onBack }: SmartImportPageProps) {
         formData.append("sourceId", defaultSourceId);
       }
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
+      const { data, error } = await supabase.functions.invoke('import-process', {
+        body: formData,
+      });
 
-      if (!token) {
-        toast.error("Sessão expirada", {
-          description: "Faça login novamente.",
-        });
-        setLoading(false);
-        return;
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-process`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (result.needs_password || result.needsPassword) {
+      if (error) {
+        const errAny = error as unknown as { context?: any; message?: string };
+        const ctx = errAny?.context;
+        if (ctx?.needs_password || ctx?.needsPassword) {
           // Handle password-protected file
           toast.info("Arquivo protegido", {
             description: "Tentando desbloquear automaticamente...",
@@ -166,21 +148,13 @@ export function SmartImportPage({ onBack }: SmartImportPageProps) {
           
           // Try with auto password
           formData.append("useAutoPassword", "true");
-          
-          const retryResponse = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-process`,
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              body: formData,
-            }
-          );
 
-          const retryResult = await retryResponse.json();
+          const { data: retryData, error: retryError } = await supabase.functions.invoke('import-process', {
+            body: formData,
+          });
 
-          if (!retryResponse.ok && (retryResult.needs_password || retryResult.needsPassword)) {
+          const retryCtx = (retryError as any)?.context;
+          if (retryError && (retryCtx?.needs_password || retryCtx?.needsPassword)) {
             toast.error("Não foi possível desbloquear", {
               description: "Verifique se seu CPF está cadastrado corretamente.",
             });
@@ -188,25 +162,29 @@ export function SmartImportPage({ onBack }: SmartImportPageProps) {
             return;
           }
 
-          if (retryResult.import_id) {
+          const retryResult: any = retryData;
+          if (retryResult?.import_id || retryResult?.importId) {
             toast.success("Arquivo processado!", {
-              description: `${retryResult.transactions_count || 0} transações encontradas.`,
+              description: `${retryResult?.transactions_count || 0} transações encontradas.`,
             });
-            navigate(`/app/import/${retryResult.import_id}/review`);
+            const importId = retryResult?.import_id || retryResult?.importId;
+            navigate(`/app/import/${importId}/review`);
             return;
           }
         }
 
-        throw new Error(result.error || "Erro ao processar arquivo");
+        throw new Error(errAny?.message || "Erro ao processar arquivo");
       }
 
-      if (result.import_id) {
+      const result: any = data;
+      const importId = result?.import_id || result?.importId;
+      if (importId) {
         toast.success("Arquivo processado!", {
           description: `${result.transactions_count || 0} transações encontradas.${
             result.detected_bank ? ` Banco: ${result.detected_bank}` : ""
           }`,
         });
-        navigate(`/app/import/${result.import_id}/review`);
+        navigate(`/app/import/${importId}/review`);
       } else {
         toast.error("Nenhuma transação encontrada", {
           description: "Verifique se o arquivo está no formato correto.",
