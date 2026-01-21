@@ -9,6 +9,7 @@ import {
   FileText,
   Loader2,
   UserCog,
+  Phone,
   Ban
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,11 +19,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserRole, useAssignRole, useRemoveRole, AppRole } from "@/hooks/useUserRole";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { COUNTRIES, parseE164 } from "@/components/profile/PhoneInput";
 
 interface AdminUserProfileViewProps {
   userId: string;
   memberId: string;
   onBack?: () => void;
+}
+
+// Format phone for display
+function formatPhoneDisplay(phoneE164: string | null, phoneCountry: string | null): string {
+  if (!phoneE164) return "—";
+  
+  const country = COUNTRIES.find(c => c.code === phoneCountry) || COUNTRIES[0];
+  const { localNumber } = parseE164(phoneE164, phoneCountry || "BR");
+  
+  if (phoneCountry === "BR" && localNumber.length >= 10) {
+    const ddd = localNumber.slice(0, 2);
+    const num = localNumber.slice(2);
+    const formatted = num.length === 9 
+      ? `${num.slice(0, 5)}-${num.slice(5)}`
+      : `${num.slice(0, 4)}-${num.slice(4)}`;
+    return `${country.flag} (${ddd}) ${formatted}`;
+  }
+  
+  return `${country.flag} ${phoneE164}`;
 }
 
 export function AdminUserProfileView({ userId, memberId }: AdminUserProfileViewProps) {
@@ -127,14 +148,28 @@ export function AdminUserProfileView({ userId, memberId }: AdminUserProfileViewP
   }
 
   const currentRole = userRoleData?.role || "user";
+  const initials = memberData.display_name
+    ?.split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) || "U";
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary">
-            {memberData.display_name?.charAt(0)?.toUpperCase() || "U"}
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-xl font-bold text-primary-foreground overflow-hidden shadow-lg ring-4 ring-background">
+            {memberData.avatar_url ? (
+              <img
+                src={memberData.avatar_url}
+                alt={memberData.display_name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              initials
+            )}
           </div>
           <div>
             <h2 className="text-xl font-semibold">{memberData.display_name}</h2>
@@ -194,20 +229,22 @@ export function AdminUserProfileView({ userId, memberId }: AdminUserProfileViewP
 
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground flex items-center gap-1">
+                <Phone className="w-3 h-3" />
+                Telefone
+              </label>
+              <p className="text-sm font-medium">
+                {formatPhoneDisplay(memberData.phone_e164, memberData.phone_country)}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
                 Membro desde
               </label>
               <p className="text-sm font-medium">
                 {new Date(memberData.created_at).toLocaleDateString("pt-BR")}
               </p>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground flex items-center gap-1">
-                <UserCog className="w-3 h-3" />
-                Papel na Família
-              </label>
-              <p className="text-sm font-medium capitalize">{memberData.role}</p>
             </div>
           </div>
         </CardContent>

@@ -7,10 +7,11 @@ import { z } from "zod";
 // Validation schemas
 export const profileSchema = z.object({
   display_name: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100, "Nome muito longo"),
-  phone: z.string().optional().refine(
-    (val) => !val || /^\+?[\d\s()-]{10,20}$/.test(val),
-    "Telefone inválido"
+  phone_e164: z.string().optional().refine(
+    (val) => !val || /^\+\d{10,15}$/.test(val),
+    "Telefone em formato inválido"
   ),
+  phone_country: z.string().optional().default("BR"),
 });
 
 export const passwordSchema = z.object({
@@ -98,9 +99,9 @@ export function useUploadAvatar() {
 
       return publicUrl;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["family"] });
-      refreshFamily();
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["family"] });
+      await refreshFamily();
       toast.success("Foto de perfil atualizada!");
     },
     onError: (error: any) => {
@@ -134,9 +135,9 @@ export function useRemoveAvatar() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["family"] });
-      refreshFamily();
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["family"] });
+      await refreshFamily();
       toast.success("Foto de perfil removida!");
     },
     onError: (error: any) => {
@@ -145,25 +146,37 @@ export function useRemoveAvatar() {
   });
 }
 
-// Hook to update profile
+// Hook to update profile (including phone)
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
   const { refreshFamily } = useAuth();
 
   return useMutation({
     mutationFn: async (data: { memberId: string; updates: Partial<ProfileFormData> }) => {
+      const updatePayload: Record<string, unknown> = {};
+      
+      if (data.updates.display_name !== undefined) {
+        updatePayload.display_name = data.updates.display_name;
+      }
+      
+      if (data.updates.phone_e164 !== undefined) {
+        updatePayload.phone_e164 = data.updates.phone_e164 || null;
+      }
+      
+      if (data.updates.phone_country !== undefined) {
+        updatePayload.phone_country = data.updates.phone_country || "BR";
+      }
+
       const { error } = await supabase
         .from("family_members")
-        .update({
-          display_name: data.updates.display_name,
-        })
+        .update(updatePayload)
         .eq("id", data.memberId);
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["family"] });
-      refreshFamily();
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["family"] });
+      await refreshFamily();
       toast.success("Perfil atualizado com sucesso!");
     },
     onError: (error: any) => {

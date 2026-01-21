@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { 
   ArrowLeft, 
   User, 
   Mail, 
-  Phone, 
   Lock, 
   Download, 
   Trash2, 
@@ -19,6 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuth } from "@/contexts/AuthContext";
 import { useUpdateProfile, profileSchema, ProfileFormData } from "@/hooks/useProfile";
 import { AvatarUpload } from "@/components/profile/AvatarUpload";
+import { PhoneInput } from "@/components/profile/PhoneInput";
 import { ChangePasswordSheet } from "@/components/profile/ChangePasswordSheet";
 import { ExportDataSheet } from "@/components/profile/ExportDataSheet";
 import { DeleteAccountSheet } from "@/components/profile/DeleteAccountSheet";
@@ -39,9 +39,21 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       display_name: familyMember?.display_name || "",
-      phone: "",
+      phone_e164: (familyMember as any)?.phone_e164 || "",
+      phone_country: (familyMember as any)?.phone_country || "BR",
     },
   });
+
+  // Update form when familyMember changes (after refresh)
+  useEffect(() => {
+    if (familyMember) {
+      form.reset({
+        display_name: familyMember.display_name || "",
+        phone_e164: (familyMember as any)?.phone_e164 || "",
+        phone_country: (familyMember as any)?.phone_country || "BR",
+      });
+    }
+  }, [familyMember, form]);
 
   const onSubmit = async (data: ProfileFormData) => {
     if (!familyMember) return;
@@ -50,6 +62,11 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
       memberId: familyMember.id,
       updates: data,
     });
+  };
+
+  const handlePhoneChange = (phoneE164: string, phoneCountry: string) => {
+    form.setValue("phone_e164", phoneE164, { shouldDirty: true });
+    form.setValue("phone_country", phoneCountry, { shouldDirty: true });
   };
 
   return (
@@ -121,25 +138,17 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
                 </p>
               </div>
 
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Phone className="w-4 h-4" />
-                      Telefone
-                    </FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="+55 (00) 00000-0000" 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Telefone</label>
+                <PhoneInput
+                  value={form.watch("phone_e164")}
+                  countryCode={form.watch("phone_country")}
+                  onChange={handlePhoneChange}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Selecione o país e digite o DDD + número
+                </p>
+              </div>
 
               <Button 
                 type="submit" 
