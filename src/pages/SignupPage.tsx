@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { OnboardingCategoriesPage } from "./OnboardingCategoriesPage";
 import { OnboardingImportStep } from "@/components/OnboardingImportStep";
+import oikLogo from "@/assets/oik-logo.png";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -23,9 +24,9 @@ const incomeRanges = [
 
 const objectives = [
   { value: "organize", label: "Organizar as finanças", icon: "📊" },
-  { value: "reduce_anxiety", label: "Reduzir ansiedade sobre dinheiro", icon: "😌" },
-  { value: "plan_better", label: "Planejar melhor o futuro", icon: "🎯" },
-  { value: "reduce_conflicts", label: "Reduzir conflitos sobre dinheiro", icon: "🤝" },
+  { value: "reduce_anxiety", label: "Reduzir ansiedade financeira", icon: "😌" },
+  { value: "plan_better", label: "Planejar o futuro", icon: "🎯" },
+  { value: "reduce_conflicts", label: "Harmonizar decisões", icon: "🤝" },
   { value: "save_more", label: "Economizar mais", icon: "💰" },
 ];
 
@@ -41,7 +42,7 @@ export function SignupPage() {
 
   const isInviteFlow = useMemo(() => Boolean(inviteFamilyId), [inviteFamilyId]);
 
-  // Step 1 - Account (or just "display name" when already logged in)
+  // Step 1 - Account
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -60,17 +61,14 @@ export function SignupPage() {
   const [emailAlreadyExists, setEmailAlreadyExists] = useState(false);
 
   useEffect(() => {
-    // If already fully set up, don't let the user sit on /signup.
     if (user && family) {
       navigate("/app", { replace: true });
     }
 
-    // If logged in but missing a family, this page is for completing setup.
     if (user && !family) {
       setEmail(user.email ?? "");
     }
 
-    // In invite mode, keep the user on step 1.
     if (isInviteFlow) {
       setStep(1);
     }
@@ -85,19 +83,17 @@ export function SignupPage() {
       return;
     }
     
-    // Validate CPF format (11 digits)
     const cleanCpf = cpf.replace(/\D/g, "");
     if (cleanCpf.length !== 11) {
       toast.error("CPF deve ter 11 dígitos");
       return;
     }
 
-    // INVITE FLOW: accept invite right after authentication
+    // INVITE FLOW
     if (isInviteFlow && inviteFamilyId) {
       setLoading(true);
 
       try {
-        // If user is not authenticated yet, create/sign in.
         if (!user) {
           if (!email || !password) {
             toast.error("Preencha todos os campos");
@@ -125,19 +121,14 @@ export function SignupPage() {
               return;
             }
 
-            toast.error("Erro ao criar conta", {
-              description: signUpError.message || "Tente novamente mais tarde.",
-            });
+            toast.error("Erro ao criar conta");
             setLoading(false);
             return;
           }
 
-          // Ensure session exists (covers cases where signup returns user but no session)
           const { error: signInError } = await signIn(email, password);
           if (signInError) {
-            toast.error("Erro ao entrar", {
-              description: "Tente fazer login com seu e-mail e senha.",
-            });
+            toast.error("Erro ao entrar");
             setLoading(false);
             return;
           }
@@ -145,23 +136,16 @@ export function SignupPage() {
 
         const { error: joinError } = await joinFamily(inviteFamilyId, name, cpf.replace(/\D/g, ""), birthDate);
         if (joinError) {
-          toast.error("Erro ao entrar na família", {
-            description: "Tente novamente mais tarde.",
-          });
+          toast.error("Erro ao entrar na família");
           setLoading(false);
           return;
         }
 
-        toast.success("Convite aceito! 🎉", {
-          description: "Você já faz parte da família.",
-        });
-
+        toast.success("Bem-vindo à família");
         window.location.href = "/app";
       } catch (err) {
         console.error('Invite flow error:', err);
-        toast.error("Erro ao aceitar convite", {
-          description: "Tente novamente mais tarde.",
-        });
+        toast.error("Erro ao aceitar convite");
         setLoading(false);
       }
 
@@ -169,7 +153,6 @@ export function SignupPage() {
     }
 
     // NORMAL FLOW
-    // If user is already authenticated, Step 1 is only to confirm display name.
     if (user) {
       setStep(2);
       return;
@@ -201,19 +184,14 @@ export function SignupPage() {
         return;
       }
 
-      toast.error("Erro ao criar conta", {
-        description: signUpError.message || "Tente novamente mais tarde.",
-      });
+      toast.error("Erro ao criar conta");
       setLoading(false);
       return;
     }
 
-    // Ensure session exists
     const { error: signInError } = await signIn(email, password);
     if (signInError) {
-      toast.error("Erro ao entrar", {
-        description: "Tente fazer login com seu e-mail e senha.",
-      });
+      toast.error("Erro ao entrar");
       setLoading(false);
       return;
     }
@@ -250,22 +228,17 @@ export function SignupPage() {
 
     if (error) {
       console.error('Error creating family:', error);
-      toast.error("Erro ao criar família", {
-        description: "Tente novamente mais tarde.",
-      });
+      toast.error("Erro ao criar família");
       setLoading(false);
       return;
     }
 
-    toast.success("Conta criada com sucesso! 🎉");
-
-    // Go to step 4 - optional import
+    toast.success("Tudo pronto");
     setLoading(false);
     setStep(4);
   };
 
   const handleImportNow = () => {
-    // Go to step 5 - category import
     setStep(5);
   };
 
@@ -285,7 +258,6 @@ export function SignupPage() {
     if (step === 1) {
       navigate("/");
     } else if (step === 4 || step === 5) {
-      // Can't go back from import steps after family is created
       return;
     } else {
       setStep((step - 1) as Step);
@@ -302,7 +274,7 @@ export function SignupPage() {
     );
   }
 
-  // Step 5 - Category Import (if user chose to import)
+  // Step 5 - Category Import
   if (step === 5) {
     return (
       <OnboardingCategoriesPage
@@ -321,24 +293,25 @@ export function SignupPage() {
           variant="ghost" 
           size="icon"
           onClick={goBack}
+          className="text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
         
-        {/* Progress */}
-        <div className="flex gap-2">
-          {[1, 2, 3, 4].map((s) => (
+        {/* Progress - Minimal */}
+        <div className="flex gap-1.5">
+          {[1, 2, 3].map((s) => (
             <div
               key={s}
               className={cn(
-                "h-2 w-6 rounded-full transition-colors",
+                "h-1 w-8 rounded-full transition-all duration-500",
                 s <= step ? "bg-primary" : "bg-muted"
               )}
             />
           ))}
         </div>
         
-        <div className="w-10" /> {/* Spacer */}
+        <div className="w-10" />
       </header>
 
       {/* Content */}
@@ -347,43 +320,42 @@ export function SignupPage() {
           {step === 1 && (
             <motion.div
               key="step1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="max-w-sm mx-auto w-full"
             >
-              <div className="text-center mb-8">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-6 h-6 text-primary" />
+              {/* Logo + Header */}
+              <div className="text-center mb-10">
+                <div className="flex justify-center mb-6">
+                  <img src={oikLogo} alt="Oik" className="w-12 h-12 object-contain opacity-80" />
                 </div>
-                <h1 className="text-2xl font-bold text-foreground mb-2">
+                <h1 className="text-2xl font-semibold text-foreground mb-2 tracking-tight">
                   {user ? "Completar cadastro" : "Criar sua conta"}
                 </h1>
                 <p className="text-muted-foreground text-sm">
-                  {user
-                    ? "Sua conta já existe. Agora vamos configurar sua família."
-                    : "Seus dados são privados e criptografados"}
+                  Seus dados são privados e criptografados
                 </p>
               </div>
 
               <form onSubmit={handleStep1} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Seu nome</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="name" className="text-sm font-medium">Seu nome</Label>
                   <Input
                     id="name"
                     type="text"
                     placeholder="Como você quer ser chamado?"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="h-12"
+                    className="h-12 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
                     autoComplete="name"
                     required
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="cpf">CPF *</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cpf" className="text-sm font-medium">CPF</Label>
                   <Input
                     id="cpf"
                     type="text"
@@ -394,41 +366,41 @@ export function SignupPage() {
                       const masked = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
                       setCpf(masked || v);
                     }}
-                    className="h-12"
+                    className="h-12 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
                     required
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="birthDate">Data de nascimento *</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="birthDate" className="text-sm font-medium">Data de nascimento</Label>
                   <Input
                     id="birthDate"
                     type="date"
                     value={birthDate}
                     onChange={(e) => setBirthDate(e.target.value)}
-                    className="h-12"
+                    className="h-12 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
                     required
                   />
                 </div>
 
                 {!user && (
                   <>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">E-mail</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email" className="text-sm font-medium">E-mail</Label>
                       <Input
                         id="email"
                         type="email"
                         placeholder="seu@email.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="h-12"
+                        className="h-12 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
                         autoComplete="email"
                         required
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Senha</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
                       <div className="relative">
                         <Input
                           id="password"
@@ -436,16 +408,16 @@ export function SignupPage() {
                           placeholder="Mínimo 6 caracteres"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="h-12 pr-10"
+                          className="h-12 pr-10 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
                           autoComplete="new-password"
                           required
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
@@ -458,44 +430,43 @@ export function SignupPage() {
                   </p>
                 )}
 
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full h-12 text-base font-semibold"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {user ? "Continuando..." : "Criando conta..."}
-                    </>
-                  ) : (
-                    <>
-                      Continuar
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </Button>
+                <div className="pt-2">
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full h-12 text-base font-medium rounded-xl transition-all duration-300"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        Continuar
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               </form>
 
-              {/* Email already exists message */}
+              {/* Email already exists */}
               <AnimatePresence>
                 {!user && emailAlreadyExists && (
                   <motion.div
-                    initial={{ opacity: 0, y: -10 }}
+                    initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="mt-6 p-4 rounded-xl bg-muted/40 border border-border"
+                    exit={{ opacity: 0, y: -8 }}
+                    className="mt-6 p-4 rounded-xl bg-secondary/50"
                   >
                     <p className="text-foreground text-sm font-medium mb-3">
-                      Já existe uma conta associada a este e-mail.
+                      Já existe uma conta com este e-mail
                     </p>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => navigate("/login")}
-                        className="flex-1"
+                        className="flex-1 rounded-lg"
                       >
                         Entrar
                       </Button>
@@ -503,7 +474,7 @@ export function SignupPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => navigate("/login", { state: { forgotPassword: true } })}
-                        className="flex-1"
+                        className="flex-1 rounded-lg"
                       >
                         Recuperar senha
                       </Button>
@@ -513,8 +484,8 @@ export function SignupPage() {
               </AnimatePresence>
 
               <p className="text-center text-sm text-muted-foreground mt-6">
-                Já tem uma conta?{" "}
-                <Link to="/login" className="text-primary font-medium hover:underline">
+                Já tem conta?{" "}
+                <Link to="/login" className="text-foreground font-medium hover:underline">
                   Entrar
                 </Link>
               </p>
@@ -524,18 +495,20 @@ export function SignupPage() {
           {step === 2 && (
             <motion.div
               key="step2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="max-w-sm mx-auto w-full"
             >
-              <div className="text-center mb-8">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-6 h-6 text-primary" />
+              <div className="text-center mb-10">
+                <div className="flex justify-center mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Users className="w-6 h-6 text-primary" />
+                  </div>
                 </div>
-                <h1 className="text-2xl font-bold text-foreground mb-2">
-                  Sobre a família
+                <h1 className="text-2xl font-semibold text-foreground mb-2 tracking-tight">
+                  Sua família
                 </h1>
                 <p className="text-muted-foreground text-sm">
                   Como vocês querem se identificar?
@@ -543,21 +516,21 @@ export function SignupPage() {
               </div>
 
               <form onSubmit={handleStep2} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="familyName">Nome da família</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="familyName" className="text-sm font-medium">Nome da família</Label>
                   <Input
                     id="familyName"
                     type="text"
-                    placeholder="Ex: Família Silva, Casa da Praia"
+                    placeholder="Ex: Família Silva"
                     value={familyName}
                     onChange={(e) => setFamilyName(e.target.value)}
-                    className="h-12"
+                    className="h-12 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
                     required
                   />
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Quantas pessoas fazem parte?</Label>
+                  <Label className="text-sm font-medium">Quantas pessoas?</Label>
                   <div className="grid grid-cols-5 gap-2">
                     {[1, 2, 3, 4, 5].map((n) => (
                       <button
@@ -565,10 +538,10 @@ export function SignupPage() {
                         type="button"
                         onClick={() => setMembersCount(n)}
                         className={cn(
-                          "h-12 rounded-xl border-2 font-semibold transition-all",
+                          "h-12 rounded-xl font-medium transition-all duration-300",
                           membersCount === n
-                            ? "border-primary bg-primary/5 text-primary"
-                            : "border-border text-muted-foreground hover:border-primary/50"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
                         )}
                       >
                         {n}{n === 5 && "+"}
@@ -580,7 +553,7 @@ export function SignupPage() {
                 <Button 
                   type="submit" 
                   size="lg" 
-                  className="w-full h-12 text-base font-semibold"
+                  className="w-full h-12 text-base font-medium rounded-xl transition-all duration-300"
                 >
                   Continuar
                   <ArrowRight className="w-4 h-4 ml-2" />
@@ -592,27 +565,29 @@ export function SignupPage() {
           {step === 3 && (
             <motion.div
               key="step3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="max-w-sm mx-auto w-full"
             >
               <div className="text-center mb-8">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <Target className="w-6 h-6 text-primary" />
+                <div className="flex justify-center mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Target className="w-6 h-6 text-primary" />
+                  </div>
                 </div>
-                <h1 className="text-2xl font-bold text-foreground mb-2">
+                <h1 className="text-2xl font-semibold text-foreground mb-2 tracking-tight">
                   Contexto inicial
                 </h1>
                 <p className="text-muted-foreground text-sm">
-                  Sem julgamentos. Vocês podem ajustar depois.
+                  Opcional. Ajuda a personalizar sua experiência.
                 </p>
               </div>
 
               <form onSubmit={handleStep3} className="space-y-6">
                 <div className="space-y-3">
-                  <Label>Faixa de renda mensal aproximada (opcional)</Label>
+                  <Label className="text-sm font-medium">Renda mensal aproximada</Label>
                   <div className="space-y-2">
                     {incomeRanges.map((range) => (
                       <button
@@ -620,15 +595,15 @@ export function SignupPage() {
                         type="button"
                         onClick={() => setIncomeRange(range.value === incomeRange ? "" : range.value)}
                         className={cn(
-                          "w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left",
+                          "w-full flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 text-left",
                           incomeRange === range.value
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary/50 hover:bg-secondary"
                         )}
                       >
                         <span className="font-medium text-sm">{range.label}</span>
                         {incomeRange === range.value && (
-                          <Check className="w-5 h-5 text-primary" />
+                          <Check className="w-4 h-4" />
                         )}
                       </button>
                     ))}
@@ -636,7 +611,7 @@ export function SignupPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Objetivo principal (opcional)</Label>
+                  <Label className="text-sm font-medium">Objetivo principal</Label>
                   <div className="space-y-2">
                     {objectives.map((obj) => (
                       <button
@@ -644,16 +619,16 @@ export function SignupPage() {
                         type="button"
                         onClick={() => setPrimaryObjective(obj.value === primaryObjective ? "" : obj.value)}
                         className={cn(
-                          "w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left",
+                          "w-full flex items-center gap-3 p-3.5 rounded-xl transition-all duration-300 text-left",
                           primaryObjective === obj.value
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary/50 hover:bg-secondary"
                         )}
                       >
-                        <span className="text-xl">{obj.icon}</span>
+                        <span className="text-lg">{obj.icon}</span>
                         <span className="font-medium text-sm flex-1">{obj.label}</span>
                         {primaryObjective === obj.value && (
-                          <Check className="w-5 h-5 text-primary" />
+                          <Check className="w-4 h-4" />
                         )}
                       </button>
                     ))}
@@ -663,21 +638,18 @@ export function SignupPage() {
                 <Button 
                   type="submit" 
                   size="lg" 
-                  className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90"
+                  className="w-full h-12 text-base font-medium rounded-xl transition-all duration-300"
                   disabled={loading}
                 >
                   {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Criando...
-                    </>
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    "Começar a organizar"
+                    "Começar"
                   )}
                 </Button>
 
                 <p className="text-center text-xs text-muted-foreground">
-                  Os dados são privados e pertencem apenas à sua família
+                  Dados privados. Pertencem apenas à sua família.
                 </p>
               </form>
             </motion.div>
