@@ -307,7 +307,7 @@ export function LoginPage() {
             </div>
             
             <p className="text-lg text-muted-foreground font-light tracking-wide">
-              Tudo no lugar. Os objetivos da família em ordem.
+              Tudo no lugar. Família em controle.
             </p>
           </div>
 
