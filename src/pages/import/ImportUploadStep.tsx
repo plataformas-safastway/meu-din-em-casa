@@ -103,32 +103,18 @@ export function ImportUploadStep({ onComplete }: ImportUploadStepProps) {
         formData.append('invoiceMonth', invoiceMonth);
       }
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
+      const { data, error } = await supabase.functions.invoke('import-process', {
+        body: formData,
+      });
 
-      if (!token) {
-        toast.error("Sessão expirada. Faça login novamente.");
-        setLoading(false);
-        return;
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-process`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (result.needsPassword) {
+      if (error) {
+        const errAny = error as unknown as { context?: any; message?: string };
+        const ctx = errAny?.context;
+        const needsPassword = !!(ctx?.needs_password || ctx?.needsPassword);
+        if (needsPassword) {
+          const importId = ctx?.import_id || ctx?.importId || '';
           onComplete({
-            importId: result.importId || '',
+            importId,
             needsPassword: true,
             file,
             importType,
@@ -137,13 +123,19 @@ export function ImportUploadStep({ onComplete }: ImportUploadStepProps) {
           });
           return;
         }
-        throw new Error(result.error || 'Erro ao processar arquivo');
+        throw new Error(errAny?.message || 'Erro ao processar arquivo');
+      }
+
+      const result: any = data;
+      const importId = result?.import_id || result?.importId;
+      if (!importId) {
+        throw new Error('Importação sem ID retornado pelo backend');
       }
 
       queryClient.invalidateQueries({ queryKey: ['imports'] });
 
       onComplete({
-        importId: result.importId,
+        importId,
         needsPassword: false,
       });
 

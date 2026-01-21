@@ -4,8 +4,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { MOCK_OFX_CONTENT, MOCK_XLS_TRANSACTIONS } from "./testData";
 import { TestRunner, setMobileViewport, LogCapture } from "./testUtils";
+import { ImportUploadPage } from "@/pages/import/ImportUploadPage";
 
 // Mock do Supabase
 vi.mock("@/integrations/supabase/client", () => ({
@@ -28,14 +31,14 @@ vi.mock("@/integrations/supabase/client", () => ({
       delete: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ error: null }) })
     }),
     functions: {
-      invoke: vi.fn().mockResolvedValue({ 
-        data: { 
-          success: true, 
+      invoke: vi.fn().mockResolvedValue({
+        data: {
+          success: true,
           import_id: "import-123",
-          transactions_count: 3 
-        }, 
-        error: null 
-      })
+          transactions_count: 3,
+        },
+        error: null,
+      }),
     },
     storage: {
       from: vi.fn().mockReturnValue({
@@ -43,6 +46,30 @@ vi.mock("@/integrations/supabase/client", () => ({
       })
     }
   }
+}));
+
+// Mock de hooks de bancos/cartões para o formulário de upload
+vi.mock("@/hooks/useBankData", () => ({
+  useBankAccounts: () => ({
+    data: [
+      {
+        id: "bank-1",
+        nickname: "Conta Principal",
+        banks: { name: "Banco QA" },
+        custom_bank_name: null,
+      },
+    ],
+    isLoading: false,
+  }),
+  useCreditCards: () => ({
+    data: [
+      {
+        id: "card-1",
+        card_name: "Cartão QA",
+      },
+    ],
+    isLoading: false,
+  }),
 }));
 
 // Mock do AuthContext
@@ -429,6 +456,51 @@ describe("7. Testes de Importação", () => {
         true
       );
       
+      runner.endTest();
+    });
+  });
+
+  describe("7.8 Fluxo crítico: Upload → /review/:id (reidratável)", () => {
+    it("deve navegar para /app/import/:id/review após upload com sucesso", async () => {
+      runner.startTest("7.8.1 - Navegação por importId (obrigatória)");
+
+      render(
+        <MemoryRouter initialEntries={["/app/import"]}>
+          <Routes>
+            <Route path="/app/import" element={<ImportUploadPage />} />
+            <Route
+              path="/app/import/:importId/review"
+              element={<div data-testid="review-route">REVIEW_OK</div>}
+            />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      // Escolher "Extrato de Conta"
+      fireEvent.click(screen.getByText(/extrato de conta/i));
+
+      // Abrir select e escolher conta
+      fireEvent.mouseDown(screen.getByRole("combobox"));
+      fireEvent.click(await screen.findByText(/conta principal/i));
+
+      // Upload de arquivo
+      const file = new File([MOCK_OFX_CONTENT], "teste.ofx", { type: "application/x-ofx" });
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      fireEvent.change(input, { target: { files: [file] } });
+
+      // Processar
+      fireEvent.click(screen.getByRole("button", { name: /processar arquivo/i }));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("review-route")).toBeInTheDocument();
+      });
+
+      runner.addStep(
+        "Upload concluído",
+        "Navega para /app/import/:id/review",
+        "REVIEW_OK renderizado",
+        true
+      );
       runner.endTest();
     });
   });

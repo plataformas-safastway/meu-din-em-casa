@@ -91,46 +91,34 @@ export function ImportUploadPage() {
       formData.append('file', file);
       formData.append('importType', importType);
       formData.append('sourceId', sourceId);
-      if (invoiceMonth) {
-        formData.append('invoiceMonth', invoiceMonth);
-      }
+      if (invoiceMonth) formData.append('invoiceMonth', invoiceMonth);
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
+      const { data, error } = await supabase.functions.invoke('import-process', {
+        body: formData,
+      });
 
-      if (!token) {
-        toast.error("Sessão expirada. Faça login novamente.");
-        setLoading(false);
-        return;
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-process`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (result.needs_password) {
-          // Handle password-protected files
+      if (error) {
+        // Normalize password-protected signal
+        const errAny = error as unknown as { context?: any; message?: string };
+        const ctx = errAny?.context;
+        const needsPassword = !!(ctx?.needs_password || ctx?.needsPassword);
+        if (needsPassword) {
           toast.info("Arquivo protegido por senha", {
-            description: "Por favor, forneça a senha do arquivo."
+            description: "Abra a importação inteligente para tentar senha automática (CPF) ou digitar manualmente.",
           });
-          // TODO: Show password input dialog
           return;
         }
-        throw new Error(result.error || 'Erro ao processar arquivo');
+
+        throw new Error(errAny?.message || 'Erro ao processar arquivo');
       }
 
+      const result: any = data;
+
       // Save import ID to localStorage for recovery
-      const importId = result.import_id;
+      const importId = result?.import_id || result?.importId;
+      if (!importId) {
+        throw new Error('Importação sem ID retornado pelo backend');
+      }
       savePendingImportId(importId);
 
       // Invalidate queries
