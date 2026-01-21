@@ -220,6 +220,21 @@
   .shadow-card {
     box-shadow: var(--shadow-card);
   }
+
+  /* Hide scrollbar for mobile */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Touch targets for mobile - min 44px */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 /* Oik Motion - Elements flow, never jump */
