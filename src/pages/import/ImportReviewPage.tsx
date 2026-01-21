@@ -31,6 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DetectedSourceHandler } from "@/components/import/DetectedSourceHandler";
 
 // ============================================
 // EMPTY STATE COMPONENT
@@ -428,7 +429,8 @@ export function ImportReviewPage() {
 
       <main className="container px-4 py-6">
         <div className="space-y-4 max-w-lg mx-auto">
-          {/* Stats */}
+          {/* Detected Sources Handler */}
+          <DetectedSourceHandler importId={importId} />
           <div className="flex gap-3 overflow-x-auto pb-2">
             <div className="flex-shrink-0 px-3 py-2 rounded-lg bg-muted">
               <p className="text-xs text-muted-foreground">Total</p>
