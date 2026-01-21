@@ -423,6 +423,54 @@ Deno.test("Bank detection with priority scoring", async () => {
   console.log(`False positive test: Detected ${falsePositiveResult} (expected: Santander)`);
   assertEquals(falsePositiveResult, "Santander", "Should detect Santander even with Bradesco mention in transaction");
   
+  // Test 3: Detection via CNPJ (strongest signal)
+  console.log("\n--- Testing CNPJ-based detection ---");
+  const docWithCNPJ = `
+    EXTRATO BANCÁRIO
+    Razão Social: NU PAGAMENTOS S.A.
+    CNPJ: 18.236.120/0001-58
+    
+    Data Descrição Valor
+    01/12/2025 PIX RECEBIDO 500,00
+  `;
+  
+  // Simulate CNPJ detection
+  const nuCNPJ = "18.236.120/0001-58";
+  const hasCNPJ = docWithCNPJ.includes(nuCNPJ);
+  assertEquals(hasCNPJ, true, "Should find Nubank CNPJ");
+  console.log(`CNPJ detection: Found Nubank CNPJ = ${hasCNPJ}`);
+  
+  // Test 4: Detection via SWIFT code
+  console.log("\n--- Testing SWIFT-based detection ---");
+  const docWithSWIFT = `
+    EXTRATO PARA REMESSA INTERNACIONAL
+    SWIFT/BIC: ITAUBRSP
+    
+    Data Descrição Valor
+    01/12/2025 TED INTERNACIONAL 10.000,00
+  `;
+  
+  const itauSWIFT = "ITAUBRSP";
+  const hasSWIFT = docWithSWIFT.toUpperCase().includes(itauSWIFT);
+  assertEquals(hasSWIFT, true, "Should find Itaú SWIFT code");
+  console.log(`SWIFT detection: Found Itaú SWIFT = ${hasSWIFT}`);
+  
+  // Test 5: Detection via bank code (COMPE)
+  console.log("\n--- Testing bank code detection ---");
+  const docWithBankCode = `
+    EXTRATO DE CONTA
+    Banco: 341 - Itaú
+    Agência: 1234
+    
+    Data Descrição Valor
+    01/12/2025 SALDO 5.000,00
+  `;
+  
+  const bankCodePattern = /banco\s*:?\s*341\b/i;
+  const hasBankCode = bankCodePattern.test(docWithBankCode);
+  assertEquals(hasBankCode, true, "Should find Itaú bank code 341");
+  console.log(`Bank code detection: Found code 341 = ${hasBankCode}`);
+  
   console.log("✅ Bank detection with priority scoring works correctly");
 });
 

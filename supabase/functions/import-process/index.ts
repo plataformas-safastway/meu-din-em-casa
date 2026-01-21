@@ -735,6 +735,83 @@ function parsePDF(content: string, password?: string): { transactions: ParsedTra
   }
 }
 
+// CNPJ codes for Brazilian banks (strongest identifier - unique per institution)
+const BANK_CNPJ_MAP: Record<string, string> = {
+  // Bancos Tradicionais
+  "Itaú": "60.701.190/0001-04",
+  "Bradesco": "60.746.948/0001-12",
+  "Santander": "90.400.888/0001-42",
+  "Banco do Brasil": "00.000.000/0001-91",
+  "Caixa Econômica Federal": "00.360.305/0001-04",
+  // Bancos Digitais
+  "Nubank": "18.236.120/0001-58",
+  "Banco Inter": "00.416.968/0001-01",
+  "C6 Bank": "31.872.495/0001-72",
+  "Neon": "20.855.875/0001-82",
+  "Banco Original": "92.894.922/0001-08",
+  // Fintechs
+  "Mercado Pago": "10.573.521/0001-91",
+  "PicPay": "22.896.431/0001-10",
+  "PagBank/PagSeguro": "08.561.701/0001-01",
+  "Ame Digital": "32.778.350/0001-70",
+  // Bancos Médios
+  "Banco PAN": "59.285.411/0001-13",
+  "Banco BMG": "61.186.680/0001-74",
+  "Banco BV": "01.149.953/0001-89",
+  "Banco Safra": "58.160.789/0001-28",
+  "BTG Pactual": "30.306.294/0001-45",
+  // Cooperativas
+  "Sicredi": "01.181.521/0001-55",
+  "Sicoob": "02.038.232/0001-64",
+  // Regionais
+  "Banrisul": "92.702.067/0001-96",
+  "Banco do Nordeste": "07.237.373/0001-20",
+  "Banco da Amazônia": "04.902.979/0001-44",
+  "BRB": "00.000.208/0001-00",
+};
+
+// SWIFT/BIC codes for Brazilian banks
+const BANK_SWIFT_MAP: Record<string, string[]> = {
+  "Itaú": ["ITAUBRSP", "ITAUBR"],
+  "Bradesco": ["BBDEBRSP", "BBDEBR"],
+  "Santander": ["BABORJSP", "BSCHBRSP"],
+  "Banco do Brasil": ["BRASBRRJ", "BRASBR"],
+  "Caixa Econômica Federal": ["CABORJRJ", "CEFXBRSP"],
+  "Nubank": ["NABORJRJ"],
+  "Banco Inter": ["BABORJSP"],
+  "BTG Pactual": ["BTGPBRSP"],
+  "Banco Safra": ["SAFRBRSP"],
+  "Banrisul": ["BRGSBRRS"],
+};
+
+// Bank codes (COMPE/ISPB) - 3-digit codes used in Brazilian banking system
+const BANK_CODE_MAP: Record<string, string[]> = {
+  "Itaú": ["341"],
+  "Bradesco": ["237"],
+  "Santander": ["033"],
+  "Banco do Brasil": ["001"],
+  "Caixa Econômica Federal": ["104"],
+  "Nubank": ["260"],
+  "Banco Inter": ["077"],
+  "C6 Bank": ["336"],
+  "Neon": ["735", "655"],
+  "Banco Original": ["212"],
+  "Mercado Pago": ["323"],
+  "PicPay": ["380"],
+  "PagBank/PagSeguro": ["290"],
+  "Banco PAN": ["623"],
+  "Banco BMG": ["318"],
+  "Banco BV": ["413"],
+  "Banco Safra": ["422"],
+  "BTG Pactual": ["208"],
+  "Sicredi": ["748"],
+  "Sicoob": ["756"],
+  "Banrisul": ["041"],
+  "Banco do Nordeste": ["004"],
+  "Banco da Amazônia": ["003"],
+  "BRB": ["070"],
+};
+
 // High-priority header identifiers that strongly indicate the source bank
 // These should be found in headers, titles, or bank logos - NOT in transaction descriptions
 const HEADER_PRIORITY_IDENTIFIERS: Record<string, string[]> = {
@@ -767,6 +844,7 @@ const TRANSACTION_DESCRIPTION_INDICATORS = [
 
 function detectBankFromContent(text: string): BankPattern | null {
   const lowerText = text.toLowerCase();
+  const upperText = text.toUpperCase();
   
   // Calculate scores for each bank
   const scores: Array<{ pattern: BankPattern; score: number; matchType: string }> = [];
@@ -775,7 +853,57 @@ function detectBankFromContent(text: string): BankPattern | null {
     let score = 0;
     let matchType = "none";
     
-    // Phase 1: Check for high-priority header identifiers (strongest signal)
+    // Phase 0: Check for CNPJ (STRONGEST signal - unique per institution, score 500)
+    const cnpj = BANK_CNPJ_MAP[pattern.name];
+    if (cnpj) {
+      // CNPJ can appear with or without formatting: 60.701.190/0001-04 or 60701190000104
+      const cnpjClean = cnpj.replace(/[.\-\/]/g, "");
+      const textClean = text.replace(/[.\-\/\s]/g, "");
+      
+      if (text.includes(cnpj) || textClean.includes(cnpjClean)) {
+        score += 500;
+        matchType = "cnpj";
+        console.log(`CNPJ match for ${pattern.name}: ${cnpj}`);
+      }
+    }
+    
+    // Phase 0.5: Check for SWIFT/BIC code (VERY STRONG signal, score 400)
+    const swiftCodes = BANK_SWIFT_MAP[pattern.name];
+    if (swiftCodes) {
+      for (const swift of swiftCodes) {
+        if (upperText.includes(swift)) {
+          score += 400;
+          matchType = matchType === "cnpj" ? "cnpj+swift" : "swift";
+          console.log(`SWIFT match for ${pattern.name}: ${swift}`);
+        }
+      }
+    }
+    
+    // Phase 0.7: Check for bank code (COMPE) in specific contexts
+    const bankCodes = BANK_CODE_MAP[pattern.name];
+    if (bankCodes) {
+      for (const code of bankCodes) {
+        // Bank codes usually appear in context like "Banco 341" or "Cód. 341" or "341 - Itaú"
+        const codePatterns = [
+          new RegExp(`banco\\s*:?\\s*${code}\\b`, "gi"),
+          new RegExp(`cod\\.?\\s*:?\\s*${code}\\b`, "gi"),
+          new RegExp(`código\\s*:?\\s*${code}\\b`, "gi"),
+          new RegExp(`\\b${code}\\s*[-–]\\s*${pattern.name.split(" ")[0]}`, "gi"),
+          new RegExp(`agência.*\\b${code}\\b`, "gi"),
+        ];
+        
+        for (const codePattern of codePatterns) {
+          if (codePattern.test(text)) {
+            score += 300;
+            matchType = matchType === "none" ? "bank_code" : matchType + "+code";
+            console.log(`Bank code match for ${pattern.name}: ${code}`);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Phase 1: Check for high-priority header identifiers (strong signal, score 100-50)
     const headerIds = HEADER_PRIORITY_IDENTIFIERS[pattern.name];
     if (headerIds) {
       for (const headerId of headerIds) {
@@ -797,13 +925,13 @@ function detectBankFromContent(text: string): BankPattern | null {
           
           if (!isTransactionContext) {
             score += isNearStart ? 100 : 50;
-            matchType = "header";
+            if (matchType === "none") matchType = "header";
           }
         }
       }
     }
     
-    // Phase 2: Check regular identifiers with context analysis
+    // Phase 2: Check regular identifiers with context analysis (score 10-20)
     for (const identifier of pattern.identifiers) {
       const idLower = identifier.toLowerCase();
       let searchIndex = 0;
