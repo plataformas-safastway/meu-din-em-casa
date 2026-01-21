@@ -59,9 +59,15 @@ export const getCurrentMonth = (): string => {
   }).format(new Date());
 };
 
-export const getGreeting = (): string => {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Bom dia";
-  if (hour < 18) return "Boa tarde";
-  return "Boa noite";
+export const getGreeting = (date: Date = new Date()): string => {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 12) return "Bom dia";
+  if (hour >= 12 && hour < 18) return "Boa tarde";
+  return "Boa noite"; // 18-23 or 0-4
+};
+
+export const getFirstName = (fullName?: string | null): string | null => {
+  if (!fullName) return null;
+  const firstName = fullName.trim().split(/\s+/)[0];
+  return firstName || null;
 };
