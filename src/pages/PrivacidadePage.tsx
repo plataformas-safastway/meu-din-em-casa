@@ -23,32 +23,42 @@ export function PrivacidadePage() {
       <main className="container px-6 py-8 max-w-2xl mx-auto">
         <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
           <p className="text-muted-foreground text-sm">
-            Última atualização: Janeiro de 2025
+            Última atualização: Janeiro de 2026
           </p>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">1. Coleta de Dados</h2>
+            <h2 className="text-xl font-semibold text-foreground">1. Sobre o Oik e Privacidade</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Coletamos informações que vocês fornecem diretamente ao usar o aplicativo, 
-              incluindo dados de cadastro (nome, e-mail), informações financeiras inseridas 
-              (transações, categorias, orçamentos) e dados de uso do aplicativo.
+              O Oik é uma plataforma premium de inteligência financeira familiar. Entendemos 
+              a importância da privacidade e estamos comprometidos em proteger as informações 
+              pessoais e financeiras de vocês e suas famílias.
+            </p>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold text-foreground">2. Coleta de Dados</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Coletamos informações que vocês fornecem diretamente ao usar o Oik, 
+              incluindo dados de cadastro (nome, e-mail, telefone), informações financeiras inseridas 
+              (transações, categorias, orçamentos) e dados de uso da plataforma.
             </p>
             <p className="text-muted-foreground leading-relaxed">
               Os dados financeiros são armazenados de forma segura e são utilizados 
-              exclusivamente para fornecer as funcionalidades do aplicativo. Não vendemos, 
+              exclusivamente para fornecer as funcionalidades do Oik. Não vendemos, 
               alugamos ou compartilhamos suas informações pessoais com terceiros para fins 
               de marketing.
             </p>
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">2. Uso das Informações</h2>
+            <h2 className="text-xl font-semibold text-foreground">3. Uso das Informações</h2>
             <p className="text-muted-foreground leading-relaxed">
               Utilizamos as informações coletadas para:
             </p>
             <ul className="text-muted-foreground space-y-2 list-disc list-inside">
-              <li>Fornecer, manter e melhorar o aplicativo</li>
+              <li>Fornecer, manter e melhorar o Oik</li>
               <li>Processar e exibir suas informações financeiras</li>
+              <li>Gerar análises e insights personalizados com inteligência artificial</li>
               <li>Enviar comunicações relacionadas ao serviço</li>
               <li>Responder a solicitações e fornecer suporte</li>
               <li>Detectar e prevenir atividades fraudulentas</li>
@@ -56,7 +66,7 @@ export function PrivacidadePage() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">3. Proteção e Segurança</h2>
+            <h2 className="text-xl font-semibold text-foreground">4. Proteção e Segurança</h2>
             <p className="text-muted-foreground leading-relaxed">
               Implementamos medidas de segurança técnicas e organizacionais para proteger 
               suas informações pessoais contra acesso não autorizado, alteração, divulgação 
@@ -71,7 +81,7 @@ export function PrivacidadePage() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">4. Direitos do Usuário</h2>
+            <h2 className="text-xl font-semibold text-foreground">5. Direitos do Usuário (LGPD)</h2>
             <p className="text-muted-foreground leading-relaxed">
               De acordo com a Lei Geral de Proteção de Dados (LGPD), vocês têm direito a:
             </p>
@@ -86,7 +96,7 @@ export function PrivacidadePage() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">5. Retenção de Dados</h2>
+            <h2 className="text-xl font-semibold text-foreground">6. Retenção de Dados</h2>
             <p className="text-muted-foreground leading-relaxed">
               Mantemos suas informações pessoais pelo tempo necessário para fornecer os 
               serviços solicitados ou conforme exigido por lei. Quando vocês excluem sua 
@@ -96,20 +106,20 @@ export function PrivacidadePage() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">6. Contato para Dúvidas</h2>
+            <h2 className="text-xl font-semibold text-foreground">7. Contato para Dúvidas</h2>
             <p className="text-muted-foreground leading-relaxed">
               Se tiverem dúvidas sobre esta Política de Privacidade ou sobre como tratamos 
               suas informações pessoais, entrem em contato conosco através dos canais 
-              disponíveis no aplicativo. Responderemos às solicitações dentro do prazo 
+              disponíveis no Oik. Responderemos às solicitações dentro do prazo 
               estabelecido pela legislação aplicável.
             </p>
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">7. Alterações nesta Política</h2>
+            <h2 className="text-xl font-semibold text-foreground">8. Alterações nesta Política</h2>
             <p className="text-muted-foreground leading-relaxed">
               Podemos atualizar esta Política de Privacidade periodicamente. Notificaremos 
-              sobre quaisquer alterações significativas através do aplicativo ou por e-mail. 
+              sobre quaisquer alterações significativas através do Oik ou por e-mail. 
               Recomendamos que revisem esta política regularmente.
             </p>
           </section>
