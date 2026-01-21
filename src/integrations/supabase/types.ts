@@ -348,6 +348,42 @@ export type Database = {
           },
         ]
       }
+      cpf_password_patterns: {
+        Row: {
+          bank_name: string
+          cpf_pattern_length: number
+          created_at: string
+          document_type: string
+          family_id: string
+          id: string
+          last_success_at: string
+          success_count: number
+          updated_at: string
+        }
+        Insert: {
+          bank_name: string
+          cpf_pattern_length: number
+          created_at?: string
+          document_type: string
+          family_id: string
+          id?: string
+          last_success_at?: string
+          success_count?: number
+          updated_at?: string
+        }
+        Update: {
+          bank_name?: string
+          cpf_pattern_length?: number
+          created_at?: string
+          document_type?: string
+          family_id?: string
+          id?: string
+          last_success_at?: string
+          success_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       credit_cards: {
         Row: {
           bank_account_id: string | null
@@ -678,6 +714,62 @@ export type Database = {
           },
         ]
       }
+      import_detected_sources: {
+        Row: {
+          account_number: string | null
+          agency: string | null
+          bank_name: string
+          created_at: string
+          family_id: string
+          id: string
+          import_id: string
+          last4: string | null
+          match_status: string
+          matched_source_id: string | null
+          source_type: string
+          updated_at: string
+          user_confirmed: boolean
+        }
+        Insert: {
+          account_number?: string | null
+          agency?: string | null
+          bank_name: string
+          created_at?: string
+          family_id: string
+          id?: string
+          import_id: string
+          last4?: string | null
+          match_status?: string
+          matched_source_id?: string | null
+          source_type: string
+          updated_at?: string
+          user_confirmed?: boolean
+        }
+        Update: {
+          account_number?: string | null
+          agency?: string | null
+          bank_name?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          import_id?: string
+          last4?: string | null
+          match_status?: string
+          matched_source_id?: string | null
+          source_type?: string
+          updated_at?: string
+          user_confirmed?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_detected_sources_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_history: {
         Row: {
           created_at: string
@@ -814,8 +906,11 @@ export type Database = {
       }
       imports: {
         Row: {
+          auto_detected: boolean | null
           created_at: string
           created_by: string | null
+          detected_bank: string | null
+          detected_document_type: string | null
           error_message: string | null
           expires_at: string | null
           family_id: string
@@ -824,6 +919,7 @@ export type Database = {
           id: string
           import_type: string
           invoice_month: string | null
+          password_pattern_used: number | null
           processed_at: string | null
           source_id: string
           status: string
@@ -831,8 +927,11 @@ export type Database = {
           transactions_count: number | null
         }
         Insert: {
+          auto_detected?: boolean | null
           created_at?: string
           created_by?: string | null
+          detected_bank?: string | null
+          detected_document_type?: string | null
           error_message?: string | null
           expires_at?: string | null
           family_id: string
@@ -841,6 +940,7 @@ export type Database = {
           id?: string
           import_type: string
           invoice_month?: string | null
+          password_pattern_used?: number | null
           processed_at?: string | null
           source_id: string
           status?: string
@@ -848,8 +948,11 @@ export type Database = {
           transactions_count?: number | null
         }
         Update: {
+          auto_detected?: boolean | null
           created_at?: string
           created_by?: string | null
+          detected_bank?: string | null
+          detected_document_type?: string | null
           error_message?: string | null
           expires_at?: string | null
           family_id?: string
@@ -858,6 +961,7 @@ export type Database = {
           id?: string
           import_type?: string
           invoice_month?: string | null
+          password_pattern_used?: number | null
           processed_at?: string | null
           source_id?: string
           status?: string

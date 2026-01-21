@@ -279,28 +279,31 @@ export const helpArticles: HelpArticle[] = [
       },
       {
         title: "Upload do arquivo",
-        description: "Vá em Configurações > Importar ou use o atalho na tela inicial.",
+        description: "Vá em Configurações > Importar ou use o atalho na tela inicial. O OIK detecta automaticamente o banco e tipo de documento.",
       },
       {
-        title: "Arquivos com senha",
-        description: "Se o arquivo estiver protegido, o Oik tentará desbloquear automaticamente usando seu CPF (11 dígitos), CPF sem os 2 primeiros dígitos, ou data de nascimento (DDMMYYYY).",
-        tip: "Vocês também podem digitar a senha manualmente se as tentativas automáticas falharem.",
+        title: "Arquivos com senha (Inteligente)",
+        description: "Se o arquivo estiver protegido, o OIK tenta desbloquear automaticamente usando padrões de CPF: 11 dígitos, 3, 4, 5, 6, 7, 8, 9 ou 10 primeiros dígitos.",
+        tip: "O sistema aprende o padrão de cada banco para acelerar futuras importações.",
+      },
+      {
+        title: "Confirmação de titularidade",
+        description: "Antes de importar, você confirma que o arquivo pertence a você ou sua família. Isso é obrigatório por segurança.",
+      },
+      {
+        title: "Detecção automática",
+        description: "O OIK identifica automaticamente: banco emissor, tipo (extrato ou fatura), conta/cartão associado, e categoriza as transações.",
       },
       {
         title: "Revisão obrigatória",
         description: "Antes de salvar, vocês SEMPRE revisam as transações. É possível editar categoria, descartar itens ou ajustar valores.",
       },
       {
-        title: "Categorização automática",
-        description: "O Oik sugere categorias baseado em palavras-chave (ex: 'IFOOD' → Lazer > Restaurantes).",
-        tip: "Ao corrigir uma categoria, o Oik aprende para próximas importações.",
-      },
-      {
-        title: "Deduplicação",
-        description: "Transações duplicadas são detectadas automaticamente. Vocês podem importar mesmo assim se desejarem.",
+        title: "Aprendizado contínuo",
+        description: "Ao corrigir uma categoria, o OIK aprende para próximas importações. Padrões de senha também são aprendidos por banco.",
       },
     ],
-    keywords: ["importar", "extrato", "banco", "ofx", "excel", "xlsx", "pdf", "senha", "cpf", "duplicado"],
+    keywords: ["importar", "extrato", "banco", "ofx", "excel", "xlsx", "pdf", "senha", "cpf", "duplicado", "automático", "inteligente"],
     deepLink: "settings",
   },
 
@@ -500,9 +503,23 @@ export const faqItems: FAQItem[] = [
   {
     id: "faq-11",
     question: "Por que preciso informar CPF e data de nascimento?",
-    answer: "Essas informações são usadas para tentar desbloquear automaticamente arquivos de extrato que vêm protegidos por senha (como faturas de cartão em PDF).",
+    answer: "O CPF é usado para tentar desbloquear automaticamente arquivos de extrato protegidos por senha. Os bancos brasileiros geralmente usam o CPF (completo ou parcial) como senha padrão. Seu CPF é armazenado de forma segura e nunca aparece em logs.",
     category: "import",
-    keywords: ["cpf", "nascimento", "senha", "importar"],
+    keywords: ["cpf", "nascimento", "senha", "importar", "segurança"],
+  },
+  {
+    id: "faq-cpf-seguro",
+    question: "O OIK salva minha senha de arquivo?",
+    answer: "Não! Senhas de arquivos NUNCA são salvas. O OIK apenas memoriza qual PADRÃO funcionou (ex: 'CPF 9 dígitos') para cada banco, acelerando futuras importações. Seu CPF é criptografado e usado apenas no momento do desbloqueio.",
+    category: "import",
+    keywords: ["senha", "cpf", "segurança", "lgpd", "salvar"],
+  },
+  {
+    id: "faq-auto-detect",
+    question: "Como funciona a detecção automática de contas?",
+    answer: "Ao importar um arquivo, o OIK identifica automaticamente o banco emissor usando CNPJ, códigos COMPE e padrões de texto. Se detectar uma conta ou cartão, oferece a opção de vincular a um cadastro existente ou criar automaticamente.",
+    category: "import",
+    keywords: ["detecção", "automático", "conta", "cartão", "banco"],
   },
   {
     id: "faq-12",
