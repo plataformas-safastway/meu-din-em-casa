@@ -24,6 +24,19 @@ export interface FAQItem {
 // Última atualização: 21/01/2026
 export const HELP_CENTER_VERSION = "21/01/2026";
 
+// Bancos testados e compatíveis com importação
+export const SUPPORTED_BANKS = [
+  { name: "Bradesco", formats: ["PDF", "XLS"], tested: true },
+  { name: "BTG Pactual", formats: ["PDF", "XLS"], tested: true },
+  { name: "Itaú", formats: ["PDF", "XLS"], tested: true },
+  { name: "Santander", formats: ["PDF", "XLS"], tested: true },
+  { name: "Nubank", formats: ["OFX"], tested: true },
+  { name: "Inter", formats: ["OFX"], tested: true },
+  { name: "C6 Bank", formats: ["OFX"], tested: true },
+  { name: "Caixa", formats: ["OFX"], tested: false },
+  { name: "Banco do Brasil", formats: ["OFX"], tested: false },
+] as const;
+
 export const helpArticles: HelpArticle[] = [
   // ===== PRIMEIROS PASSOS =====
   {
@@ -275,7 +288,12 @@ export const helpArticles: HelpArticle[] = [
     steps: [
       {
         title: "Formatos suportados",
-        description: "OFX (padrão bancário), XLSX/XLS (Excel) e PDF (fatura de cartão).",
+        description: "OFX (padrão bancário universal), XLSX/XLS (Excel) e PDF. Todos os formatos são aceitos para extratos de conta corrente.",
+      },
+      {
+        title: "Bancos compatíveis (testados)",
+        description: "Bradesco, BTG Pactual, Itaú e Santander foram testados com arquivos PDF e XLS reais. Nubank, Inter e C6 funcionam via OFX.",
+        tip: "Outros bancos também podem funcionar. Se o seu não for reconhecido, exporte o extrato em OFX.",
       },
       {
         title: "Upload do arquivo",
@@ -292,18 +310,54 @@ export const helpArticles: HelpArticle[] = [
       },
       {
         title: "Detecção automática",
-        description: "O OIK identifica automaticamente: banco emissor, tipo (extrato ou fatura), conta/cartão associado, e categoriza as transações.",
+        description: "O OIK identifica automaticamente: banco emissor (Bradesco, BTG, Itaú, Santander, etc.), tipo (extrato ou fatura), conta/cartão associado, e categoriza as transações.",
       },
       {
         title: "Revisão obrigatória",
-        description: "Antes de salvar, vocês SEMPRE revisam as transações. É possível editar categoria, descartar itens ou ajustar valores.",
+        description: "Antes de salvar, vocês SEMPRE revisam as transações. Linhas de saldo (ex: 'SALDO ANTERIOR', 'Saldo Diário') são filtradas automaticamente.",
       },
       {
         title: "Aprendizado contínuo",
         description: "Ao corrigir uma categoria, o OIK aprende para próximas importações. Padrões de senha também são aprendidos por banco.",
       },
     ],
-    keywords: ["importar", "extrato", "banco", "ofx", "excel", "xlsx", "pdf", "senha", "cpf", "duplicado", "automático", "inteligente"],
+    keywords: ["importar", "extrato", "banco", "ofx", "excel", "xlsx", "xls", "pdf", "senha", "cpf", "duplicado", "automático", "inteligente", "bradesco", "btg", "itau", "santander"],
+    deepLink: "settings",
+  },
+
+  {
+    id: "import-supported-banks",
+    title: "Bancos Compatíveis",
+    category: "import",
+    icon: "🏦",
+    summary: "Lista de bancos testados e formatos suportados",
+    steps: [
+      {
+        title: "Bradesco",
+        description: "PDF e XLS testados. Layout 'Bradesco Internet Banking' com colunas Data, Histórico, Crédito, Débito.",
+        tip: "Linhas 'Rem:' e 'Des:' são concatenadas automaticamente na descrição.",
+      },
+      {
+        title: "BTG Pactual",
+        description: "PDF e XLS testados. Layout com Data/hora, Categoria, Transação, Descrição, Valor.",
+        tip: "Linhas 'Saldo Diário' são ignoradas automaticamente.",
+      },
+      {
+        title: "Itaú",
+        description: "PDF e XLS testados. Layout com data, lançamentos, valor, saldo.",
+        tip: "Linhas 'SALDO TOTAL DISPONÍVEL DIA' são filtradas automaticamente.",
+      },
+      {
+        title: "Santander",
+        description: "PDF e XLS testados. Layout com Data, Descrição, Crédito, Débito, Saldo.",
+      },
+      {
+        title: "Outros bancos (via OFX)",
+        description: "Nubank, Inter, C6 Bank, Caixa, Banco do Brasil e outros funcionam exportando o extrato em formato OFX.",
+        tip: "OFX é o formato mais universal e funciona com qualquer banco.",
+      },
+    ],
+    keywords: ["banco", "compatível", "suportado", "bradesco", "btg", "itau", "santander", "nubank", "inter", "c6", "caixa", "bb"],
     deepLink: "settings",
   },
 
@@ -468,9 +522,30 @@ export const faqItems: FAQItem[] = [
   {
     id: "faq-6",
     question: "Como importar meu extrato bancário?",
-    answer: "Vá em Configurações > Importar Dados. Vocês podem importar arquivos OFX, Excel (XLSX/XLS) ou PDF. Se o arquivo tiver senha, o Oik tentará usar CPF ou data de nascimento automaticamente.",
+    answer: "Vá em Configurações > Importar Dados. Vocês podem importar arquivos OFX, Excel (XLSX/XLS) ou PDF. Bancos testados: Bradesco, BTG Pactual, Itaú e Santander (PDF/XLS). Outros bancos funcionam via OFX. Se o arquivo tiver senha, o Oik tentará usar CPF automaticamente.",
     category: "import",
-    keywords: ["importar", "extrato", "banco", "ofx", "excel", "pdf", "senha"],
+    keywords: ["importar", "extrato", "banco", "ofx", "excel", "pdf", "senha", "bradesco", "btg", "itau", "santander"],
+  },
+  {
+    id: "faq-bancos-compativeis",
+    question: "Quais bancos são compatíveis com importação?",
+    answer: "Testamos e validamos: Bradesco, BTG Pactual, Itaú e Santander (PDF e XLS). Nubank, Inter e C6 Bank funcionam via OFX. Outros bancos podem funcionar — se o seu não for reconhecido, exporte o extrato em formato OFX.",
+    category: "import",
+    keywords: ["banco", "compatível", "suportado", "bradesco", "btg", "itau", "santander", "nubank", "inter", "c6"],
+  },
+  {
+    id: "faq-saldo-nao-aparece",
+    question: "Por que linhas de saldo não aparecem na importação?",
+    answer: "O OIK filtra automaticamente linhas que não são transações reais: 'SALDO ANTERIOR', 'SALDO TOTAL DISPONÍVEL DIA', 'Saldo Diário', limites e rodapés. Isso garante que apenas movimentações reais sejam importadas.",
+    category: "import",
+    keywords: ["saldo", "não aparece", "filtro", "importação", "anterior"],
+  },
+  {
+    id: "faq-formato-melhor",
+    question: "Qual formato de arquivo é melhor para importar?",
+    answer: "OFX é o mais universal e funciona com qualquer banco. PDF e XLS são suportados para Bradesco, BTG, Itaú e Santander. Se um formato não funcionar, tente OFX como alternativa.",
+    category: "import",
+    keywords: ["formato", "ofx", "pdf", "xls", "xlsx", "melhor", "recomendado"],
   },
   {
     id: "faq-7",
