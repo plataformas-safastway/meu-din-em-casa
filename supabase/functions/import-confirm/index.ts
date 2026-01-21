@@ -137,8 +137,9 @@ serve(async (req) => {
       bank_account_id: importData.import_type === "bank_statement" ? importData.source_id : null,
       credit_card_id: importData.import_type === "credit_card_invoice" ? importData.source_id : null,
       import_id: import_id,
-      source: "import",
-      source_ref_id: tx.raw_data?.fitid || null,
+      source: "IMPORT",
+      // source_ref_id expects UUID, but fitid is a string - store in notes instead
+      notes: tx.raw_data?.fitid ? `FITID: ${tx.raw_data.fitid}` : null,
       original_date: tx.original_date,
     }));
 
