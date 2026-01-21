@@ -83,10 +83,13 @@ Período do extrato: 01/12/2025 a 31/12/2025
 `;
 
 // REAL Santander statement (from 2025-12_Extrato_Santander.pdf)
+// Added "Internet Banking Santander" header to simulate real bank header
 const REAL_SANTANDER_PDF = `
+Internet Banking Santander
 EXTRATO DE CONTA CORRENTE
 THIAGO PAULO SILVA DE OLIVEIRA    Agência e Conta: 1772 / 01003626-3
 Período: 01/12/2025 a 31/12/2025
+Banco Santander S.A.
 
 | Data       | Descrição                                                   | Docto  | Situação | Crédito (R$) | Débito (R$) | Saldo (R$) |
 | 01/12/2025 | PAGAMENTO CARTAO CREDITO BCE 29/11 12:38 CARTAO VISA        | 123800 |          |              | -200,00     | -9.437,66  |
@@ -310,8 +313,16 @@ Deno.test("Date format parsing (multiple formats)", async () => {
   console.log("✅ Date format parsing works correctly");
 });
 
-Deno.test("Bank detection from real statements", async () => {
-  console.log("\n=== Testing Bank Detection from Real Data ===");
+Deno.test("Bank detection with priority scoring", async () => {
+  console.log("\n=== Testing Bank Detection with Priority Scoring ===");
+  
+  // High-priority header identifiers
+  const HEADER_PRIORITY_IDENTIFIERS: Record<string, string[]> = {
+    "Itaú": ["itaú unibanco", "itau unibanco", "banco itau s.a", "personnalit"],
+    "Bradesco": ["bradesco internet banking", "banco bradesco s.a", "agência bradesco"],
+    "Santander": ["internet banking santander", "banco santander s.a", "santander brasil"],
+    "BTG Pactual": ["btg pactual", "eqi investimentos", "banco btg"],
+  };
   
   const bankIdentifiers: Record<string, string[]> = {
     "Itaú": ["itau", "itaú", "personnalit"],
@@ -320,18 +331,68 @@ Deno.test("Bank detection from real statements", async () => {
     "BTG Pactual": ["btg pactual", "btg"],
   };
   
-  function detectBank(text: string): string | null {
+  const TRANSACTION_INDICATORS = ["saude", "saúde", "seguros", "pago", "pagamento", "boleto"];
+  
+  function detectBankWithScoring(text: string): string | null {
     const lowerText = text.toLowerCase();
+    const scores: Array<{ name: string; score: number }> = [];
+    
     for (const [bankName, identifiers] of Object.entries(bankIdentifiers)) {
-      for (const identifier of identifiers) {
-        if (lowerText.includes(identifier)) {
-          return bankName;
+      let score = 0;
+      
+      // Check header identifiers first (higher priority)
+      const headerIds = HEADER_PRIORITY_IDENTIFIERS[bankName] || [];
+      for (const headerId of headerIds) {
+        const idx = lowerText.indexOf(headerId.toLowerCase());
+        if (idx !== -1) {
+          // Check if it's near the start (likely header)
+          const isNearStart = idx < 2000;
+          // Check if it's not in a transaction context
+          const context = lowerText.substring(Math.max(0, idx - 50), idx + headerId.length + 50);
+          const isTransactionContext = TRANSACTION_INDICATORS.some(ind => context.includes(ind));
+          
+          if (!isTransactionContext) {
+            score += isNearStart ? 100 : 50;
+          }
         }
       }
+      
+      // Check regular identifiers
+      for (const identifier of identifiers) {
+        let searchIdx = 0;
+        while (true) {
+          const foundIdx = lowerText.indexOf(identifier.toLowerCase(), searchIdx);
+          if (foundIdx === -1) break;
+          
+          const context = lowerText.substring(Math.max(0, foundIdx - 100), foundIdx + identifier.length + 100);
+          const isTransactionContext = TRANSACTION_INDICATORS.some(ind => context.includes(ind));
+          const isBrandMention = /saude|saúde|seguros?|dental|vida/.test(context);
+          
+          if (isTransactionContext || isBrandMention) {
+            score += 1; // Minimal weight
+          } else {
+            score += foundIdx < 3000 ? 20 : 10;
+          }
+          
+          searchIdx = foundIdx + 1;
+        }
+      }
+      
+      if (score > 0) {
+        scores.push({ name: bankName, score });
+      }
     }
-    return null;
+    
+    scores.sort((a, b) => b.score - a.score);
+    
+    if (scores.length > 0) {
+      console.log(`  Scores: ${scores.map(s => `${s.name}=${s.score}`).join(", ")}`);
+    }
+    
+    return scores.length > 0 && scores[0].score >= 10 ? scores[0].name : null;
   }
   
+  // Test 1: Basic detection
   const testCases = [
     { text: REAL_BRADESCO_PDF, expected: "Bradesco" },
     { text: REAL_ITAU_PDF, expected: "Itaú" },
@@ -340,12 +401,29 @@ Deno.test("Bank detection from real statements", async () => {
   ];
   
   for (const { text, expected } of testCases) {
-    const result = detectBank(text);
+    const result = detectBankWithScoring(text);
     console.log(`Detected: ${result} (expected: ${expected})`);
     assertEquals(result, expected, `Should detect ${expected}`);
   }
   
-  console.log("✅ Bank detection works for all real statements");
+  // Test 2: Santander statement with "Bradesco Saúde" transaction should still detect Santander
+  console.log("\n--- Testing false positive prevention ---");
+  const santanderWithBradescoSaude = `
+    Internet Banking Santander - Extrato
+    Banco Santander S.A.
+    Período: 01/12/2025 a 31/12/2025
+    
+    Data Descrição Valor
+    05/12/2025 TED RECEBIDA BRADESCO SAUDE 277,62
+    10/12/2025 PIX ENVIADO MERCADO LIVRE -150,00
+    15/12/2025 PAGAMENTO ITAU SEGUROS -500,00
+  `;
+  
+  const falsePositiveResult = detectBankWithScoring(santanderWithBradescoSaude);
+  console.log(`False positive test: Detected ${falsePositiveResult} (expected: Santander)`);
+  assertEquals(falsePositiveResult, "Santander", "Should detect Santander even with Bradesco mention in transaction");
+  
+  console.log("✅ Bank detection with priority scoring works correctly");
 });
 
 Deno.test("Transaction type classification", async () => {
