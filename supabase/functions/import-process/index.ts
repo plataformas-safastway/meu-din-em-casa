@@ -1385,6 +1385,63 @@ function generatePasswordAttempts(cpf?: string, birthDate?: string): string[] {
 }
 
 // ============================================
+// ACCOUNT/CARD INFO EXTRACTION
+// ============================================
+
+function extractAccountInfo(content: string): { agency?: string; accountNumber?: string; last4?: string } {
+  const result: { agency?: string; accountNumber?: string; last4?: string } = {};
+  
+  // Try to extract agency number (4-5 digits)
+  const agencyPatterns = [
+    /ag[eê]ncia[:\s]*(\d{4,5})/i,
+    /ag[:\s]*(\d{4,5})/i,
+    /\bAG[:\s]*(\d{4,5})\b/,
+  ];
+  
+  for (const pattern of agencyPatterns) {
+    const match = content.match(pattern);
+    if (match) {
+      result.agency = match[1];
+      break;
+    }
+  }
+  
+  // Try to extract account number (5-12 digits with possible dash)
+  const accountPatterns = [
+    /conta[:\s]*(\d{5,12}[\-]?\d?)/i,
+    /c\/c[:\s]*(\d{5,12}[\-]?\d?)/i,
+    /cc[:\s]*(\d{5,12}[\-]?\d?)/i,
+    /\bCC[:\s]*(\d{5,12}[\-]?\d?)\b/,
+  ];
+  
+  for (const pattern of accountPatterns) {
+    const match = content.match(pattern);
+    if (match) {
+      result.accountNumber = match[1];
+      break;
+    }
+  }
+  
+  // Try to extract last 4 digits of card
+  const last4Patterns = [
+    /cart[aã]o[^\d]*(\d{4})\s*$/im,
+    /final[:\s]*(\d{4})/i,
+    /\*{4,}\s*(\d{4})/,
+    /x{4,}\s*(\d{4})/i,
+  ];
+  
+  for (const pattern of last4Patterns) {
+    const match = content.match(pattern);
+    if (match) {
+      result.last4 = match[1];
+      break;
+    }
+  }
+  
+  return result;
+}
+
+// ============================================
 // DEDUPLICATION & CATEGORIZATION
 // ============================================
 
@@ -1737,7 +1794,38 @@ serve(async (req) => {
 
     console.log(`Parsed ${transactions.length} transactions`);
 
-    // Create import record
+    // Detect bank from file content for auto-detection
+    let detectedBankName: string | null = null;
+    let detectedDocType: string | null = null;
+    let detectedInfo: { agency?: string; accountNumber?: string; last4?: string } = {};
+
+    // Try to detect bank from content
+    if (file_type === "xlsx" || file_type === "pdf") {
+      const contentForDetection = file_type === "xlsx" 
+        ? atob(file_content).substring(0, 50000) 
+        : atob(file_content).substring(0, 50000);
+      
+      const detectedBank = detectBankFromContent(contentForDetection);
+      if (detectedBank) {
+        detectedBankName = detectedBank.name;
+        console.log(`Auto-detected bank: ${detectedBankName}`);
+      }
+
+      // Try to detect account/card info from content
+      detectedInfo = extractAccountInfo(contentForDetection);
+      
+      // Auto-detect document type from content
+      const contentLower = contentForDetection.toLowerCase();
+      if (contentLower.includes("fatura") || contentLower.includes("cartão de crédito") || 
+          contentLower.includes("limite disponível") || contentLower.includes("pagamento mínimo")) {
+        detectedDocType = "credit_card";
+      } else if (contentLower.includes("extrato") || contentLower.includes("conta corrente") || 
+                 contentLower.includes("agência") || contentLower.includes("saldo")) {
+        detectedDocType = "bank_statement";
+      }
+    }
+
+    // Create import record with detected info
     const importId = crypto.randomUUID();
     
     const { error: importError } = await adminClient.from("imports").insert({
@@ -1745,12 +1833,15 @@ serve(async (req) => {
       family_id: familyId,
       file_name: `import_${Date.now()}.${file_type}`,
       file_type,
-      import_type,
+      import_type: detectedDocType || import_type,
       source_id,
       invoice_month: invoice_month || null,
       status: "reviewing",
       transactions_count: transactions.length,
       created_by: userData.user.id,
+      detected_bank: detectedBankName,
+      detected_document_type: detectedDocType,
+      auto_detected: !!detectedBankName,
     });
 
     if (importError) {
@@ -1759,6 +1850,25 @@ serve(async (req) => {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
+    }
+
+    // If we detected a bank/account/card, save it for user confirmation
+    if (detectedBankName) {
+      const sourceType = detectedDocType === "credit_card" ? "credit_card" : "bank_account";
+      
+      await adminClient.from("import_detected_sources").insert({
+        family_id: familyId,
+        import_id: importId,
+        source_type: sourceType,
+        bank_name: detectedBankName,
+        agency: detectedInfo.agency || null,
+        account_number: detectedInfo.accountNumber || null,
+        last4: detectedInfo.last4 || null,
+        match_status: "pending",
+        user_confirmed: false,
+      });
+      
+      console.log(`Saved detected source: ${sourceType} - ${detectedBankName}`);
     }
 
     // Check for duplicates and suggest categories
