@@ -40,6 +40,150 @@ interface ProcessResponse {
 }
 
 // ============================================
+// BRAZILIAN BANK PATTERNS
+// ============================================
+
+interface BankPattern {
+  name: string;
+  identifiers: string[];
+  datePatterns: RegExp[];
+  amountPatterns: RegExp[];
+  linePattern?: RegExp;
+  creditIndicators?: string[];
+  debitIndicators?: string[];
+}
+
+const BRAZILIAN_BANK_PATTERNS: BankPattern[] = [
+  {
+    name: "Nubank",
+    identifiers: ["nubank", "nu pagamentos", "nu financeira"],
+    datePatterns: [
+      /(\d{2})\s+(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)/gi,
+      /(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/g,
+    ],
+    amountPatterns: [
+      /R\$\s*-?\s*([\d.,]+)/gi,
+      /(-?\d{1,3}(?:\.\d{3})*,\d{2})\s*$/gm,
+    ],
+    linePattern: /(\d{2}\s+(?:JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ))\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["pagamento recebido", "pix recebido", "ted recebida", "estorno"],
+    debitIndicators: ["compra", "pagamento", "pix enviado", "transferência"],
+  },
+  {
+    name: "Itaú",
+    identifiers: ["itau", "itaú", "banco itau"],
+    datePatterns: [
+      /(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/g,
+      /(\d{2})-(\d{2})-(\d{4})/g,
+    ],
+    amountPatterns: [
+      /(-?\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:C|D)?$/gm,
+      /R\$\s*-?\s*([\d.,]+)/gi,
+    ],
+    linePattern: /(\d{2}\/\d{2}(?:\/\d{2,4})?)\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})\s*([CD])?/gi,
+    creditIndicators: ["c", "credito", "crédito", "pag recebido"],
+    debitIndicators: ["d", "debito", "débito", "pagto"],
+  },
+  {
+    name: "Bradesco",
+    identifiers: ["bradesco", "banco bradesco"],
+    datePatterns: [
+      /(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/g,
+    ],
+    amountPatterns: [
+      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm,
+    ],
+    linePattern: /(\d{2}\/\d{2}(?:\/\d{4})?)\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["credito", "deposito", "ted credit", "pix credit"],
+    debitIndicators: ["debito", "saque", "pagamento"],
+  },
+  {
+    name: "Banco do Brasil",
+    identifiers: ["banco do brasil", "bb", "banco brasil"],
+    datePatterns: [
+      /(\d{2})\/(\d{2})(?:\/(\d{4}))?/g,
+    ],
+    amountPatterns: [
+      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm,
+    ],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["c", "cred", "dep"],
+    debitIndicators: ["d", "deb", "pag"],
+  },
+  {
+    name: "Santander",
+    identifiers: ["santander"],
+    datePatterns: [
+      /(\d{2})\/(\d{2})(?:\/(\d{4}))?/g,
+    ],
+    amountPatterns: [
+      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm,
+      /R\$\s*-?\s*([\d.,]+)/gi,
+    ],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["cred", "deposito", "ted cred"],
+    debitIndicators: ["deb", "pagto", "transf"],
+  },
+  {
+    name: "Caixa",
+    identifiers: ["caixa economica", "caixa federal", "cef"],
+    datePatterns: [
+      /(\d{2})\/(\d{2})(?:\/(\d{4}))?/g,
+    ],
+    amountPatterns: [
+      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm,
+    ],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["cred", "dep", "sal"],
+    debitIndicators: ["deb", "pag", "saque"],
+  },
+  {
+    name: "Inter",
+    identifiers: ["banco inter", "inter"],
+    datePatterns: [
+      /(\d{2})\/(\d{2})(?:\/(\d{4}))?/g,
+    ],
+    amountPatterns: [
+      /R\$\s*-?\s*([\d.,]+)/gi,
+      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm,
+    ],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["recebido", "pix in", "credito"],
+    debitIndicators: ["pago", "pix out", "debito"],
+  },
+  {
+    name: "C6 Bank",
+    identifiers: ["c6 bank", "c6bank"],
+    datePatterns: [
+      /(\d{2})\/(\d{2})(?:\/(\d{4}))?/g,
+    ],
+    amountPatterns: [
+      /R\$\s*-?\s*([\d.,]+)/gi,
+      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm,
+    ],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["recebido", "credito"],
+    debitIndicators: ["pago", "debito"],
+  },
+];
+
+// Month name to number mapping for Brazilian formats
+const MONTH_MAP: Record<string, string> = {
+  jan: "01", janeiro: "01",
+  fev: "02", fevereiro: "02",
+  mar: "03", março: "03", marco: "03",
+  abr: "04", abril: "04",
+  mai: "05", maio: "05",
+  jun: "06", junho: "06",
+  jul: "07", julho: "07",
+  ago: "08", agosto: "08",
+  set: "09", setembro: "09",
+  out: "10", outubro: "10",
+  nov: "11", novembro: "11",
+  dez: "12", dezembro: "12",
+};
+
+// ============================================
 // OFX PARSER
 // ============================================
 
@@ -118,18 +262,15 @@ function parseOFX(content: string): ParsedTransaction[] {
 }
 
 // ============================================
-// XLSX PARSER (using base64 decode and simple parsing)
+// XLSX PARSER (Enhanced for Brazilian Banks)
 // ============================================
 
 function parseXLSX(content: string, password?: string): { transactions: ParsedTransaction[]; needsPassword?: boolean } {
-  // For encrypted files, we'd need a library that supports decryption
-  // Since we're in Deno, we'll do basic parsing
-  
   try {
     // Decode base64 content
     const binaryContent = atob(content);
     
-    // Check for encryption marker (PK signature for zip + encryption flags)
+    // Check for encryption marker
     const isEncrypted = binaryContent.includes("EncryptedPackage") || 
                         binaryContent.includes("StrongEncryptionDataSpace");
     
@@ -137,67 +278,251 @@ function parseXLSX(content: string, password?: string): { transactions: ParsedTr
       return { transactions: [], needsPassword: true };
     }
     
-    // For now, we'll extract what we can from the XML inside the xlsx
-    // XLSX is a zip file containing XML files
-    
     const transactions: ParsedTransaction[] = [];
+    const seenHashes = new Set<string>();
     
-    // Try to find shared strings and sheet data
-    // This is a simplified parser - in production, use a proper library
+    // Extract shared strings from XLSX
+    const sharedStrings = extractSharedStrings(binaryContent);
+    console.log(`Extracted ${sharedStrings.length} shared strings from XLSX`);
     
-    // Look for date, description, and amount patterns in the content
-    const lines = binaryContent.split("\n");
+    // Try to detect bank from content
+    const detectedBank = detectBankFromContent(binaryContent + " " + sharedStrings.join(" "));
+    console.log(`Detected bank: ${detectedBank?.name || "Unknown"}`);
     
-    for (const line of lines) {
-      // Try to extract structured data from XML cells
-      const cellMatches = line.match(/<c[^>]*><v>([^<]+)<\/v><\/c>/g);
-      if (cellMatches && cellMatches.length >= 3) {
-        // Basic extraction attempt
-        try {
-          const values = cellMatches.map(m => {
-            const match = m.match(/<v>([^<]+)<\/v>/);
-            return match ? match[1] : "";
-          });
-          
-          // Try to identify date, description, and amount columns
-          // This is heuristic-based
-          for (let i = 0; i < values.length - 2; i++) {
-            const possibleDate = values[i];
-            const possibleDesc = values[i + 1];
-            const possibleAmount = values[i + 2];
-            
-            // Check if it looks like a date (Excel serial or ISO format)
-            const dateNum = parseFloat(possibleDate);
-            if (dateNum > 40000 && dateNum < 50000) {
-              // Excel serial date
-              const date = new Date((dateNum - 25569) * 86400 * 1000);
-              const amount = parseFloat(possibleAmount.replace(",", "."));
-              
-              if (!isNaN(amount)) {
-                transactions.push({
-                  date: date.toISOString().split("T")[0],
-                  description: possibleDesc.substring(0, 500),
-                  amount: Math.abs(amount),
-                  type: amount >= 0 ? "income" : "expense",
-                });
-              }
-            }
-          }
-        } catch (e) {
-          // Skip malformed rows
-        }
-      }
+    // Method 1: Parse using structured XML cells
+    const xmlTransactions = parseXLSXFromXML(binaryContent, sharedStrings, detectedBank);
+    transactions.push(...xmlTransactions);
+    
+    // Method 2: If no results, try pattern-based extraction
+    if (transactions.length === 0) {
+      const patternTransactions = parseXLSXByPatterns(binaryContent + " " + sharedStrings.join("\n"), detectedBank);
+      transactions.push(...patternTransactions);
     }
     
-    return { transactions };
+    // Deduplicate
+    const uniqueTransactions = transactions.filter(tx => {
+      const hash = `${tx.date}_${tx.amount}_${tx.description.substring(0, 20)}`;
+      if (seenHashes.has(hash)) return false;
+      seenHashes.add(hash);
+      return true;
+    });
+    
+    console.log(`Parsed ${uniqueTransactions.length} transactions from XLSX`);
+    return { transactions: uniqueTransactions };
   } catch (e) {
     console.error("Error parsing XLSX:", e);
     return { transactions: [] };
   }
 }
 
+function extractSharedStrings(content: string): string[] {
+  const strings: string[] = [];
+  
+  // Look for shared strings table (sharedStrings.xml inside the xlsx zip)
+  const siPattern = /<si[^>]*>[\s\S]*?<t[^>]*>([^<]+)<\/t>[\s\S]*?<\/si>/gi;
+  let match;
+  
+  while ((match = siPattern.exec(content)) !== null) {
+    strings.push(match[1].trim());
+  }
+  
+  // Also extract direct text content
+  const tPattern = /<t[^>]*>([^<]+)<\/t>/gi;
+  while ((match = tPattern.exec(content)) !== null) {
+    const text = match[1].trim();
+    if (text.length > 0 && !strings.includes(text)) {
+      strings.push(text);
+    }
+  }
+  
+  return strings;
+}
+
+function parseXLSXFromXML(content: string, sharedStrings: string[], detectedBank: BankPattern | null): ParsedTransaction[] {
+  const transactions: ParsedTransaction[] = [];
+  
+  // Look for rows in the sheet
+  const rowPattern = /<row[^>]*>([\s\S]*?)<\/row>/gi;
+  let rowMatch;
+  
+  while ((rowMatch = rowPattern.exec(content)) !== null) {
+    const rowContent = rowMatch[1];
+    
+    // Extract all cells from the row
+    const cellPattern = /<c\s+[^>]*r="([A-Z]+\d+)"[^>]*(?:t="([^"]*)")?[^>]*>[\s\S]*?<v>([^<]+)<\/v>[\s\S]*?<\/c>/gi;
+    const cells: { col: string; type: string; value: string }[] = [];
+    let cellMatch;
+    
+    while ((cellMatch = cellPattern.exec(rowContent)) !== null) {
+      const colRef = cellMatch[1].replace(/\d+/g, "");
+      const cellType = cellMatch[2] || "";
+      let cellValue = cellMatch[3];
+      
+      // If type is 's' (shared string), look up the value
+      if (cellType === "s") {
+        const index = parseInt(cellValue);
+        if (!isNaN(index) && index < sharedStrings.length) {
+          cellValue = sharedStrings[index];
+        }
+      }
+      
+      cells.push({ col: colRef, type: cellType, value: cellValue });
+    }
+    
+    if (cells.length < 2) continue;
+    
+    // Try to identify date, description, and amount columns
+    let date: string | null = null;
+    let description = "";
+    let amount: number | null = null;
+    let isCredit = false;
+    
+    for (const cell of cells) {
+      const value = cell.value;
+      
+      // Check for Excel date (numeric, between 40000 and 50000)
+      const numValue = parseFloat(value);
+      if (!date && numValue > 40000 && numValue < 50000) {
+        const excelDate = new Date((numValue - 25569) * 86400 * 1000);
+        date = excelDate.toISOString().split("T")[0];
+        continue;
+      }
+      
+      // Check for date string
+      if (!date) {
+        const dateStr = parseFlexibleDate(value);
+        if (dateStr) {
+          date = dateStr;
+          continue;
+        }
+      }
+      
+      // Check for amount (Brazilian format)
+      if (amount === null) {
+        const parsed = parseBrazilianAmount(value);
+        if (parsed !== null && Math.abs(parsed) > 0.01) {
+          amount = parsed;
+          isCredit = parsed > 0;
+          continue;
+        }
+      }
+      
+      // Collect description text
+      if (value.length > 2 && !/^[\d.,\-R$\s]+$/.test(value)) {
+        description += (description ? " " : "") + value;
+      }
+    }
+    
+    if (date && amount !== null && Math.abs(amount) > 0.01) {
+      // Determine transaction type
+      let type: "income" | "expense" = "expense";
+      
+      if (isCredit) {
+        type = "income";
+      } else if (detectedBank) {
+        const descLower = description.toLowerCase();
+        const isCreditByDesc = detectedBank.creditIndicators?.some(ind => descLower.includes(ind)) || false;
+        if (isCreditByDesc) type = "income";
+      }
+      
+      transactions.push({
+        date,
+        description: description.trim().substring(0, 500) || "Transação importada",
+        amount: Math.abs(amount),
+        type,
+        raw_data: { source: "xlsx_xml", cells: cells.map(c => c.value) },
+      });
+    }
+  }
+  
+  return transactions;
+}
+
+function parseXLSXByPatterns(text: string, detectedBank: BankPattern | null): ParsedTransaction[] {
+  const transactions: ParsedTransaction[] = [];
+  const lines = text.split(/[\n\r]+/);
+  
+  for (const line of lines) {
+    if (line.length < 10) continue;
+    
+    // Try to find date, description, and amount
+    let date: string | null = null;
+    let description = "";
+    let amount: number | null = null;
+    
+    // Extract date
+    const dateMatch = line.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.]?(\d{2,4})?/);
+    if (dateMatch) {
+      date = parseFlexibleDate(dateMatch[0]);
+    }
+    
+    if (!date) continue;
+    
+    // Extract amount
+    const amountPatterns = [
+      /R\$\s*-?\s*([\d.,]+)/i,
+      /(-?\d{1,3}(?:\.\d{3})*,\d{2})(?:\s|$)/,
+      /(-?\d+,\d{2})(?:\s|$)/,
+    ];
+    
+    for (const pattern of amountPatterns) {
+      const amountMatch = line.match(pattern);
+      if (amountMatch) {
+        const parsed = parseBrazilianAmount(amountMatch[1] || amountMatch[0]);
+        if (parsed !== null) {
+          amount = parsed;
+          break;
+        }
+      }
+    }
+    
+    if (amount === null || Math.abs(amount) < 0.01) continue;
+    
+    // Extract description (text between date and amount, or other non-numeric text)
+    const parts = line.split(/\s+/);
+    const descParts: string[] = [];
+    
+    for (const part of parts) {
+      // Skip date and amount parts
+      if (/^\d{1,2}[\/\-\.]\d{1,2}/.test(part)) continue;
+      if (/^-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}$/.test(part)) continue;
+      if (/^R\$/.test(part)) continue;
+      if (part.length > 1) {
+        descParts.push(part);
+      }
+    }
+    
+    description = descParts.join(" ").trim();
+    
+    if (description.length < 2) {
+      description = "Transação importada";
+    }
+    
+    // Determine type
+    let type: "income" | "expense" = "expense";
+    const descLower = description.toLowerCase();
+    
+    if (amount > 0) {
+      type = "income";
+    } else if (detectedBank) {
+      const isCreditByDesc = detectedBank.creditIndicators?.some(ind => descLower.includes(ind)) || false;
+      if (isCreditByDesc) type = "income";
+    }
+    
+    transactions.push({
+      date,
+      description: description.substring(0, 500),
+      amount: Math.abs(amount),
+      type,
+      raw_data: { source: "xlsx_pattern", line: line.substring(0, 100) },
+    });
+  }
+  
+  return transactions;
+}
+
 // ============================================
-// PDF PARSER (enhanced with OCR-like text extraction)
+// PDF PARSER (Enhanced for Brazilian Banks)
 // ============================================
 
 function parsePDF(content: string, password?: string): { transactions: ParsedTransaction[]; needsPassword?: boolean; confidence: "high" | "medium" | "low" } {
@@ -216,12 +541,15 @@ function parsePDF(content: string, password?: string): { transactions: ParsedTra
     
     // Extract all text using multiple methods
     const extractedText = extractPDFTextEnhanced(binaryContent);
+    console.log(`PDF text extraction: ${extractedText.length} characters`);
     
-    console.log(`PDF text extraction: ${extractedText.length} characters extracted`);
+    // Detect bank from content
+    const detectedBank = detectBankFromContent(extractedText);
+    console.log(`Detected bank in PDF: ${detectedBank?.name || "Unknown"}`);
     
     if (extractedText.length < 50) {
       // Very little text - likely scanned/image PDF
-      console.log("PDF appears to be scanned/image-based, attempting pattern extraction");
+      console.log("PDF appears to be scanned/image-based, using heuristic extraction");
       const ocrTransactions = extractTransactionsFromScannedPDF(binaryContent);
       return { 
         transactions: ocrTransactions, 
@@ -229,17 +557,204 @@ function parsePDF(content: string, password?: string): { transactions: ParsedTra
       };
     }
     
-    // Parse the extracted text to find transactions
-    const transactions = parseTransactionsFromText(extractedText);
+    // Parse using bank-specific patterns
+    let transactions: ParsedTransaction[] = [];
+    
+    if (detectedBank) {
+      transactions = parsePDFWithBankPattern(extractedText, detectedBank);
+      console.log(`Bank-specific parsing found ${transactions.length} transactions`);
+    }
+    
+    // Fallback to generic parsing if bank-specific found nothing
+    if (transactions.length === 0) {
+      transactions = parseTransactionsFromTextGeneric(extractedText);
+      console.log(`Generic parsing found ${transactions.length} transactions`);
+    }
+    
+    // Deduplicate
+    const seenHashes = new Set<string>();
+    const uniqueTransactions = transactions.filter(tx => {
+      const hash = `${tx.date}_${tx.amount}_${tx.description.substring(0, 20)}`;
+      if (seenHashes.has(hash)) return false;
+      seenHashes.add(hash);
+      return true;
+    });
+    
+    const confidence = detectedBank && uniqueTransactions.length > 0 ? "medium" : 
+                       uniqueTransactions.length > 0 ? "low" : "low";
     
     return { 
-      transactions, 
-      confidence: transactions.length > 0 ? "medium" : "low" 
+      transactions: uniqueTransactions, 
+      confidence 
     };
   } catch (e) {
     console.error("Error parsing PDF:", e);
     return { transactions: [], confidence: "low" };
   }
+}
+
+function detectBankFromContent(text: string): BankPattern | null {
+  const lowerText = text.toLowerCase();
+  
+  for (const pattern of BRAZILIAN_BANK_PATTERNS) {
+    for (const identifier of pattern.identifiers) {
+      if (lowerText.includes(identifier.toLowerCase())) {
+        return pattern;
+      }
+    }
+  }
+  
+  return null;
+}
+
+function parsePDFWithBankPattern(text: string, bank: BankPattern): ParsedTransaction[] {
+  const transactions: ParsedTransaction[] = [];
+  
+  // Normalize text
+  const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  
+  // Try bank-specific line pattern first
+  if (bank.linePattern) {
+    const matches = [...normalized.matchAll(new RegExp(bank.linePattern.source, "gim"))];
+    
+    for (const match of matches) {
+      try {
+        const [, dateStr, description, amountStr, indicator] = match;
+        
+        const date = parseFlexibleDate(dateStr);
+        if (!date) continue;
+        
+        const amount = parseBrazilianAmount(amountStr);
+        if (amount === null || Math.abs(amount) < 0.01) continue;
+        
+        // Determine type based on indicator or amount sign
+        let type: "income" | "expense" = "expense";
+        
+        if (indicator) {
+          const indicatorLower = indicator.toLowerCase();
+          const isCreditByIndicator = bank.creditIndicators?.some(ind => indicatorLower.includes(ind)) || false;
+          if (isCreditByIndicator) type = "income";
+        } else if (amount > 0) {
+          const descLower = description.toLowerCase();
+          const isCreditByDesc = bank.creditIndicators?.some(ind => descLower.includes(ind)) || false;
+          if (isCreditByDesc) type = "income";
+        }
+        
+        transactions.push({
+          date,
+          description: description.trim().substring(0, 500),
+          amount: Math.abs(amount),
+          type,
+          raw_data: { source: "pdf_bank_pattern", bank: bank.name, match: match[0].substring(0, 100) },
+        });
+      } catch (e) {
+        // Skip malformed matches
+      }
+    }
+  }
+  
+  // If line pattern didn't work, try generic extraction
+  if (transactions.length === 0) {
+    return parseTransactionsFromTextGeneric(text);
+  }
+  
+  return transactions;
+}
+
+function parseTransactionsFromTextGeneric(text: string): ParsedTransaction[] {
+  const transactions: ParsedTransaction[] = [];
+  
+  // Normalize text
+  const normalized = text.replace(/\s+/g, " ");
+  const lines = text.split(/[\n\r]+/);
+  
+  // Process line by line
+  for (const line of lines) {
+    if (line.length < 10) continue;
+    
+    // Find date in line
+    const datePatterns = [
+      /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{2,4})/,
+      /(\d{2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)(?:\s+(\d{2,4}))?/i,
+    ];
+    
+    let date: string | null = null;
+    let dateEndPos = 0;
+    
+    for (const pattern of datePatterns) {
+      const match = line.match(pattern);
+      if (match) {
+        date = parseFlexibleDate(match[0]);
+        if (date) {
+          dateEndPos = match.index! + match[0].length;
+          break;
+        }
+      }
+    }
+    
+    if (!date) continue;
+    
+    // Find amount in line (after date)
+    const afterDate = line.substring(dateEndPos);
+    const amountPatterns = [
+      /R\$\s*-?\s*([\d.,]+)/i,
+      /(-?\d{1,3}(?:\.\d{3})*,\d{2})(?:\s|$|C|D)/,
+      /(-?\d+,\d{2})(?:\s|$)/,
+    ];
+    
+    let amount: number | null = null;
+    let amountPos = -1;
+    
+    for (const pattern of amountPatterns) {
+      const match = afterDate.match(pattern);
+      if (match) {
+        const parsed = parseBrazilianAmount(match[1] || match[0]);
+        if (parsed !== null && Math.abs(parsed) > 0.01) {
+          amount = parsed;
+          amountPos = match.index!;
+          break;
+        }
+      }
+    }
+    
+    if (amount === null) continue;
+    
+    // Extract description (between date and amount)
+    let description = "";
+    if (amountPos > 0) {
+      description = afterDate.substring(0, amountPos).trim();
+    }
+    
+    // Clean description
+    description = description
+      .replace(/^[\s\-:\.]+/, "")
+      .replace(/[\s\-:\.]+$/, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    
+    if (description.length < 2) {
+      description = "Transação importada de PDF";
+    }
+    
+    // Determine type - default to expense, positive amounts from context might be income
+    let type: "income" | "expense" = "expense";
+    const descLower = description.toLowerCase();
+    
+    const incomeKeywords = ["recebido", "deposito", "depósito", "salario", "salário", "ted cred", "pix rec", "pagamento recebido", "estorno"];
+    if (incomeKeywords.some(kw => descLower.includes(kw))) {
+      type = "income";
+    }
+    
+    transactions.push({
+      date,
+      description: description.substring(0, 500),
+      amount: Math.abs(amount),
+      type,
+      raw_data: { source: "pdf_generic", line: line.substring(0, 100) },
+    });
+  }
+  
+  return transactions;
 }
 
 // Enhanced PDF text extraction using multiple methods
@@ -307,7 +822,7 @@ function extractPDFTextEnhanced(binaryContent: string): string {
   return textParts
     .join(" ")
     .replace(/\s+/g, " ")
-    .replace(/[^\x20-\x7E\xA0-\xFF]/g, " ") // Keep printable chars
+    .replace(/[^\x20-\x7E\xA0-\xFF]/g, " ")
     .trim();
 }
 
@@ -338,142 +853,15 @@ function decodeHexString(hex: string): string {
   return result;
 }
 
-// Parse transactions from extracted text
-function parseTransactionsFromText(text: string): ParsedTransaction[] {
-  const transactions: ParsedTransaction[] = [];
-  const seenHashes = new Set<string>();
-  
-  // Normalize text
-  const normalized = text.replace(/\s+/g, " ");
-  
-  // Split into potential transaction lines
-  // Look for date patterns as line starters
-  const datePattern = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.]?(\d{2,4})?/g;
-  
-  // Find all date occurrences
-  let match;
-  const datePositions: { date: string; isoDate: string; position: number }[] = [];
-  
-  while ((match = datePattern.exec(normalized)) !== null) {
-    const [fullMatch, day, month, year] = match;
-    const dayNum = parseInt(day);
-    const monthNum = parseInt(month);
-    
-    // Validate date components
-    if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12) {
-      const fullYear = year 
-        ? (year.length === 2 ? `20${year}` : year)
-        : new Date().getFullYear().toString();
-      
-      const isoDate = `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-      datePositions.push({
-        date: fullMatch,
-        isoDate,
-        position: match.index,
-      });
-    }
-  }
-  
-  // For each date, extract the transaction info
-  for (let i = 0; i < datePositions.length; i++) {
-    const current = datePositions[i];
-    const next = datePositions[i + 1];
-    
-    // Get text between this date and the next one
-    const endPos = next ? next.position : Math.min(current.position + 300, normalized.length);
-    const segment = normalized.substring(current.position, endPos);
-    
-    // Look for amount in segment
-    // Brazilian format: 1.234,56 or R$ 1.234,56 or -1.234,56
-    const amountPatterns = [
-      /R\$\s*-?([\d.,]+)/i,
-      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/,
-      /(-?\d+,\d{2})/,
-    ];
-    
-    let amount: number | null = null;
-    let amountStr = "";
-    
-    for (const pattern of amountPatterns) {
-      const amountMatch = segment.match(pattern);
-      if (amountMatch) {
-        amountStr = amountMatch[1] || amountMatch[0];
-        // Convert Brazilian format to number
-        const cleaned = amountStr
-          .replace(/[R$\s]/g, "")
-          .replace(/\./g, "") // Remove thousand separators
-          .replace(",", "."); // Decimal separator
-        amount = parseFloat(cleaned);
-        if (!isNaN(amount) && amount !== 0) {
-          break;
-        }
-        amount = null;
-      }
-    }
-    
-    if (amount === null || Math.abs(amount) < 0.01) {
-      continue;
-    }
-    
-    // Extract description (text between date and amount)
-    const dateEndPos = segment.indexOf(current.date) + current.date.length;
-    const amountStartPos = segment.indexOf(amountStr);
-    let description = "";
-    
-    if (amountStartPos > dateEndPos) {
-      description = segment.substring(dateEndPos, amountStartPos).trim();
-    } else {
-      // Amount before description - try to get text after amount
-      description = segment.substring(amountStartPos + amountStr.length).trim();
-    }
-    
-    // Clean description
-    description = description
-      .replace(/^[\s\-:]+/, "") // Remove leading separators
-      .replace(/[\s\-:]+$/, "") // Remove trailing separators
-      .replace(/\s+/g, " ")
-      .substring(0, 200);
-    
-    if (description.length < 3) {
-      description = "Transação importada de PDF";
-    }
-    
-    // Deduplicate
-    const hash = `${current.isoDate}_${Math.abs(amount).toFixed(2)}_${description.substring(0, 20)}`;
-    if (seenHashes.has(hash)) {
-      continue;
-    }
-    seenHashes.add(hash);
-    
-    transactions.push({
-      date: current.isoDate,
-      description,
-      amount: Math.abs(amount),
-      type: amount < 0 ? "expense" : "expense", // Default to expense for PDF
-      raw_data: { 
-        source: "pdf_text", 
-        confidence: "medium",
-        original_segment: segment.substring(0, 100),
-      },
-    });
-  }
-  
-  return transactions;
-}
-
 // Extract transactions from scanned/image PDFs (OCR-like heuristics)
 function extractTransactionsFromScannedPDF(binaryContent: string): ParsedTransaction[] {
   const transactions: ParsedTransaction[] = [];
+  const seenHashes = new Set<string>();
   
-  // For scanned PDFs, we look for raw byte patterns that might be dates and amounts
-  // This is a last-resort heuristic
-  
-  // Look for patterns that survived encoding: date-like and number-like sequences
+  // Look for patterns that might have survived encoding
   const dateValuePattern = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.]?(\d{2,4})?\s*[^\d]*?(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})/g;
   
   let match;
-  const seenHashes = new Set<string>();
-  
   while ((match = dateValuePattern.exec(binaryContent)) !== null) {
     const [, day, month, year, valueStr] = match;
     
@@ -491,10 +879,8 @@ function extractTransactionsFromScannedPDF(binaryContent: string): ParsedTransac
     const isoDate = `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
     
     // Parse value
-    const cleanValue = valueStr.replace(/\./g, "").replace(",", ".");
-    const amount = parseFloat(cleanValue);
-    
-    if (isNaN(amount) || amount <= 0 || amount > 1000000) {
+    const amount = parseBrazilianAmount(valueStr);
+    if (amount === null || amount <= 0 || amount > 1000000) {
       continue;
     }
     
@@ -520,6 +906,71 @@ function extractTransactionsFromScannedPDF(binaryContent: string): ParsedTransac
 }
 
 // ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+function parseFlexibleDate(dateStr: string): string | null {
+  if (!dateStr) return null;
+  
+  const normalized = dateStr.trim().toLowerCase();
+  
+  // Format: DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+  const slashMatch = normalized.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.]?(\d{2,4})?$/);
+  if (slashMatch) {
+    const [, day, month, year] = slashMatch;
+    const fullYear = year 
+      ? (year.length === 2 ? `20${year}` : year)
+      : new Date().getFullYear().toString();
+    
+    const dayNum = parseInt(day);
+    const monthNum = parseInt(month);
+    
+    if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12) {
+      return `${fullYear}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+  }
+  
+  // Format: DD MMM (YYYY optional) - e.g., "15 JAN" or "15 JAN 2024"
+  const monthNameMatch = normalized.match(/^(\d{1,2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)(?:\w*)?(?:\s+(\d{2,4}))?$/i);
+  if (monthNameMatch) {
+    const [, day, monthName, year] = monthNameMatch;
+    const month = MONTH_MAP[monthName.toLowerCase().substring(0, 3)];
+    
+    if (month) {
+      const fullYear = year 
+        ? (year.length === 2 ? `20${year}` : year)
+        : new Date().getFullYear().toString();
+      
+      return `${fullYear}-${month}-${day.padStart(2, "0")}`;
+    }
+  }
+  
+  return null;
+}
+
+function parseBrazilianAmount(amountStr: string): number | null {
+  if (!amountStr) return null;
+  
+  // Remove R$ and whitespace
+  let cleaned = amountStr
+    .replace(/R\$/gi, "")
+    .replace(/\s/g, "")
+    .trim();
+  
+  // Handle Brazilian format: 1.234,56 -> 1234.56
+  // Check if it's Brazilian format (has comma as decimal separator)
+  if (cleaned.includes(",")) {
+    // Remove thousand separators (dots) and convert decimal comma to dot
+    cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+  }
+  
+  const amount = parseFloat(cleaned);
+  
+  if (isNaN(amount)) return null;
+  return amount;
+}
+
+// ============================================
 // PASSWORD GENERATION (Brazil-specific)
 // ============================================
 
@@ -527,35 +978,25 @@ function generatePasswordAttempts(cpf?: string, birthDate?: string): string[] {
   const passwords: string[] = [];
   
   if (cpf) {
-    // Clean CPF (only numbers)
     const cleanCpf = cpf.replace(/\D/g, "");
     
     if (cleanCpf.length === 11) {
-      // Option 1: Full CPF (11 digits)
       passwords.push(cleanCpf);
-      
-      // Option 2: CPF without first 2 digits (9 digits, from 3rd to 11th)
       passwords.push(cleanCpf.substring(2));
-      
-      // Option 3: Last 6 digits
       passwords.push(cleanCpf.substring(5));
+      passwords.push(cleanCpf.substring(0, 6));
+      passwords.push(cleanCpf.substring(0, 4));
     }
   }
   
   if (birthDate) {
-    // Parse birth date (expected ISO format: YYYY-MM-DD)
     const match = birthDate.match(/(\d{4})-(\d{2})-(\d{2})/);
     if (match) {
       const [, year, month, day] = match;
-      
-      // Option 4: DDMMYYYY
       passwords.push(`${day}${month}${year}`);
-      
-      // Option 5: DDMMYY
       passwords.push(`${day}${month}${year.substring(2)}`);
-      
-      // Option 6: YYYYMMDD
       passwords.push(`${year}${month}${day}`);
+      passwords.push(`${day}${month}`);
     }
   }
   
@@ -563,16 +1004,16 @@ function generatePasswordAttempts(cpf?: string, birthDate?: string): string[] {
 }
 
 // ============================================
-// DEDUPLICATION
+// DEDUPLICATION & CATEGORIZATION
 // ============================================
 
 function normalizeDescription(desc: string): string {
   return desc
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Remove accents
-    .replace(/[^\w\s]/g, "") // Remove special chars
-    .replace(/\s+/g, " ") // Normalize spaces
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -580,7 +1021,6 @@ function generateTransactionHash(tx: ParsedTransaction, sourceId: string): strin
   const normalized = normalizeDescription(tx.description);
   const key = `${tx.date}|${tx.amount.toFixed(2)}|${normalized}|${sourceId}`;
   
-  // Simple hash function
   let hash = 0;
   for (let i = 0; i < key.length; i++) {
     const char = key.charCodeAt(i);
@@ -591,38 +1031,38 @@ function generateTransactionHash(tx: ParsedTransaction, sourceId: string): strin
   return Math.abs(hash).toString(36);
 }
 
-// ============================================
-// CATEGORY SUGGESTION
-// ============================================
-
 const DEFAULT_CATEGORY_KEYWORDS: Record<string, { category: string; keywords: string[] }> = {
   food_delivery: {
     category: "alimentacao",
-    keywords: ["ifood", "rappi", "uber eats", "99food", "delivery"],
+    keywords: ["ifood", "rappi", "uber eats", "99food", "delivery", "aiqfome"],
   },
   supermarket: {
     category: "alimentacao", 
-    keywords: ["mercado", "supermercado", "carrefour", "extra", "pao de acucar", "atacadao"],
+    keywords: ["mercado", "supermercado", "carrefour", "extra", "pao de acucar", "atacadao", "assai", "dia", "makro"],
   },
   transport: {
     category: "transporte",
-    keywords: ["uber", "99", "cabify", "posto", "combustivel", "gasolina", "estacionamento"],
+    keywords: ["uber", "99", "cabify", "posto", "combustivel", "gasolina", "estacionamento", "ipva", "detran", "pedagio"],
   },
   health: {
     category: "saude",
-    keywords: ["farmacia", "drogaria", "hospital", "medico", "clinica", "laboratorio"],
+    keywords: ["farmacia", "drogaria", "hospital", "medico", "clinica", "laboratorio", "droga", "raia", "ultrafarma"],
   },
   utilities: {
     category: "moradia",
-    keywords: ["luz", "energia", "agua", "gas", "internet", "telefone", "celular"],
+    keywords: ["luz", "energia", "agua", "gas", "internet", "telefone", "celular", "cpfl", "cemig", "enel", "vivo", "claro", "tim", "oi"],
   },
   education: {
     category: "educacao",
-    keywords: ["escola", "faculdade", "curso", "livro", "papelaria"],
+    keywords: ["escola", "faculdade", "curso", "livro", "papelaria", "universidade"],
   },
   entertainment: {
     category: "lazer",
-    keywords: ["netflix", "spotify", "cinema", "teatro", "show", "ingresso"],
+    keywords: ["netflix", "spotify", "cinema", "teatro", "show", "ingresso", "prime video", "disney", "hbo", "globoplay"],
+  },
+  salary: {
+    category: "salario",
+    keywords: ["salario", "folha", "holerite", "pagamento empresa", "pro-labore"],
   },
 };
 
@@ -741,7 +1181,7 @@ serve(async (req) => {
     const userCpf = memberData.cpf;
     const userBirthDate = memberData.birth_date;
 
-    // Parse request body - support both FormData and JSON
+    // Parse request body
     let file_content: string;
     let file_type: "ofx" | "xlsx" | "pdf";
     let import_type: string;
@@ -753,7 +1193,6 @@ serve(async (req) => {
     const contentType = req.headers.get("content-type") || "";
 
     if (contentType.includes("multipart/form-data")) {
-      // Parse FormData
       try {
         const formData = await req.formData();
         const file = formData.get("file") as File | null;
@@ -769,7 +1208,6 @@ serve(async (req) => {
           });
         }
 
-        // Determine file type from extension
         const fileName = file.name.toLowerCase();
         if (fileName.endsWith(".ofx")) {
           file_type = "ofx";
@@ -784,16 +1222,13 @@ serve(async (req) => {
           });
         }
 
-        // Read file content
         const arrayBuffer = await file.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
 
         if (file_type === "ofx") {
-          // OFX is text-based, decode as string
           const decoder = new TextDecoder("utf-8");
           file_content = decoder.decode(uint8Array);
         } else {
-          // XLSX and PDF need base64 encoding
           let binary = "";
           for (let i = 0; i < uint8Array.length; i++) {
             binary += String.fromCharCode(uint8Array[i]);
@@ -808,7 +1243,6 @@ serve(async (req) => {
         });
       }
     } else {
-      // Parse JSON body (for backwards compatibility and password retries)
       try {
         const body: ProcessRequest = await req.json();
         file_content = body.file_content;
@@ -842,7 +1276,6 @@ serve(async (req) => {
     if (file_type === "ofx") {
       transactions = parseOFX(file_content);
     } else if (file_type === "xlsx") {
-      // Try auto-password if enabled
       if (auto_password && !password) {
         const passwordAttempts = generatePasswordAttempts(userCpf, userBirthDate);
         
@@ -871,7 +1304,6 @@ serve(async (req) => {
         }
       }
     } else if (file_type === "pdf") {
-      // Try auto-password if enabled
       if (auto_password && !password) {
         const passwordAttempts = generatePasswordAttempts(userCpf, userBirthDate);
         
@@ -915,7 +1347,7 @@ serve(async (req) => {
     if (transactions.length === 0) {
       return new Response(JSON.stringify({ 
         success: false, 
-        error: "Não foi possível extrair transações deste arquivo. Tente outro formato." 
+        error: "Não foi possível extrair transações deste arquivo. Verifique se o formato é compatível ou tente exportar o extrato em OFX." 
       } as ProcessResponse), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -975,7 +1407,6 @@ serve(async (req) => {
     for (const tx of transactions) {
       const hash = generateTransactionHash(tx, source_id);
       
-      // Check for duplicates
       let isDuplicate = existingHashes.has(hash);
       if (!isDuplicate && tx.fitid) {
         const { data: existingByFitid } = await adminClient
@@ -989,7 +1420,6 @@ serve(async (req) => {
 
       const categoryResult = await suggestCategory(tx.description, familyId, adminClient);
       
-      // Mark PDF transactions as needing review (low confidence)
       const needsReview = file_type === "pdf" || categoryResult.confidence < 0.5;
 
       pendingTransactions.push({
@@ -1016,7 +1446,6 @@ serve(async (req) => {
 
     if (pendingError) {
       console.error("Error inserting pending transactions:", pendingError);
-      // Clean up import record
       await adminClient.from("imports").delete().eq("id", importId);
       return new Response(JSON.stringify({ error: "Failed to process transactions" }), {
         status: 500,
@@ -1029,15 +1458,14 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       import_id: importId,
-      transactions_count: transactions.length,
+      transactions_count: pendingTransactions.length,
     } as ProcessResponse), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
-
-  } catch (err) {
-    console.error("import-process: unexpected error", err);
-    return new Response(JSON.stringify({ error: "Unexpected error" }), {
+  } catch (e) {
+    console.error("Unexpected error:", e);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
