@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { MonthlyBalance } from "@/types/finance";
 import { formatCurrency } from "@/lib/formatters";
@@ -6,10 +7,11 @@ interface MonthlyChartProps {
   data: MonthlyBalance[];
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const CustomTooltip = forwardRef<HTMLDivElement, any>(({ active, payload, label }, ref) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-card rounded-lg shadow-lg border border-border p-3">
+      <div ref={ref} className="bg-card rounded-lg shadow-lg border border-border p-3 z-50">
         <p className="font-medium text-foreground mb-2">{label}</p>
         <div className="space-y-1">
           <p className="text-sm text-success">
@@ -23,7 +25,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     );
   }
   return null;
-};
+});
+
+CustomTooltip.displayName = "CustomTooltip";
 
 export function MonthlyChart({ data }: MonthlyChartProps) {
   return (

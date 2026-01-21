@@ -1,8 +1,8 @@
+import { forwardRef } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { CategoryExpense } from "@/types/finance";
 import { getCategoryById } from "@/data/categories";
 import { formatCurrency, formatPercentage } from "@/lib/formatters";
-import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 interface CategoryChartProps {
@@ -10,13 +10,14 @@ interface CategoryChartProps {
   onViewAll?: () => void;
 }
 
-const CustomTooltip = ({ active, payload }: any) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const CustomTooltip = forwardRef<HTMLDivElement, any>(({ active, payload }, ref) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const category = getCategoryById(data.category);
     
     return (
-      <div className="bg-card rounded-lg shadow-lg border border-border p-3">
+      <div ref={ref} className="bg-card rounded-lg shadow-lg border border-border p-3 z-50">
         <div className="flex items-center gap-2">
           <span className="text-lg">{category?.icon}</span>
           <span className="font-medium">{category?.name}</span>
@@ -28,7 +29,9 @@ const CustomTooltip = ({ active, payload }: any) => {
     );
   }
   return null;
-};
+});
+
+CustomTooltip.displayName = "CustomTooltip";
 
 export function CategoryChart({ categories, onViewAll }: CategoryChartProps) {
   const chartData = categories.map(cat => ({
