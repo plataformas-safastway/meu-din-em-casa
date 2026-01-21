@@ -477,7 +477,45 @@ function extractSharedStrings(content: string): string[] {
     }
   }
   
-  return strings;
+  // Method 3: Extract readable text directly from binary for non-XML XLS files
+  // This handles older .xls format and any text visible in the binary
+  const readableText: string[] = [];
+  let currentWord = "";
+  
+  for (let i = 0; i < content.length; i++) {
+    const charCode = content.charCodeAt(i);
+    // Check for printable ASCII and common extended chars
+    if ((charCode >= 32 && charCode <= 126) || 
+        (charCode >= 192 && charCode <= 255) || // Latin extended
+        charCode === 10 || charCode === 13) {
+      currentWord += content[i];
+    } else {
+      if (currentWord.length >= 3) {
+        const trimmed = currentWord.trim();
+        // Filter for meaningful content (dates, amounts, descriptions)
+        if (trimmed.length >= 3 && 
+            !readableText.includes(trimmed) &&
+            /[a-zA-ZÀ-ÿ0-9]/.test(trimmed)) {
+          readableText.push(trimmed);
+        }
+      }
+      currentWord = "";
+    }
+  }
+  
+  // Add last word if valid
+  if (currentWord.length >= 3) {
+    const trimmed = currentWord.trim();
+    if (trimmed.length >= 3 && !readableText.includes(trimmed)) {
+      readableText.push(trimmed);
+    }
+  }
+  
+  // Combine XML strings with readable text
+  const combined = [...strings, ...readableText];
+  console.log(`Extracted ${strings.length} XML strings + ${readableText.length} readable text fragments`);
+  
+  return combined;
 }
 
 function parseXLSXFromXML(content: string, sharedStrings: string[], detectedBank: BankPattern | null): ParsedTransaction[] {
@@ -1045,94 +1083,200 @@ function parsePDFWithBankPattern(text: string, bank: BankPattern): ParsedTransac
 function parseTransactionsFromTextGeneric(text: string): ParsedTransaction[] {
   const transactions: ParsedTransaction[] = [];
   
-  // Normalize text
-  const normalized = text.replace(/\s+/g, " ");
+  // Method 1: Process line by line
   const lines = text.split(/[\n\r]+/);
   
-  // Process line by line
   for (const line of lines) {
-    if (line.length < 10) continue;
+    if (line.length < 8) continue;
     
-    // Find date in line
-    const datePatterns = [
-      /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{2,4})/,
-      /(\d{2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)(?:\s+(\d{2,4}))?/i,
-    ];
+    const tx = extractTransactionFromLine(line);
+    if (tx) {
+      transactions.push(tx);
+    }
+  }
+  
+  // Method 2: If line-by-line didn't work well, try pattern matching on normalized text
+  if (transactions.length === 0) {
+    const normalized = text.replace(/\s+/g, " ");
     
-    let date: string | null = null;
-    let dateEndPos = 0;
+    // Try to find date + amount pairs anywhere in text
+    // Pattern: date followed by some text followed by amount
+    const combinedPattern = /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]?\d{0,4})\s+([A-Za-zÀ-ÿ\s\*\-\.]{3,50}?)\s+(-?R?\$?\s?[\d.,]+)/gi;
     
-    for (const pattern of datePatterns) {
-      const match = line.match(pattern);
-      if (match) {
-        date = parseFlexibleDate(match[0]);
-        if (date) {
-          dateEndPos = match.index! + match[0].length;
-          break;
+    let match;
+    while ((match = combinedPattern.exec(normalized)) !== null) {
+      const [, dateStr, desc, amtStr] = match;
+      
+      const date = parseFlexibleDate(dateStr);
+      if (!date) continue;
+      
+      const amount = parseBrazilianAmount(amtStr);
+      if (amount === null || Math.abs(amount) < 0.01 || Math.abs(amount) > 10000000) continue;
+      
+      const description = desc.trim().substring(0, 500) || "Transação importada";
+      
+      // Determine type
+      let type: "income" | "expense" = "expense";
+      const descLower = description.toLowerCase();
+      const incomeKeywords = ["recebido", "deposito", "depósito", "salario", "salário", "ted cred", "pix rec", "estorno", "credito"];
+      if (incomeKeywords.some(kw => descLower.includes(kw))) {
+        type = "income";
+      }
+      
+      transactions.push({
+        date,
+        description,
+        amount: Math.abs(amount),
+        type,
+        raw_data: { source: "pdf_combined_pattern", match: match[0].substring(0, 100) },
+      });
+    }
+  }
+  
+  // Method 3: Very lenient - just find any date + value pairs
+  if (transactions.length === 0) {
+    const dateValuePairs = extractDateValuePairsLenient(text);
+    transactions.push(...dateValuePairs);
+  }
+  
+  return transactions;
+}
+
+// Helper to extract a transaction from a single line
+function extractTransactionFromLine(line: string): ParsedTransaction | null {
+  if (line.length < 8) return null;
+  
+  // Find date in line
+  const datePatterns = [
+    /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{2,4})/,
+    /(\d{2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)(?:\s+(\d{2,4}))?/i,
+    /(\d{1,2})[\/\-](\d{1,2})/,
+  ];
+  
+  let date: string | null = null;
+  let dateEndPos = 0;
+  
+  for (const pattern of datePatterns) {
+    const match = line.match(pattern);
+    if (match) {
+      date = parseFlexibleDate(match[0]);
+      if (date) {
+        dateEndPos = match.index! + match[0].length;
+        break;
+      }
+    }
+  }
+  
+  if (!date) return null;
+  
+  // Find amount in line
+  const amountPatterns = [
+    /R\$\s*-?\s*([\d.,]+)/i,
+    /(-?\d{1,3}(?:\.\d{3})*,\d{2})(?:\s|$|C|D|[A-Z])/,
+    /(-?\d+,\d{2})(?:\s|$)/,
+    /([\d.]+,\d{2})/,
+  ];
+  
+  let amount: number | null = null;
+  let amountPos = -1;
+  
+  for (const pattern of amountPatterns) {
+    const match = line.match(pattern);
+    if (match) {
+      const parsed = parseBrazilianAmount(match[1] || match[0]);
+      if (parsed !== null && Math.abs(parsed) > 0.01 && Math.abs(parsed) < 10000000) {
+        amount = parsed;
+        amountPos = match.index!;
+        break;
+      }
+    }
+  }
+  
+  if (amount === null) return null;
+  
+  // Extract description
+  let description = "";
+  const afterDate = line.substring(dateEndPos);
+  if (amountPos > dateEndPos) {
+    description = afterDate.substring(0, amountPos - dateEndPos).trim();
+  } else {
+    // Amount might be before the date, extract text between them
+    const parts = line.split(/\s+/).filter(p => 
+      p.length > 1 && 
+      !/^\d{1,2}[\/\-\.]\d{1,2}/.test(p) && 
+      !/^-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}$/.test(p) &&
+      !/^R\$/.test(p)
+    );
+    description = parts.join(" ");
+  }
+  
+  description = description
+    .replace(/^[\s\-:\.]+/, "")
+    .replace(/[\s\-:\.]+$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  
+  if (description.length < 2) {
+    description = "Transação importada";
+  }
+  
+  // Determine type
+  let type: "income" | "expense" = "expense";
+  const descLower = description.toLowerCase();
+  const incomeKeywords = ["recebido", "deposito", "depósito", "salario", "salário", "ted cred", "pix rec", "pagamento recebido", "estorno", "credito"];
+  if (incomeKeywords.some(kw => descLower.includes(kw))) {
+    type = "income";
+  }
+  
+  return {
+    date,
+    description: description.substring(0, 500),
+    amount: Math.abs(amount),
+    type,
+    raw_data: { source: "pdf_generic", line: line.substring(0, 100) },
+  };
+}
+
+// Very lenient date+value extraction as fallback
+function extractDateValuePairsLenient(text: string): ParsedTransaction[] {
+  const transactions: ParsedTransaction[] = [];
+  const seen = new Set<string>();
+  
+  // Find all dates
+  const datePattern = /\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.]?(\d{2,4})?\b/g;
+  let dateMatch;
+  
+  while ((dateMatch = datePattern.exec(text)) !== null) {
+    const dateStr = parseFlexibleDate(dateMatch[0]);
+    if (!dateStr) continue;
+    
+    // Look for amounts nearby (within 100 chars)
+    const searchStart = Math.max(0, dateMatch.index - 20);
+    const searchEnd = Math.min(text.length, dateMatch.index + 150);
+    const nearby = text.substring(searchStart, searchEnd);
+    
+    const amountMatch = nearby.match(/(-?\d{1,3}(?:\.\d{3})*,\d{2})/);
+    if (amountMatch) {
+      const amount = parseBrazilianAmount(amountMatch[1]);
+      if (amount !== null && Math.abs(amount) > 0.01 && Math.abs(amount) < 10000000) {
+        const hash = `${dateStr}_${amount.toFixed(2)}`;
+        if (!seen.has(hash)) {
+          seen.add(hash);
+          
+          // Try to extract some description from nearby text
+          const descMatch = nearby.match(/[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\*\-]{3,30}/);
+          const description = descMatch ? descMatch[0].trim() : "Transação extraída";
+          
+          transactions.push({
+            date: dateStr,
+            description,
+            amount: Math.abs(amount),
+            type: "expense",
+            raw_data: { source: "pdf_lenient", nearby: nearby.substring(0, 80) },
+          });
         }
       }
     }
-    
-    if (!date) continue;
-    
-    // Find amount in line (after date)
-    const afterDate = line.substring(dateEndPos);
-    const amountPatterns = [
-      /R\$\s*-?\s*([\d.,]+)/i,
-      /(-?\d{1,3}(?:\.\d{3})*,\d{2})(?:\s|$|C|D)/,
-      /(-?\d+,\d{2})(?:\s|$)/,
-    ];
-    
-    let amount: number | null = null;
-    let amountPos = -1;
-    
-    for (const pattern of amountPatterns) {
-      const match = afterDate.match(pattern);
-      if (match) {
-        const parsed = parseBrazilianAmount(match[1] || match[0]);
-        if (parsed !== null && Math.abs(parsed) > 0.01) {
-          amount = parsed;
-          amountPos = match.index!;
-          break;
-        }
-      }
-    }
-    
-    if (amount === null) continue;
-    
-    // Extract description (between date and amount)
-    let description = "";
-    if (amountPos > 0) {
-      description = afterDate.substring(0, amountPos).trim();
-    }
-    
-    // Clean description
-    description = description
-      .replace(/^[\s\-:\.]+/, "")
-      .replace(/[\s\-:\.]+$/, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    
-    if (description.length < 2) {
-      description = "Transação importada de PDF";
-    }
-    
-    // Determine type - default to expense, positive amounts from context might be income
-    let type: "income" | "expense" = "expense";
-    const descLower = description.toLowerCase();
-    
-    const incomeKeywords = ["recebido", "deposito", "depósito", "salario", "salário", "ted cred", "pix rec", "pagamento recebido", "estorno"];
-    if (incomeKeywords.some(kw => descLower.includes(kw))) {
-      type = "income";
-    }
-    
-    transactions.push({
-      date,
-      description: description.substring(0, 500),
-      amount: Math.abs(amount),
-      type,
-      raw_data: { source: "pdf_generic", line: line.substring(0, 100) },
-    });
   }
   
   return transactions;
