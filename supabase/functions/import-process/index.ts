@@ -935,7 +935,7 @@ serve(async (req) => {
       import_type,
       source_id,
       invoice_month: invoice_month || null,
-      status: "pending",
+      status: "reviewing",
       transactions_count: transactions.length,
       created_by: userData.user.id,
     });
