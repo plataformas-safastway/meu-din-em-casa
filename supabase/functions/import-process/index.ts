@@ -40,7 +40,7 @@ interface ProcessResponse {
 }
 
 // ============================================
-// BRAZILIAN BANK PATTERNS
+// BRAZILIAN BANK PATTERNS (25+ Banks)
 // ============================================
 
 interface BankPattern {
@@ -54,9 +54,10 @@ interface BankPattern {
 }
 
 const BRAZILIAN_BANK_PATTERNS: BankPattern[] = [
+  // === BANCOS DIGITAIS ===
   {
     name: "Nubank",
-    identifiers: ["nubank", "nu pagamentos", "nu financeira"],
+    identifiers: ["nubank", "nu pagamentos", "nu financeira", "nu s.a"],
     datePatterns: [
       /(\d{2})\s+(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)/gi,
       /(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/g,
@@ -66,104 +67,234 @@ const BRAZILIAN_BANK_PATTERNS: BankPattern[] = [
       /(-?\d{1,3}(?:\.\d{3})*,\d{2})\s*$/gm,
     ],
     linePattern: /(\d{2}\s+(?:JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ))\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
-    creditIndicators: ["pagamento recebido", "pix recebido", "ted recebida", "estorno"],
+    creditIndicators: ["pagamento recebido", "pix recebido", "ted recebida", "estorno", "cashback"],
     debitIndicators: ["compra", "pagamento", "pix enviado", "transferência"],
   },
   {
+    name: "Banco Inter",
+    identifiers: ["banco inter", "inter s.a", "intermedium"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/R\$\s*-?\s*([\d.,]+)/gi, /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["recebido", "pix in", "credito", "deposito", "ted in"],
+    debitIndicators: ["pago", "pix out", "debito", "pagamento"],
+  },
+  {
+    name: "C6 Bank",
+    identifiers: ["c6 bank", "c6bank", "c6 s.a"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/R\$\s*-?\s*([\d.,]+)/gi, /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["recebido", "credito", "deposito"],
+    debitIndicators: ["pago", "debito", "pagamento"],
+  },
+  {
+    name: "Neon",
+    identifiers: ["neon", "banco neon", "neon pagamentos"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/R\$\s*-?\s*([\d.,]+)/gi, /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["recebido", "credito", "deposito", "pix recebido"],
+    debitIndicators: ["pago", "debito", "pagamento", "pix enviado"],
+  },
+  {
+    name: "Banco Original",
+    identifiers: ["banco original", "original s.a"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/R\$\s*-?\s*([\d.,]+)/gi, /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["recebido", "credito", "deposito"],
+    debitIndicators: ["pago", "debito", "pagamento"],
+  },
+  
+  // === BANCOS TRADICIONAIS ===
+  {
     name: "Itaú",
-    identifiers: ["itau", "itaú", "banco itau"],
-    datePatterns: [
-      /(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/g,
-      /(\d{2})-(\d{2})-(\d{4})/g,
-    ],
-    amountPatterns: [
-      /(-?\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:C|D)?$/gm,
-      /R\$\s*-?\s*([\d.,]+)/gi,
-    ],
+    identifiers: ["itau", "itaú", "banco itau", "itaú unibanco", "itau unibanco"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/g, /(\d{2})-(\d{2})-(\d{4})/g],
+    amountPatterns: [/(-?\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:C|D)?$/gm, /R\$\s*-?\s*([\d.,]+)/gi],
     linePattern: /(\d{2}\/\d{2}(?:\/\d{2,4})?)\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})\s*([CD])?/gi,
-    creditIndicators: ["c", "credito", "crédito", "pag recebido"],
-    debitIndicators: ["d", "debito", "débito", "pagto"],
+    creditIndicators: ["c", "credito", "crédito", "pag recebido", "ted cred"],
+    debitIndicators: ["d", "debito", "débito", "pagto", "pgto"],
   },
   {
     name: "Bradesco",
     identifiers: ["bradesco", "banco bradesco"],
-    datePatterns: [
-      /(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/g,
-    ],
-    amountPatterns: [
-      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm,
-    ],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{2,4}))?/g],
+    amountPatterns: [/(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
     linePattern: /(\d{2}\/\d{2}(?:\/\d{4})?)\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
-    creditIndicators: ["credito", "deposito", "ted credit", "pix credit"],
-    debitIndicators: ["debito", "saque", "pagamento"],
+    creditIndicators: ["credito", "deposito", "ted credit", "pix credit", "c"],
+    debitIndicators: ["debito", "saque", "pagamento", "d"],
   },
   {
     name: "Banco do Brasil",
-    identifiers: ["banco do brasil", "bb", "banco brasil"],
-    datePatterns: [
-      /(\d{2})\/(\d{2})(?:\/(\d{4}))?/g,
-    ],
-    amountPatterns: [
-      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm,
-    ],
+    identifiers: ["banco do brasil", "bb", "banco brasil", "bb s.a"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
     linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
-    creditIndicators: ["c", "cred", "dep"],
-    debitIndicators: ["d", "deb", "pag"],
+    creditIndicators: ["c", "cred", "dep", "credito"],
+    debitIndicators: ["d", "deb", "pag", "debito"],
   },
   {
     name: "Santander",
-    identifiers: ["santander"],
-    datePatterns: [
-      /(\d{2})\/(\d{2})(?:\/(\d{4}))?/g,
-    ],
-    amountPatterns: [
-      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm,
-      /R\$\s*-?\s*([\d.,]+)/gi,
-    ],
+    identifiers: ["santander", "banco santander"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm, /R\$\s*-?\s*([\d.,]+)/gi],
     linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
-    creditIndicators: ["cred", "deposito", "ted cred"],
-    debitIndicators: ["deb", "pagto", "transf"],
+    creditIndicators: ["cred", "deposito", "ted cred", "credito"],
+    debitIndicators: ["deb", "pagto", "transf", "debito"],
   },
   {
-    name: "Caixa",
-    identifiers: ["caixa economica", "caixa federal", "cef"],
-    datePatterns: [
-      /(\d{2})\/(\d{2})(?:\/(\d{4}))?/g,
-    ],
-    amountPatterns: [
-      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm,
-    ],
+    name: "Caixa Econômica Federal",
+    identifiers: ["caixa economica", "caixa federal", "cef", "caixa economica federal"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
     linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
-    creditIndicators: ["cred", "dep", "sal"],
-    debitIndicators: ["deb", "pag", "saque"],
+    creditIndicators: ["cred", "dep", "sal", "credito"],
+    debitIndicators: ["deb", "pag", "saque", "debito"],
+  },
+  
+  // === FINTECHS / CARTEIRAS DIGITAIS ===
+  {
+    name: "Mercado Pago",
+    identifiers: ["mercado pago", "mercadopago", "mercado livre", "mercadolivre"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/R\$\s*-?\s*([\d.,]+)/gi, /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["recebido", "venda", "credito", "deposito", "transferencia recebida"],
+    debitIndicators: ["pago", "compra", "debito", "saque", "transferencia enviada"],
   },
   {
-    name: "Inter",
-    identifiers: ["banco inter", "inter"],
-    datePatterns: [
-      /(\d{2})\/(\d{2})(?:\/(\d{4}))?/g,
-    ],
-    amountPatterns: [
-      /R\$\s*-?\s*([\d.,]+)/gi,
-      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm,
-    ],
+    name: "PicPay",
+    identifiers: ["picpay", "pic pay"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/R\$\s*-?\s*([\d.,]+)/gi, /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
     linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
-    creditIndicators: ["recebido", "pix in", "credito"],
-    debitIndicators: ["pago", "pix out", "debito"],
+    creditIndicators: ["recebido", "credito", "cashback", "pix recebido"],
+    debitIndicators: ["pago", "debito", "pagamento", "pix enviado"],
   },
   {
-    name: "C6 Bank",
-    identifiers: ["c6 bank", "c6bank"],
-    datePatterns: [
-      /(\d{2})\/(\d{2})(?:\/(\d{4}))?/g,
-    ],
-    amountPatterns: [
-      /R\$\s*-?\s*([\d.,]+)/gi,
-      /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm,
-    ],
+    name: "PagBank/PagSeguro",
+    identifiers: ["pagbank", "pagseguro", "pag seguro", "pag bank"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/R\$\s*-?\s*([\d.,]+)/gi, /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
     linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
-    creditIndicators: ["recebido", "credito"],
-    debitIndicators: ["pago", "debito"],
+    creditIndicators: ["recebido", "venda", "credito"],
+    debitIndicators: ["pago", "compra", "debito", "saque"],
+  },
+  {
+    name: "Ame Digital",
+    identifiers: ["ame digital", "ame"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/R\$\s*-?\s*([\d.,]+)/gi, /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["recebido", "credito", "cashback"],
+    debitIndicators: ["pago", "debito", "pagamento"],
+  },
+  
+  // === BANCOS MÉDIOS ===
+  {
+    name: "Banco PAN",
+    identifiers: ["banco pan", "pan s.a", "panamericano"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/R\$\s*-?\s*([\d.,]+)/gi, /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["recebido", "credito", "deposito"],
+    debitIndicators: ["pago", "debito", "pagamento"],
+  },
+  {
+    name: "Banco BMG",
+    identifiers: ["banco bmg", "bmg s.a", "bmg"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/R\$\s*-?\s*([\d.,]+)/gi, /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["recebido", "credito", "deposito"],
+    debitIndicators: ["pago", "debito", "pagamento"],
+  },
+  {
+    name: "Banco BV",
+    identifiers: ["banco bv", "bv financeira", "banco votorantim"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/R\$\s*-?\s*([\d.,]+)/gi, /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["recebido", "credito", "deposito"],
+    debitIndicators: ["pago", "debito", "pagamento"],
+  },
+  {
+    name: "Banco Safra",
+    identifiers: ["banco safra", "safra s.a"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/R\$\s*-?\s*([\d.,]+)/gi, /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["c", "credito", "deposito"],
+    debitIndicators: ["d", "debito", "pagamento"],
+  },
+  {
+    name: "BTG Pactual",
+    identifiers: ["btg pactual", "btg", "banco btg"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/R\$\s*-?\s*([\d.,]+)/gi, /(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(R\$\s*-?\s*[\d.,]+|\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["recebido", "credito", "deposito", "aplicacao"],
+    debitIndicators: ["pago", "debito", "pagamento", "resgate"],
+  },
+  
+  // === COOPERATIVAS ===
+  {
+    name: "Sicredi",
+    identifiers: ["sicredi", "banco sicredi"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["c", "cred", "credito", "deposito"],
+    debitIndicators: ["d", "deb", "debito", "pagamento"],
+  },
+  {
+    name: "Sicoob",
+    identifiers: ["sicoob", "banco sicoob"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["c", "cred", "credito", "deposito"],
+    debitIndicators: ["d", "deb", "debito", "pagamento"],
+  },
+  
+  // === BANCOS REGIONAIS ===
+  {
+    name: "Banrisul",
+    identifiers: ["banrisul", "banco banrisul", "banco do estado do rio grande do sul"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["c", "cred", "credito", "deposito"],
+    debitIndicators: ["d", "deb", "debito", "pagamento"],
+  },
+  {
+    name: "Banco do Nordeste",
+    identifiers: ["banco do nordeste", "bnb", "banco nordeste"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["c", "cred", "credito", "deposito"],
+    debitIndicators: ["d", "deb", "debito", "pagamento"],
+  },
+  {
+    name: "Banco da Amazônia",
+    identifiers: ["banco da amazonia", "basa", "banco amazonia"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["c", "cred", "credito", "deposito"],
+    debitIndicators: ["d", "deb", "debito", "pagamento"],
+  },
+  {
+    name: "BRB",
+    identifiers: ["brb", "banco de brasilia", "banco brb"],
+    datePatterns: [/(\d{2})\/(\d{2})(?:\/(\d{4}))?/g],
+    amountPatterns: [/(-?\d{1,3}(?:\.\d{3})*,\d{2})/gm],
+    linePattern: /(\d{2}\/\d{2}\/?\d{0,4})\s+(.+?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi,
+    creditIndicators: ["c", "cred", "credito", "deposito"],
+    debitIndicators: ["d", "deb", "debito", "pagamento"],
   },
 ];
 
