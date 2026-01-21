@@ -741,18 +741,90 @@ serve(async (req) => {
     const userCpf = memberData.cpf;
     const userBirthDate = memberData.birth_date;
 
-    // Parse request body
-    let body: ProcessRequest;
-    try {
-      body = await req.json();
-    } catch {
-      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
+    // Parse request body - support both FormData and JSON
+    let file_content: string;
+    let file_type: "ofx" | "xlsx" | "pdf";
+    let import_type: string;
+    let source_id: string;
+    let invoice_month: string | undefined;
+    let password: string | undefined;
+    let auto_password = true;
 
-    const { file_content, file_type, import_type, source_id, invoice_month, password, auto_password } = body;
+    const contentType = req.headers.get("content-type") || "";
+
+    if (contentType.includes("multipart/form-data")) {
+      // Parse FormData
+      try {
+        const formData = await req.formData();
+        const file = formData.get("file") as File | null;
+        import_type = formData.get("importType") as string || "";
+        source_id = formData.get("sourceId") as string || "";
+        invoice_month = formData.get("invoiceMonth") as string || undefined;
+        password = formData.get("password") as string || undefined;
+
+        if (!file) {
+          return new Response(JSON.stringify({ error: "No file provided" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        }
+
+        // Determine file type from extension
+        const fileName = file.name.toLowerCase();
+        if (fileName.endsWith(".ofx")) {
+          file_type = "ofx";
+        } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+          file_type = "xlsx";
+        } else if (fileName.endsWith(".pdf")) {
+          file_type = "pdf";
+        } else {
+          return new Response(JSON.stringify({ error: "Unsupported file type" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        }
+
+        // Read file content
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        if (file_type === "ofx") {
+          // OFX is text-based, decode as string
+          const decoder = new TextDecoder("utf-8");
+          file_content = decoder.decode(uint8Array);
+        } else {
+          // XLSX and PDF need base64 encoding
+          let binary = "";
+          for (let i = 0; i < uint8Array.length; i++) {
+            binary += String.fromCharCode(uint8Array[i]);
+          }
+          file_content = btoa(binary);
+        }
+      } catch (e) {
+        console.error("Error parsing FormData:", e);
+        return new Response(JSON.stringify({ error: "Failed to parse file upload" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    } else {
+      // Parse JSON body (for backwards compatibility and password retries)
+      try {
+        const body: ProcessRequest = await req.json();
+        file_content = body.file_content;
+        file_type = body.file_type;
+        import_type = body.import_type;
+        source_id = body.source_id;
+        invoice_month = body.invoice_month;
+        password = body.password;
+        auto_password = body.auto_password ?? true;
+      } catch {
+        return new Response(JSON.stringify({ error: "Invalid request body" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
 
     if (!file_content || !file_type || !import_type || !source_id) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
