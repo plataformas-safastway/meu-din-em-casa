@@ -467,6 +467,7 @@ export function ImportReviewPage() {
   const navigate = useNavigate();
   const { importId: routeImportId } = useParams<{ importId: string }>();
   const [searchParams] = useSearchParams();
+  const debug = searchParams.get('debug') === '1';
   
   // Try to get importId from route first, then query params, then localStorage
   const importId = routeImportId || searchParams.get('id') || getPendingImportId();
@@ -769,6 +770,39 @@ export function ImportReviewPage() {
 
       <main className="container px-4 py-6">
         <div className="space-y-4 max-w-lg mx-auto">
+          {/* Debug card (temporário): /app/import/:id/review?debug=1 */}
+          {debug && (
+            <section className="rounded-xl border border-border bg-card p-3">
+              <h2 className="text-sm font-semibold text-foreground">Debug • Import Review</h2>
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                <div>
+                  <dt className="text-muted-foreground">importBatchId</dt>
+                  <dd className="font-mono text-foreground break-all">{importId}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">status</dt>
+                  <dd className="font-mono text-foreground">{batch.status}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">items.length</dt>
+                  <dd className="font-mono text-foreground">{transactions.length}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">errorCode</dt>
+                  <dd className="font-mono text-foreground">{errorCode ?? 'null'}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">bankName</dt>
+                  <dd className="font-mono text-foreground">{batch.detected_bank ?? 'null'}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">sourceType</dt>
+                  <dd className="font-mono text-foreground">{batch.import_type ?? 'null'}</dd>
+                </div>
+              </dl>
+            </section>
+          )}
+
           {/* Detected Sources Handler */}
           <DetectedSourceHandler importId={importId} />
           
