@@ -45,6 +45,7 @@ export function useImportWithCpf(): UseImportWithCpfReturn {
   }, [hasCpf]);
 
   // Upload file and process with automatic type/bank detection
+  // Uses supabase.functions.invoke (standardized, no direct fetch)
   const uploadAndProcess = useCallback(
     async (
       file: File,
@@ -66,54 +67,45 @@ export function useImportWithCpf(): UseImportWithCpfReturn {
           formData.append("invoiceMonth", invoiceMonth);
         }
 
-        // Get auth token
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData?.session?.access_token;
+        // Use supabase.functions.invoke instead of direct fetch
+        const { data, error } = await supabase.functions.invoke('import-process', {
+          body: formData,
+        });
 
-        if (!token) {
+        if (error) {
+          console.error("[useImportWithCpf] Edge function error:", error);
           return {
             success: false,
-            error: "Sessão expirada. Faça login novamente.",
+            error: error.message || "Erro ao processar arquivo",
           };
         }
 
-        // Send to edge function
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-process`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          }
-        );
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          if (result.needs_password || result.needsPassword) {
-            return {
-              success: false,
-              needsPassword: true,
-            };
-          }
+        // Handle password-protected files
+        if (data?.needs_password || data?.needsPassword) {
           return {
             success: false,
-            error: result.error || "Erro ao processar arquivo",
+            needsPassword: true,
+          };
+        }
+
+        // Handle other errors in response
+        if (data?.error) {
+          return {
+            success: false,
+            error: data.error,
           };
         }
 
         return {
           success: true,
-          importId: result.import_id,
-          transactionsCount: result.transactions_count,
-          detectedBank: result.detected_bank,
-          detectedType: result.detected_type,
-          patternUsed: result.pattern_used,
+          importId: data.import_id,
+          transactionsCount: data.transactions_count,
+          detectedBank: data.detected_bank,
+          detectedType: data.detected_type,
+          patternUsed: data.pattern_used,
         };
       } catch (error) {
-        console.error("Import error:", error);
+        console.error("[useImportWithCpf] Import error:", error);
         return {
           success: false,
           error: error instanceof Error ? error.message : "Erro desconhecido",
