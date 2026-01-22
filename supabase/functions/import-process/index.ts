@@ -615,7 +615,12 @@ function parseSantanderText(text: string): ParsedTransaction[] {
 
 function parseGenericText(text: string): ParsedTransaction[] {
   const transactions: ParsedTransaction[] = [];
+  
+  console.log("[parseGenericText] Starting with text length:", text.length);
+  
+  // STRATEGY 1: Line-by-line with date at start
   const lines = text.split(/\n/);
+  let strategy1Count = 0;
   
   for (const line of lines) {
     const trimmed = line.trim();
@@ -650,9 +655,132 @@ function parseGenericText(text: string): ParsedTransaction[] {
       description: description.substring(0, 500),
       amount: Math.abs(amount),
       type,
-      raw_data: { source: "generic" },
+      raw_data: { source: "generic-s1" },
     });
+    strategy1Count++;
   }
+  
+  console.log("[parseGenericText] Strategy 1 (line-by-line) found:", strategy1Count);
+  
+  // STRATEGY 2: Find date + amount pairs anywhere in text (PDF fragments)
+  if (transactions.length === 0) {
+    console.log("[parseGenericText] Trying Strategy 2 (regex scan)");
+    
+    // Normalize text: join fragmented lines
+    const normalized = text.replace(/\s+/g, " ").trim();
+    
+    // Pattern: date followed by description and amount
+    // Date formats: DD/MM/YYYY, DD/MM/YY, DD-MM-YYYY
+    const combinedPattern = /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})\s+([A-Za-zÀ-ÿ0-9\s\-\*\/\.]+?)\s+(-?R?\$?\s*\d{1,3}(?:[.,]\d{3})*[.,]\d{2})/g;
+    
+    let match;
+    while ((match = combinedPattern.exec(normalized)) !== null) {
+      const dateStr = match[1];
+      let description = match[2].trim();
+      const amountStr = match[3];
+      
+      const date = parseFlexibleDate(dateStr);
+      if (!date) continue;
+      
+      const amount = parseBrazilianAmount(amountStr);
+      if (amount === null || Math.abs(amount) < 0.01) continue;
+      
+      // Clean description
+      description = description.replace(/\s+/g, " ").substring(0, 500);
+      if (description.length < 2) continue;
+      
+      // Skip noise
+      if (isNoiseLine(description)) continue;
+      
+      const type: "income" | "expense" = amount >= 0 ? "income" : "expense";
+      
+      transactions.push({
+        date,
+        description,
+        amount: Math.abs(amount),
+        type,
+        raw_data: { source: "generic-s2" },
+      });
+    }
+    
+    console.log("[parseGenericText] Strategy 2 found:", transactions.length);
+  }
+  
+  // STRATEGY 3: Lenient extraction - find any currency amount near a date
+  if (transactions.length === 0) {
+    console.log("[parseGenericText] Trying Strategy 3 (lenient)");
+    
+    // Find all dates
+    const datePattern = /\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/g;
+    const dates: { date: string; index: number }[] = [];
+    let dateMatch;
+    while ((dateMatch = datePattern.exec(text)) !== null) {
+      const parsed = parseFlexibleDate(dateMatch[0]);
+      if (parsed) {
+        dates.push({ date: parsed, index: dateMatch.index });
+      }
+    }
+    
+    // Find all amounts
+    const amountPattern = /-?R?\$?\s*\d{1,3}(?:[.,]\d{3})*[.,]\d{2}/g;
+    const amounts: { amount: number; index: number }[] = [];
+    let amtMatch;
+    while ((amtMatch = amountPattern.exec(text)) !== null) {
+      const parsed = parseBrazilianAmount(amtMatch[0]);
+      if (parsed !== null && Math.abs(parsed) >= 0.01) {
+        amounts.push({ amount: parsed, index: amtMatch.index });
+      }
+    }
+    
+    console.log(`[parseGenericText] S3: Found ${dates.length} dates and ${amounts.length} amounts`);
+    
+    // Match dates with nearest amounts (within 200 chars)
+    const usedAmounts = new Set<number>();
+    
+    for (const d of dates) {
+      // Find nearest unused amount after the date
+      let nearestAmt: { amount: number; index: number } | null = null;
+      let nearestDist = Infinity;
+      
+      for (const a of amounts) {
+        if (usedAmounts.has(a.index)) continue;
+        const dist = a.index - d.index;
+        if (dist > 0 && dist < 200 && dist < nearestDist) {
+          nearestDist = dist;
+          nearestAmt = a;
+        }
+      }
+      
+      if (nearestAmt) {
+        usedAmounts.add(nearestAmt.index);
+        
+        // Extract description between date and amount
+        const descStart = d.index + 10; // Skip date
+        const descEnd = nearestAmt.index;
+        let description = text.substring(descStart, descEnd)
+          .replace(/\s+/g, " ")
+          .trim()
+          .substring(0, 500);
+        
+        if (description.length < 2) description = "(Transação importada)";
+        if (isNoiseLine(description)) continue;
+        
+        const type: "income" | "expense" = nearestAmt.amount >= 0 ? "income" : "expense";
+        
+        transactions.push({
+          date: d.date,
+          description,
+          amount: Math.abs(nearestAmt.amount),
+          type,
+          raw_data: { source: "generic-s3" },
+        });
+      }
+    }
+    
+    console.log("[parseGenericText] Strategy 3 found:", transactions.length);
+  }
+  
+  console.log("[parseGenericText] Total found:", transactions.length);
   
   return transactions;
 }
@@ -1421,10 +1549,15 @@ serve(async (req) => {
       }
       
       const text = extractPDFTextRobust(binaryString);
-      console.log(`Extracted PDF text: ${text.length} chars`);
+      console.log(`[PDF] Extracted text length: ${text.length} chars`);
+      
+      // Log first 500 chars for debugging (no sensitive data)
+      if (text.length > 0) {
+        console.log(`[PDF] Text preview (first 500): ${text.substring(0, 500).replace(/\s+/g, ' ')}`);
+      }
       
       if (text.length < 50) {
-        console.log("PDF text too short, possibly scanned or encrypted");
+        console.log("[PDF] Text too short, possibly scanned or encrypted");
         return new Response(JSON.stringify({ 
           success: false, 
           error: "Não foi possível extrair texto do PDF. O arquivo pode estar escaneado ou em formato de imagem.",
@@ -1440,9 +1573,10 @@ serve(async (req) => {
       detectedBank = detection.bank;
       detectedBankName = detection.displayName;
       
-      console.log(`PDF detected bank: ${detectedBankName}`);
+      console.log(`[PDF] Detected bank: ${detectedBankName}`);
       
       transactions = parseTextContent(text, detectedBank);
+      console.log(`[PDF] Final transaction count: ${transactions.length}`);
     }
 
     if (transactions.length === 0) {
