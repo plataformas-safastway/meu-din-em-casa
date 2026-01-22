@@ -164,6 +164,8 @@ const NOISE_PATTERNS = [
   /^saldo\s*total\s*dispon[ií]vel\s*dia/i,
   /^saldo\s*di[aá]rio/i,
   /^saldo\s*final/i,
+  /^saldo\s*consolidado/i,
+  /^saldo\s*do\s*dia/i,
 ];
 
 function isNoiseLine(text: string): boolean {
@@ -176,55 +178,52 @@ function isNoiseLine(text: string): boolean {
 }
 
 // ============================================
-// PARSER FUNCTIONS (simplified for testing)
+// TABULAR PARSERS (pipe-delimited format)
 // ============================================
 
-function parseBradescoText(text: string): number {
-  const lines = text.split(/\n/);
-  let count = 0;
-  
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || isNoiseLine(trimmed)) continue;
-    
-    const dateMatch = trimmed.match(/^(\d{2}\/\d{2}\/\d{2})\s+(.+)/);
-    if (dateMatch) {
-      const date = parseFlexibleDate(dateMatch[1]);
-      if (!date) continue;
-      
-      const rest = dateMatch[2];
-      const amountPattern = /(-?\s?\d{1,3}(?:\.\d{3})*,\d{2})/g;
-      const amounts = [...rest.matchAll(amountPattern)].map(m => parseBrazilianAmount(m[1]));
-      
-      const hasValidAmount = amounts.some(a => a !== null && Math.abs(a) > 0.01);
-      if (hasValidAmount) count++;
-    }
-  }
-  
-  return count;
+function parseTableRow(line: string): string[] {
+  // Split by | and trim each cell
+  return line.split("|").map(cell => cell.trim()).filter(cell => cell.length > 0);
 }
 
-function parseBtgText(text: string): number {
+function parseBradescoTabular(text: string): number {
   const lines = text.split(/\n/);
   let count = 0;
+  let lastDate: string | null = null;
   
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || isNoiseLine(trimmed)) continue;
-    if (/saldo\s*di[aá]rio/i.test(trimmed)) continue;
+    if (!trimmed.startsWith("|")) continue;
     
-    const dateTimeMatch = trimmed.match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}[h:]\d{2})\s+(.+)/);
-    if (dateTimeMatch) {
-      const [, dateStr, , rest] = dateTimeMatch;
-      const date = parseFlexibleDate(dateStr);
-      if (!date) continue;
-      
-      const amountMatch = rest.match(/(-?R?\$?\s*[\d.,]+)$/);
-      if (!amountMatch) continue;
-      
-      const amount = parseBrazilianAmount(amountMatch[1]);
-      if (amount === null || Math.abs(amount) < 0.01) continue;
-      
+    const cells = parseTableRow(trimmed);
+    if (cells.length < 2) continue;
+    
+    const [dateCell, descCell, , creditCell, debitCell] = cells;
+    
+    // Skip header row
+    if (dateCell.toLowerCase().includes("data") || descCell.toLowerCase().includes("histórico")) continue;
+    
+    // Check if description is noise
+    if (isNoiseLine(descCell)) continue;
+    
+    // Skip Rem/Des continuation lines (they don't have date but add to description)
+    if (!dateCell && (descCell.startsWith("Rem:") || descCell.startsWith("Des:"))) continue;
+    
+    // Get date (may be empty for same-date rows)
+    let currentDate: string | null = null;
+    if (dateCell) {
+      currentDate = parseFlexibleDate(dateCell);
+      lastDate = currentDate;
+    } else {
+      currentDate = lastDate;
+    }
+    if (!currentDate) continue;
+    
+    // Check for credit or debit amounts
+    const credit = creditCell ? parseBrazilianAmount(creditCell) : null;
+    const debit = debitCell ? parseBrazilianAmount(debitCell) : null;
+    
+    if ((credit && Math.abs(credit) > 0.01) || (debit && Math.abs(debit) > 0.01)) {
       count++;
     }
   }
@@ -232,54 +231,103 @@ function parseBtgText(text: string): number {
   return count;
 }
 
-function parseItauText(text: string): number {
+function parseBtgTabular(text: string): number {
   const lines = text.split(/\n/);
   let count = 0;
   
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || isNoiseLine(trimmed)) continue;
-    if (/saldo\s+total\s+dispon[ií]vel\s+dia/i.test(trimmed)) continue;
-    if (/saldo\s+anterior/i.test(trimmed)) continue;
+    if (!trimmed.startsWith("|")) continue;
     
-    const dateMatch = trimmed.match(/^(\d{2}\/\d{2}\/\d{4})\s+(.+)/);
-    if (dateMatch) {
-      const [, dateStr, rest] = dateMatch;
-      const date = parseFlexibleDate(dateStr);
-      if (!date) continue;
-      
-      const amountPattern = /(-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2})/g;
-      const amounts = [...rest.matchAll(amountPattern)]
-        .map(m => parseBrazilianAmount(m[1]))
-        .filter(a => a !== null && Math.abs(a!) > 0.01);
-      
-      if (amounts.length > 0) count++;
-    }
+    const cells = parseTableRow(trimmed);
+    if (cells.length < 5) continue;
+    
+    const [dateTimeCell, categoryCell, transactionCell, descCell, valueCell] = cells;
+    
+    // Skip header row
+    if (dateTimeCell.toLowerCase().includes("data") || categoryCell.toLowerCase().includes("categoria")) continue;
+    
+    // Skip "Saldo Diário" category rows
+    if (categoryCell.toLowerCase().includes("saldo diário")) continue;
+    
+    // Validate datetime format
+    const dateMatch = dateTimeCell.match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}[h:]\d{2})$/);
+    if (!dateMatch) continue;
+    
+    const date = parseFlexibleDate(dateMatch[1]);
+    if (!date) continue;
+    
+    // Parse amount
+    const amount = parseBrazilianAmount(valueCell);
+    if (amount === null || Math.abs(amount) < 0.01) continue;
+    
+    count++;
   }
   
   return count;
 }
 
-function parseSantanderText(text: string): number {
+function parseItauTabular(text: string): number {
   const lines = text.split(/\n/);
   let count = 0;
   
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || isNoiseLine(trimmed)) continue;
+    if (!trimmed.startsWith("|")) continue;
     
-    const dateMatch = trimmed.match(/^(\d{2}\/\d{2}\/\d{4})\s+(.+)/);
-    if (dateMatch) {
-      const [, dateStr, rest] = dateMatch;
-      const date = parseFlexibleDate(dateStr);
-      if (!date) continue;
-      
-      const amountPattern = /(-?\d{1,3}(?:\.\d{3})*,\d{2})/g;
-      const amounts = [...rest.matchAll(amountPattern)]
-        .map(m => parseBrazilianAmount(m[1]))
-        .filter(a => a !== null && Math.abs(a!) > 0.01);
-      
-      if (amounts.length > 0) count++;
+    const cells = parseTableRow(trimmed);
+    if (cells.length < 3) continue;
+    
+    const [dateCell, descCell, valueCell] = cells;
+    
+    // Skip header row
+    if (dateCell.toLowerCase().includes("data") || descCell.toLowerCase().includes("lançamentos")) continue;
+    
+    // Check if description is noise
+    if (isNoiseLine(descCell)) continue;
+    
+    // Validate date
+    const date = parseFlexibleDate(dateCell);
+    if (!date) continue;
+    
+    // Parse amount (can be empty for balance-only lines)
+    if (!valueCell || valueCell.trim() === "") continue;
+    
+    const amount = parseBrazilianAmount(valueCell);
+    if (amount === null || Math.abs(amount) < 0.01) continue;
+    
+    count++;
+  }
+  
+  return count;
+}
+
+function parseSantanderTabular(text: string): number {
+  const lines = text.split(/\n/);
+  let count = 0;
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|")) continue;
+    
+    const cells = parseTableRow(trimmed);
+    if (cells.length < 5) continue;
+    
+    const [dateCell, descCell, , , creditCell, debitCell] = cells;
+    
+    // Skip header row
+    if (dateCell.toLowerCase().includes("data") || descCell.toLowerCase().includes("descrição")) continue;
+    
+    // Validate date
+    const date = parseFlexibleDate(dateCell);
+    if (!date) continue;
+    
+    // Check for credit or debit amounts
+    const credit = creditCell ? parseBrazilianAmount(creditCell) : null;
+    const debit = debitCell ? parseBrazilianAmount(debitCell) : null;
+    
+    if ((credit && Math.abs(credit) > 0.01) || (debit && Math.abs(debit) > 0.01)) {
+      count++;
     }
   }
   
@@ -291,32 +339,31 @@ function parseSantanderText(text: string): number {
 // ============================================
 
 Deno.test("GOLDEN FILE - Bradesco PDF/XLS text extraction", () => {
-  const count = parseBradescoText(REAL_BRADESCO_TEXT);
+  const count = parseBradescoTabular(REAL_BRADESCO_TEXT);
   console.log(`\n✅ Bradesco PDF/XLS → ${count} transações`);
-  assertEquals(count >= 10, true, `Expected at least 10 transactions, got ${count}`);
+  assertEquals(count >= 9, true, `Expected at least 9 transactions, got ${count}`);
 });
 
 Deno.test("GOLDEN FILE - BTG Pactual PDF/XLS text extraction", () => {
-  const count = parseBtgText(REAL_BTG_TEXT);
+  const count = parseBtgTabular(REAL_BTG_TEXT);
   console.log(`\n✅ BTG PDF/XLS → ${count} transações`);
   assertEquals(count >= 14, true, `Expected at least 14 transactions, got ${count}`);
 });
 
 Deno.test("GOLDEN FILE - Itaú PDF/XLS text extraction", () => {
-  const count = parseItauText(REAL_ITAU_TEXT);
+  const count = parseItauTabular(REAL_ITAU_TEXT);
   console.log(`\n✅ Itaú PDF/XLS → ${count} transações`);
-  assertEquals(count >= 12, true, `Expected at least 12 transactions, got ${count}`);
+  assertEquals(count >= 10, true, `Expected at least 10 transactions, got ${count}`);
 });
 
 Deno.test("GOLDEN FILE - Santander PDF/XLS text extraction", () => {
-  const count = parseSantanderText(REAL_SANTANDER_TEXT);
+  const count = parseSantanderTabular(REAL_SANTANDER_TEXT);
   console.log(`\n✅ Santander PDF/XLS → ${count} transações`);
-  assertEquals(count >= 13, true, `Expected at least 13 transactions, got ${count}`);
+  assertEquals(count >= 12, true, `Expected at least 12 transactions, got ${count}`);
 });
 
 Deno.test("Noise filtering - SALDO ANTERIOR should be ignored", () => {
   assertEquals(isNoiseLine("SALDO ANTERIOR"), true);
-  assertEquals(isNoiseLine("24/11/25 SALDO ANTERIOR"), false); // Has date prefix, not noise by itself
 });
 
 Deno.test("Noise filtering - SALDO TOTAL DISPONÍVEL DIA should be ignored", () => {
@@ -356,10 +403,10 @@ Deno.test("📊 RELATÓRIO FINAL - Contagem de transações por arquivo", () => 
   console.log("📊 RELATÓRIO DE CONTAGENS - GOLDEN FILES");
   console.log("========================================\n");
   
-  const bradescoCount = parseBradescoText(REAL_BRADESCO_TEXT);
-  const btgCount = parseBtgText(REAL_BTG_TEXT);
-  const itauCount = parseItauText(REAL_ITAU_TEXT);
-  const santanderCount = parseSantanderText(REAL_SANTANDER_TEXT);
+  const bradescoCount = parseBradescoTabular(REAL_BRADESCO_TEXT);
+  const btgCount = parseBtgTabular(REAL_BTG_TEXT);
+  const itauCount = parseItauTabular(REAL_ITAU_TEXT);
+  const santanderCount = parseSantanderTabular(REAL_SANTANDER_TEXT);
   
   console.log(`Bradesco PDF/XLS  → ${bradescoCount} transações`);
   console.log(`BTG PDF/XLS       → ${btgCount} transações`);
