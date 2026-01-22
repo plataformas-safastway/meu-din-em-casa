@@ -1,0 +1,185 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.90.1";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+type ReviewRequest = {
+  import_id: string;
+};
+
+function isUuid(v: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
+}
+
+serve(async (req) => {
+  // CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false },
+      global: {
+        headers: {
+          Authorization: req.headers.get("Authorization") ?? "",
+        },
+      },
+    });
+
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const jwt = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!jwt) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const { data: userRes, error: userErr } = await admin.auth.getUser(jwt);
+    if (userErr || !userRes?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const body = (await req.json()) as ReviewRequest;
+    if (!body?.import_id || !isUuid(body.import_id)) {
+      return new Response(JSON.stringify({ error: "Invalid import_id" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const importId = body.import_id;
+
+    // Resolve family_id from membership
+    const { data: member, error: memberErr } = await admin
+      .from("family_members")
+      .select("family_id")
+      .eq("user_id", userRes.user.id)
+      .maybeSingle();
+
+    if (memberErr || !member?.family_id) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const familyId = member.family_id as string;
+
+    // Batch
+    const { data: batch, error: batchErr } = await admin
+      .from("imports")
+      .select("*")
+      .eq("id", importId)
+      .eq("family_id", familyId)
+      .maybeSingle();
+
+    if (batchErr) {
+      console.error("[OIK Import][Review] batch query error", { importId, message: batchErr.message });
+      return new Response(JSON.stringify({ error: "Failed to fetch import" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (!batch) {
+      return new Response(JSON.stringify({ batch: null, items: [], summary: null }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Items (no filters by status; no pagination surprises)
+    const { data: items, error: itemsErr } = await admin
+      .from("import_pending_transactions")
+      .select("*")
+      .eq("import_id", importId)
+      .eq("family_id", familyId)
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (itemsErr) {
+      console.error("[OIK Import][Review] items query error", { importId, message: itemsErr.message });
+      return new Response(JSON.stringify({ error: "Failed to fetch items" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const safeItems = items ?? [];
+
+    // ✅ Regra de ouro: se há itens persistidos, status efetivo deve ser reviewing.
+    // (Corrige batches presos em processing/failed por qualquer motivo.)
+    if (safeItems.length > 0 && ["pending", "processing", "failed"].includes((batch as any).status)) {
+      const nextCount = safeItems.length;
+      const { error: fixErr } = await admin
+        .from("imports")
+        .update({
+          status: "reviewing",
+          transactions_count: nextCount,
+          error_message: null,
+          error_code: null,
+        })
+        .eq("id", importId)
+        .eq("family_id", familyId);
+
+      if (fixErr) {
+        console.error("[OIK Import][Review] failed to auto-fix status", {
+          importId,
+          message: fixErr.message,
+        });
+      } else {
+        (batch as any).status = "reviewing";
+        (batch as any).transactions_count = nextCount;
+        (batch as any).error_message = null;
+        (batch as any).error_code = null;
+      }
+    }
+
+    const summary = {
+      total: safeItems.length,
+      duplicateCount: safeItems.filter((i: any) => !!i.is_duplicate).length,
+      needsReviewCount: safeItems.filter((i: any) => !!i.needs_review && !i.is_duplicate).length,
+      totalIncome: safeItems
+        .filter((i: any) => i.type === "income")
+        .reduce((sum: number, i: any) => sum + (Number(i.amount) || 0), 0),
+      totalExpense: safeItems
+        .filter((i: any) => i.type === "expense")
+        .reduce((sum: number, i: any) => sum + (Number(i.amount) || 0), 0),
+    };
+
+    console.log("[OIK Import][Review]", {
+      importBatchId: importId,
+      status: (batch as any).status,
+      itemsCount: safeItems.length,
+    });
+
+    return new Response(JSON.stringify({ batch, items: safeItems, summary }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  } catch (e) {
+    console.error("[OIK Import][Review] unexpected", { message: (e as Error).message });
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
+});
