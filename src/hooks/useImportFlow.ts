@@ -221,15 +221,21 @@ export function useImportBatch(importId: string | null) {
   const isLoading = reviewQuery.isLoading;
   const isError = reviewQuery.isError;
   const error = reviewQuery.error;
+
+  // ✅ Regra suprema de UI: se há itens, eles vencem qualquer erro/status antigo.
+  const hasItems = items.length > 0;
+  const effectiveStatus: ImportStatus | null = hasItems ? 'reviewing' : (batch?.status ?? null);
   
   // Determine status-based states
-  const isExpired = batch?.status === 'expired' || 
-    (batch?.expires_at && new Date(batch.expires_at) < new Date());
-  const isProcessing = batch?.status === 'pending' || batch?.status === 'processing';
-  const isFailed = batch?.status === 'failed';
-  const isReviewing = batch?.status === 'reviewing';
-  const isEmpty = !isLoading && !isError && items.length === 0 && batch !== null && 
-    (batch.status === 'reviewing' || batch.status === 'completed');
+  const isExpired =
+    !hasItems &&
+    (batch?.status === 'expired' ||
+      (batch?.expires_at && new Date(batch.expires_at) < new Date()));
+  const isProcessing = effectiveStatus === 'pending' || effectiveStatus === 'processing';
+  const isFailed = effectiveStatus === 'failed';
+  const isReviewing = effectiveStatus === 'reviewing';
+  const isEmpty = !hasItems && !isLoading && !isError && items.length === 0 && batch !== null && 
+    (effectiveStatus === 'reviewing' || effectiveStatus === 'completed');
 
   // Calculate summary
   const summary = {
@@ -244,9 +250,7 @@ export function useImportBatch(importId: string | null) {
   // Generate error code
   let errorCode: string | null = null;
   const backendErrorCode = (batch as any)?.error_code ?? null;
-  if (backendErrorCode) {
-    errorCode = backendErrorCode;
-  }
+  if (!hasItems && backendErrorCode) errorCode = backendErrorCode;
   if (!batch && !isLoading && importId) {
     errorCode = IMPORT_ERROR_CODES.NOT_FOUND;
   } else if (isExpired) {

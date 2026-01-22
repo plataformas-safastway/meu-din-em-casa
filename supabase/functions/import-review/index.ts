@@ -125,31 +125,59 @@ serve(async (req) => {
 
     const safeItems = items ?? [];
 
-    // ✅ Regra de ouro: se há itens persistidos, status efetivo deve ser reviewing.
-    // (Corrige batches presos em processing/failed por qualquer motivo.)
-    if (safeItems.length > 0 && ["pending", "processing", "failed"].includes((batch as any).status)) {
+    // ✅ Auto-fix completo:
+    // - Se há itens persistidos, eles são a fonte da verdade: status=reviewing e limpar erros antigos.
+    // - Se NÃO há itens e o batch está reviewing, isso é inconsistência: marcar failed com código específico.
+
+    if (safeItems.length > 0) {
       const nextCount = safeItems.length;
-      const { error: fixErr } = await admin
+      const needsFix = (batch as any).status !== "reviewing" || (batch as any).error_code || (batch as any).error_message;
+
+      if (needsFix) {
+        const { error: fixErr } = await admin
+          .from("imports")
+          .update({
+            status: "reviewing",
+            transactions_count: nextCount,
+            error_message: null,
+            error_code: null,
+          })
+          .eq("id", importId)
+          .eq("family_id", familyId);
+
+        if (fixErr) {
+          console.error("[OIK Import][Review] failed to auto-fix status/errors", {
+            importId,
+            message: fixErr.message,
+          });
+        } else {
+          (batch as any).status = "reviewing";
+          (batch as any).transactions_count = nextCount;
+          (batch as any).error_message = null;
+          (batch as any).error_code = null;
+        }
+      }
+    } else if ((batch as any).status === "reviewing") {
+      // Inconsistência: review sem itens
+      const { error: emptyFixErr } = await admin
         .from("imports")
         .update({
-          status: "reviewing",
-          transactions_count: nextCount,
-          error_message: null,
-          error_code: null,
+          status: "failed",
+          error_code: "IMPORT_EMPTY_REVIEW",
+          error_message: "Importação em revisão sem itens persistidos",
         })
         .eq("id", importId)
         .eq("family_id", familyId);
 
-      if (fixErr) {
-        console.error("[OIK Import][Review] failed to auto-fix status", {
+      if (emptyFixErr) {
+        console.error("[OIK Import][Review] failed to mark empty reviewing as failed", {
           importId,
-          message: fixErr.message,
+          message: emptyFixErr.message,
         });
       } else {
-        (batch as any).status = "reviewing";
-        (batch as any).transactions_count = nextCount;
-        (batch as any).error_message = null;
-        (batch as any).error_code = null;
+        (batch as any).status = "failed";
+        (batch as any).error_code = "IMPORT_EMPTY_REVIEW";
+        (batch as any).error_message = "Importação em revisão sem itens persistidos";
       }
     }
 
