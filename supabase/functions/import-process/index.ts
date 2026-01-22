@@ -1459,9 +1459,9 @@ serve(async (req) => {
 
     console.log(`Parsed ${transactions.length} transactions`);
 
-    // Create import record
+    // Create import record (PROCESSING first; REVIEWING only after items are persisted)
     const importId = crypto.randomUUID();
-    
+
     const { error: importError } = await adminClient.from("imports").insert({
       id: importId,
       family_id: familyId,
@@ -1470,10 +1470,12 @@ serve(async (req) => {
       import_type,
       source_id,
       invoice_month: invoice_month || null,
-      status: "reviewing",
-      transactions_count: transactions.length,
+      status: "processing",
+      transactions_count: null,
       created_by: userData.user.id,
       detected_bank: detectedBankName,
+      error_message: null,
+      error_code: null,
     });
 
     if (importError) {
@@ -1528,16 +1530,17 @@ serve(async (req) => {
       });
     }
 
-    const { error: itemsError } = await adminClient
+    const { data: persistedRows, error: itemsError } = await adminClient
       .from("import_pending_transactions")
-      .insert(pendingItems);
+      .insert(pendingItems)
+      .select("id");
 
     if (itemsError) {
       console.error("Error inserting pending transactions:", itemsError);
       await adminClient.from("imports").update({ 
         status: "failed", 
-        error_message: "Failed to save transactions",
-        error_code: "IMPORT_DB_INSERT_FAILED"
+        error_message: "Falha ao salvar transações no banco",
+        error_code: "IMPORT_PERSIST_FAILED",
       }).eq("id", importId);
       return new Response(JSON.stringify({ error: "Failed to save transactions" }), {
         status: 500,
@@ -1545,12 +1548,41 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Import ${importId} created with ${transactions.length} transactions`);
+    const itemsPersistedCount = persistedRows?.length ?? 0;
+
+    // ✅ Source of truth: items persisted => status must be REVIEWING
+    const { error: finalizeErr } = await adminClient
+      .from("imports")
+      .update({
+        status: "reviewing",
+        transactions_count: itemsPersistedCount,
+        processed_at: new Date().toISOString(),
+        error_message: null,
+        error_code: null,
+      })
+      .eq("id", importId);
+
+    if (finalizeErr) {
+      // Não falhar silenciosamente: itens já existem; retornamos sucesso mas registramos erro e deixamos o endpoint de review corrigir.
+      console.error("[OIK Import] Failed to finalize import status", {
+        importBatchId: importId,
+        itemsExtractedCount: transactions.length,
+        itemsPersistedCount,
+        message: finalizeErr.message,
+      });
+    }
+
+    console.log("[OIK Import] import-process completed", {
+      importBatchId: importId,
+      itemsExtractedCount: transactions.length,
+      itemsPersistedCount,
+      statusFinal: "reviewing",
+    });
 
     return new Response(JSON.stringify({
       success: true,
       import_id: importId,
-      transactions_count: transactions.length,
+      transactions_count: itemsPersistedCount,
     } as ProcessResponse), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },

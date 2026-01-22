@@ -20,6 +20,7 @@ export interface ImportBatch {
   invoice_month: string | null;
   status: ImportStatus;
   transactions_count: number | null;
+  error_code?: string | null;
   error_message: string | null;
   created_at: string;
   processed_at: string | null;
@@ -176,76 +177,50 @@ export function useImportBatch(importId: string | null) {
   const { family } = useAuth();
   const familyId = family?.id;
 
-  const batchQuery = useQuery({
-    queryKey: ['import-batch', importId],
+  const reviewQuery = useQuery({
+    queryKey: ['import-review', importId, familyId],
     queryFn: async () => {
       if (!importId || !familyId) {
-        console.log('[OIK Import] No importId or familyId, returning null');
-        return null;
+        console.log('[OIK Import] No importId or familyId, returning null review');
+        return null as null | { batch: ImportBatch | null; items: ImportItem[]; summary: any };
       }
 
-      console.log(`[OIK Import] Fetching batch: ${importId}`);
-
-      const { data, error } = await supabase
-        .from('imports')
-        .select('*')
-        .eq('id', importId)
-        .eq('family_id', familyId)
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke('import-review', {
+        body: { import_id: importId },
+      });
 
       if (error) {
-        console.error('[OIK Import] Error fetching batch:', error);
+        console.error('[OIK Import] import-review function error:', error);
         throw error;
       }
-      
-      if (!data) {
-        console.log('[OIK Import] Batch not found');
-        return null;
-      }
-      
-      console.log(`[OIK Import] Batch status: ${data.status}`);
-      return data as ImportBatch;
+
+      const payload = (data ?? null) as any;
+      const batch = (payload?.batch ?? null) as ImportBatch | null;
+      const items = (payload?.items ?? []) as ImportItem[];
+      const summary = payload?.summary ?? null;
+
+      // Logs sem dados sensíveis
+      console.log('[OIK Import][ReviewPayload]', {
+        importBatchId: importId,
+        status: batch?.status ?? null,
+        itemsCount: items.length,
+      });
+
+      return { batch, items, summary };
     },
     enabled: !!importId && !!familyId,
-    staleTime: 0, // Never cache - always fresh
-    gcTime: 5000, // Remove from cache after 5s
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-  });
-
-  const itemsQuery = useQuery({
-    queryKey: ['import-items', importId],
-    queryFn: async () => {
-      if (!importId) return [];
-
-      console.log(`[OIK Import] Fetching items for: ${importId}`);
-
-      const { data, error } = await supabase
-        .from('import_pending_transactions')
-        .select('*')
-        .eq('import_id', importId)
-        .order('date', { ascending: false });
-
-      if (error) {
-        console.error('[OIK Import] Error fetching items:', error);
-        throw error;
-      }
-      
-      console.log(`[OIK Import] Found ${data?.length || 0} items`);
-      return data as ImportItem[];
-    },
-    enabled: !!importId,
-    staleTime: 0, // Never cache
+    staleTime: 0,
     gcTime: 5000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
 
-  const batch = batchQuery.data ?? null;
-  const items = itemsQuery.data ?? [];
-  const isLoading = batchQuery.isLoading || itemsQuery.isLoading;
-  const isError = batchQuery.isError || itemsQuery.isError;
-  const error = batchQuery.error || itemsQuery.error;
+  const batch = reviewQuery.data?.batch ?? null;
+  const items = reviewQuery.data?.items ?? [];
+  const serverSummary = reviewQuery.data?.summary ?? null;
+  const isLoading = reviewQuery.isLoading;
+  const isError = reviewQuery.isError;
+  const error = reviewQuery.error;
   
   // Determine status-based states
   const isExpired = batch?.status === 'expired' || 
@@ -258,16 +233,20 @@ export function useImportBatch(importId: string | null) {
 
   // Calculate summary
   const summary = {
-    total: items.length,
+    total: serverSummary?.total ?? items.length,
     validCount: items.filter(i => !i.is_duplicate && !i.needs_review).length,
-    duplicateCount: items.filter(i => i.is_duplicate).length,
-    needsReviewCount: items.filter(i => i.needs_review && !i.is_duplicate).length,
-    totalIncome: items.filter(i => i.type === 'income').reduce((sum, i) => sum + i.amount, 0),
-    totalExpense: items.filter(i => i.type === 'expense').reduce((sum, i) => sum + i.amount, 0),
+    duplicateCount: serverSummary?.duplicateCount ?? items.filter(i => i.is_duplicate).length,
+    needsReviewCount: serverSummary?.needsReviewCount ?? items.filter(i => i.needs_review && !i.is_duplicate).length,
+    totalIncome: serverSummary?.totalIncome ?? items.filter(i => i.type === 'income').reduce((sum, i) => sum + i.amount, 0),
+    totalExpense: serverSummary?.totalExpense ?? items.filter(i => i.type === 'expense').reduce((sum, i) => sum + i.amount, 0),
   };
 
   // Generate error code
   let errorCode: string | null = null;
+  const backendErrorCode = (batch as any)?.error_code ?? null;
+  if (backendErrorCode) {
+    errorCode = backendErrorCode;
+  }
   if (!batch && !isLoading && importId) {
     errorCode = IMPORT_ERROR_CODES.NOT_FOUND;
   } else if (isExpired) {
@@ -282,9 +261,8 @@ export function useImportBatch(importId: string | null) {
 
   const refetch = useCallback(() => {
     console.log('[OIK Import] Manual refetch triggered');
-    batchQuery.refetch();
-    itemsQuery.refetch();
-  }, [batchQuery, itemsQuery]);
+    reviewQuery.refetch();
+  }, [reviewQuery]);
 
   return {
     batch,
