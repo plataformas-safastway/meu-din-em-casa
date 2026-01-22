@@ -773,6 +773,7 @@ export type Database = {
       import_history: {
         Row: {
           created_at: string
+          error_code: string | null
           error_message: string | null
           family_id: string
           file_name: string
@@ -789,6 +790,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          error_code?: string | null
           error_message?: string | null
           family_id: string
           file_name: string
@@ -805,6 +807,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          error_code?: string | null
           error_message?: string | null
           family_id?: string
           file_name?: string
@@ -911,6 +914,7 @@ export type Database = {
           created_by: string | null
           detected_bank: string | null
           detected_document_type: string | null
+          error_code: string | null
           error_message: string | null
           expires_at: string | null
           family_id: string
@@ -932,6 +936,7 @@ export type Database = {
           created_by?: string | null
           detected_bank?: string | null
           detected_document_type?: string | null
+          error_code?: string | null
           error_message?: string | null
           expires_at?: string | null
           family_id: string
@@ -953,6 +958,7 @@ export type Database = {
           created_by?: string | null
           detected_bank?: string | null
           detected_document_type?: string | null
+          error_code?: string | null
           error_message?: string | null
           expires_at?: string | null
           family_id?: string
