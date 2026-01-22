@@ -371,16 +371,30 @@ function parseOFX(content: string): ParsedTransaction[] {
 
 function parseBradescoText(text: string): ParsedTransaction[] {
   const transactions: ParsedTransaction[] = [];
-  const lines = text.split(/\n/);
   
-  let currentTx: { date: string; description: string; credit?: number; debit?: number } | null = null;
+  console.log("[parseBradescoText] Starting, text length:", text.length);
+  
+  // STRATEGY 1: Multi-line tabular format (from PDF copy/paste)
+  // Format: DD/MM/YY Description DocNumber Amount(s)
+  // Continuation: Rem: or Des: lines
+  
+  const lines = text.split(/\n/);
+  let currentTx: { date: string; description: string; credit?: number; debit?: number; lineNum: number } | null = null;
+  let lastValidDate: string | null = null;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line || isNoiseLine(line)) continue;
     
-    // Check for date at start of line (DD/MM/YY format)
-    const dateMatch = line.match(/^(\d{2}\/\d{2}\/\d{2})\s+(.+)/);
+    // Skip header/footer lines
+    if (/^Data\s+Hist[oó]rico/i.test(line)) continue;
+    if (/Bradesco\s+Internet\s+Banking/i.test(line)) continue;
+    if (/^Total\s+[\d.,]+/i.test(line)) continue;
+    if (/^Saldos\s+Invest/i.test(line)) continue;
+    if (/^Últimos\s+Lançamentos/i.test(line)) continue;
+    
+    // Check for date at start of line (DD/MM/YY or DD/MM/YYYY format)
+    const dateMatch = line.match(/^(\d{2}\/\d{2}\/\d{2,4})\s+(.+)/);
     
     if (dateMatch) {
       // Save previous transaction if exists
@@ -399,18 +413,35 @@ function parseBradescoText(text: string): ParsedTransaction[] {
       
       const date = parseFlexibleDate(dateMatch[1]);
       if (!date) continue;
+      lastValidDate = date;
       
       const rest = dateMatch[2];
       
-      // Parse amounts (Brazilian format)
+      // Parse amounts (Brazilian format: 1.234,56 or -1.234,56)
       const amountPattern = /(-?\s?\d{1,3}(?:\.\d{3})*,\d{2})/g;
-      const amounts = [...rest.matchAll(amountPattern)].map(m => parseBrazilianAmount(m[1]));
+      const amountMatches = [...rest.matchAll(amountPattern)];
+      const amounts = amountMatches.map(m => parseBrazilianAmount(m[1]));
       
-      // Extract description (text before first number)
-      const descMatch = rest.match(/^([A-Za-zÀ-ÿ\s\*\.\-]+?)(?:\s+\d|$)/);
-      const description = descMatch ? descMatch[1].trim() : rest.split(/\s+\d/)[0].trim();
+      // Extract description (text before first amount or document number)
+      // Document numbers are typically 7 digits
+      let description = rest;
       
-      // Determine credit vs debit
+      // Remove doc numbers and amounts for cleaner description
+      description = description
+        .replace(/\d{7}/g, '')  // Remove 7-digit doc numbers
+        .replace(amountPattern, '')  // Remove amounts
+        .replace(/\s+-\s+/g, ' ')  // Clean up dashes
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      // If description starts with known transaction types, use that
+      const txTypeMatch = description.match(/^([A-Za-zÀ-ÿ\.\s]+?)(?:\s+\d|$)/);
+      if (txTypeMatch) {
+        description = txTypeMatch[1].trim();
+      }
+      
+      // Determine credit vs debit based on position and value
+      // In Bradesco format: Crédito column comes before Débito
       let credit: number | undefined;
       let debit: number | undefined;
       
@@ -419,21 +450,77 @@ function parseBradescoText(text: string): ParsedTransaction[] {
           if (amt < 0) {
             debit = Math.abs(amt);
           } else if (!credit) {
-            credit = amt;
+            // First positive value might be credit or debit depending on context
+            // If there's a minus sign before in the line, it's likely a debit marker
+            if (rest.includes('- ' + amt.toString().replace('.', ',').replace('-', ''))) {
+              debit = amt;
+            } else {
+              credit = amt;
+            }
+          } else if (!debit) {
+            debit = amt;
           }
         }
       }
       
-      currentTx = { date, description, credit, debit };
+      currentTx = { date, description, credit, debit, lineNum: i };
     } else if (currentTx) {
       // Check for continuation lines (Rem: or Des:)
       const remMatch = line.match(/^Rem:\s*(.+)/i);
       const desMatch = line.match(/^Des:\s*(.+)/i);
       
       if (remMatch) {
-        currentTx.description += ` | Rem: ${remMatch[1]}`;
+        // Rem: indicates transfer received (income)
+        currentTx.description += ` | Rem: ${remMatch[1].replace(/\d{7}/, '').replace(/\d{2}\/\d{2}$/, '').trim()}`;
+        
+        // Extract amount from Rem line if present
+        const amtMatch = remMatch[1].match(/(\d{1,3}(?:\.\d{3})*,\d{2})$/);
+        if (amtMatch && !currentTx.credit) {
+          const amt = parseBrazilianAmount(amtMatch[1]);
+          if (amt !== null && amt > 0.01) {
+            currentTx.credit = amt;
+          }
+        }
       } else if (desMatch) {
-        currentTx.description += ` | Des: ${desMatch[1]}`;
+        // Des: indicates transfer sent (expense)
+        currentTx.description += ` | Des: ${desMatch[1].replace(/\d{7}/, '').replace(/\d{2}\/\d{2}$/, '').trim()}`;
+        
+        // Extract amount from Des line if present
+        const amtMatch = desMatch[1].match(/(\d{1,3}(?:\.\d{3})*,\d{2})$/);
+        if (amtMatch && !currentTx.debit) {
+          const amt = parseBrazilianAmount(amtMatch[1]);
+          if (amt !== null && amt > 0.01) {
+            currentTx.debit = amt;
+          }
+        }
+      } else if (/^Contr\s+\d+|^Amortiz|^Encargo/i.test(line)) {
+        // Additional info line for loans/financing
+        currentTx.description += ` | ${line.replace(/\d{7}/, '').trim()}`;
+      }
+    } else if (lastValidDate) {
+      // Line without date but we have a previous date context
+      // This handles fragmented PDF extraction where date and rest are on different lines
+      const remMatch = line.match(/^Rem:\s*(.+)/i);
+      const desMatch = line.match(/^Des:\s*(.+)/i);
+      
+      if (remMatch || desMatch) {
+        const match = remMatch || desMatch;
+        const isCredit = !!remMatch;
+        
+        // Extract amount
+        const amtMatch = match![1].match(/(\d{1,3}(?:\.\d{3})*,\d{2})$/);
+        if (amtMatch) {
+          const amt = parseBrazilianAmount(amtMatch[1]);
+          if (amt !== null && amt > 0.01) {
+            transactions.push({
+              date: lastValidDate,
+              description: (isCredit ? 'Rem: ' : 'Des: ') + match![1].replace(/\d{7}/, '').replace(/\d{2}\/\d{2}$/, '').replace(/\d{1,3}(?:\.\d{3})*,\d{2}$/, '').trim(),
+              amount: amt,
+              type: isCredit ? "income" : "expense",
+              raw_data: { source: "bradesco-continuation" },
+            });
+          }
+        }
       }
     }
   }
@@ -450,6 +537,111 @@ function parseBradescoText(text: string): ParsedTransaction[] {
         raw_data: { source: "bradesco" },
       });
     }
+  }
+  
+  console.log("[parseBradescoText] Strategy 1 found:", transactions.length);
+  
+  // STRATEGY 2: If no transactions found, try parsing with normalized multiline format
+  // This handles when the PDF text comes as: "01/12/25 Transfe Pix 1905378 150,00 - 15.827,27"
+  if (transactions.length === 0) {
+    console.log("[parseBradescoText] Trying Strategy 2 (normalized text)");
+    
+    const normalized = text.replace(/\n/g, ' ').replace(/\s+/g, ' ');
+    
+    // Pattern: date followed by description, doc number, and amounts
+    // DD/MM/YY Description DOCNUM Credit Debit Balance
+    const pattern = /(\d{2}\/\d{2}\/\d{2,4})\s+([A-Za-zÀ-ÿ\.\s\*\-\/]+?)\s+(\d{7})\s+(\d{1,3}(?:\.\d{3})*,\d{2})?(?:\s+-\s+(\d{1,3}(?:\.\d{3})*,\d{2}))?/g;
+    
+    let match;
+    while ((match = pattern.exec(normalized)) !== null) {
+      const [, dateStr, description, , creditStr, debitStr] = match;
+      
+      const date = parseFlexibleDate(dateStr);
+      if (!date) continue;
+      
+      const credit = creditStr ? parseBrazilianAmount(creditStr) : null;
+      const debit = debitStr ? parseBrazilianAmount(debitStr) : null;
+      
+      const amount = credit ?? debit;
+      if (!amount || amount < 0.01) continue;
+      
+      // Skip noise lines
+      if (isNoiseLine(description)) continue;
+      
+      transactions.push({
+        date,
+        description: description.trim().substring(0, 500),
+        amount,
+        type: credit ? "income" : "expense",
+        raw_data: { source: "bradesco-s2" },
+      });
+    }
+    
+    console.log("[parseBradescoText] Strategy 2 found:", transactions.length);
+  }
+  
+  // STRATEGY 3: Ultra-lenient - find DD/MM/YY followed by any amount within 100 chars
+  if (transactions.length === 0) {
+    console.log("[parseBradescoText] Trying Strategy 3 (lenient date+amount)");
+    
+    // Find all dates
+    const datePattern = /\d{2}\/\d{2}\/\d{2,4}/g;
+    const dateMatches: { date: string; index: number; raw: string }[] = [];
+    let dm;
+    while ((dm = datePattern.exec(text)) !== null) {
+      const parsed = parseFlexibleDate(dm[0]);
+      if (parsed) {
+        dateMatches.push({ date: parsed, index: dm.index, raw: dm[0] });
+      }
+    }
+    
+    // Find all amounts
+    const amountPattern = /\d{1,3}(?:\.\d{3})*,\d{2}/g;
+    const amountMatches: { amount: number; index: number }[] = [];
+    let am;
+    while ((am = amountPattern.exec(text)) !== null) {
+      const parsed = parseBrazilianAmount(am[0]);
+      if (parsed !== null && parsed >= 0.01 && parsed < 100000000) {
+        amountMatches.push({ amount: parsed, index: am.index });
+      }
+    }
+    
+    console.log(`[parseBradescoText] S3: Found ${dateMatches.length} dates, ${amountMatches.length} amounts`);
+    
+    const usedAmounts = new Set<number>();
+    
+    for (const d of dateMatches) {
+      // Find first unused amount after this date (within 150 chars)
+      for (const a of amountMatches) {
+        if (usedAmounts.has(a.index)) continue;
+        const dist = a.index - d.index;
+        if (dist > 0 && dist < 150) {
+          usedAmounts.add(a.index);
+          
+          // Extract description between date and amount
+          let desc = text.substring(d.index + d.raw.length, a.index).trim();
+          desc = desc.replace(/\s+/g, ' ').replace(/\d{7}/g, '').trim();
+          
+          if (desc.length < 2) desc = "(Transação Bradesco)";
+          if (isNoiseLine(desc)) continue;
+          
+          // Determine type based on context
+          const contextBefore = text.substring(Math.max(0, a.index - 3), a.index);
+          const isDebit = contextBefore.includes('-') || /des:/i.test(desc);
+          
+          transactions.push({
+            date: d.date,
+            description: desc.substring(0, 500),
+            amount: a.amount,
+            type: isDebit ? "expense" : "income",
+            raw_data: { source: "bradesco-s3" },
+          });
+          break; // Only take first amount for each date
+        }
+      }
+    }
+    
+    console.log("[parseBradescoText] Strategy 3 found:", transactions.length);
   }
   
   return transactions;
@@ -792,10 +984,14 @@ function parseGenericText(text: string): ParsedTransaction[] {
 function extractPDFTextRobust(binaryContent: string): string {
   const textParts: string[] = [];
   
-  // Method 1: Extract stream content
+  console.log("[extractPDFTextRobust] Starting extraction, content length:", binaryContent.length);
+  
+  // Method 1: Extract stream content and decode text operators
   const streamMatches = binaryContent.match(/stream\s*([\s\S]*?)\s*endstream/gi) || [];
+  console.log("[extractPDFTextRobust] Found", streamMatches.length, "streams");
+  
   for (const stream of streamMatches) {
-    // Try to extract text operators
+    // Try to extract text operators (Tj and TJ)
     const textOps = stream.match(/\(([^)]+)\)\s*Tj|\[([^\]]+)\]\s*TJ/gi) || [];
     for (const op of textOps) {
       const textMatch = op.match(/\(([^)]+)\)/g) || [];
@@ -815,8 +1011,11 @@ function extractPDFTextRobust(binaryContent: string): string {
     }
   }
   
-  // Method 2: Literal strings in parentheses
+  console.log("[extractPDFTextRobust] Method 1 (streams) extracted", textParts.length, "parts");
+  
+  // Method 2: Literal strings in parentheses (outside streams)
   const literalMatches = binaryContent.match(/\((?:[^()\\]|\\.)*\)/g) || [];
+  let method2Count = 0;
   for (const match of literalMatches) {
     const decoded = match.slice(1, -1)
       .replace(/\\n/g, "\n")
@@ -828,47 +1027,92 @@ function extractPDFTextRobust(binaryContent: string): string {
       .replace(/\\(\d{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)));
     if (decoded.length > 1 && /[a-zA-Z0-9]/.test(decoded)) {
       textParts.push(decoded);
+      method2Count++;
     }
   }
+  console.log("[extractPDFTextRobust] Method 2 (literals) extracted", method2Count, "parts");
   
-  // Method 3: Hex strings
+  // Method 3: Hex strings (often used for Unicode)
   const hexMatches = binaryContent.match(/<[0-9A-Fa-f\s]+>/g) || [];
+  let method3Count = 0;
   for (const hex of hexMatches) {
     const clean = hex.slice(1, -1).replace(/\s/g, "");
+    if (clean.length < 4) continue;
+    
+    // Try to decode as UTF-16BE (common in PDFs)
     let result = "";
-    for (let i = 0; i < clean.length; i += 2) {
-      const charCode = parseInt(clean.substring(i, i + 2), 16);
-      if (charCode >= 32 && charCode <= 126) {
+    for (let i = 0; i < clean.length; i += 4) {
+      const charCode = parseInt(clean.substring(i, i + 4), 16);
+      if (charCode >= 32 && charCode <= 65535) {
         result += String.fromCharCode(charCode);
       }
     }
+    
+    // If that didn't work, try simple hex
+    if (result.length < 2) {
+      result = "";
+      for (let i = 0; i < clean.length; i += 2) {
+        const charCode = parseInt(clean.substring(i, i + 2), 16);
+        if (charCode >= 32 && charCode <= 126) {
+          result += String.fromCharCode(charCode);
+        }
+      }
+    }
+    
     if (result.length > 1 && /[a-zA-Z0-9]/.test(result)) {
       textParts.push(result);
+      method3Count++;
     }
   }
+  console.log("[extractPDFTextRobust] Method 3 (hex) extracted", method3Count, "parts");
   
-  // Method 4: Extract readable ASCII sequences
-  let currentWord = "";
-  for (let i = 0; i < binaryContent.length; i++) {
-    const charCode = binaryContent.charCodeAt(i);
-    if ((charCode >= 32 && charCode <= 126) || (charCode >= 160 && charCode <= 255)) {
-      currentWord += binaryContent[i];
-    } else if (currentWord.length > 0) {
-      if (currentWord.length >= 3 && /[a-zA-Z0-9]/.test(currentWord)) {
-        textParts.push(currentWord.trim());
+  // Method 4: Extract readable ASCII/Latin sequences (fallback)
+  // Only do this if we haven't found much yet
+  if (textParts.length < 20) {
+    let currentWord = "";
+    let method4Count = 0;
+    
+    for (let i = 0; i < binaryContent.length; i++) {
+      const charCode = binaryContent.charCodeAt(i);
+      // Include ASCII printable and extended Latin
+      if ((charCode >= 32 && charCode <= 126) || (charCode >= 160 && charCode <= 255)) {
+        currentWord += binaryContent[i];
+      } else if (currentWord.length > 0) {
+        // Only keep words that look like meaningful text (not binary garbage)
+        if (currentWord.length >= 3 && /[a-zA-ZÀ-ÿ]{2,}/.test(currentWord)) {
+          textParts.push(currentWord.trim());
+          method4Count++;
+        }
+        currentWord = "";
       }
-      currentWord = "";
     }
-  }
-  if (currentWord.length >= 3 && /[a-zA-Z0-9]/.test(currentWord)) {
-    textParts.push(currentWord.trim());
+    if (currentWord.length >= 3 && /[a-zA-ZÀ-ÿ]{2,}/.test(currentWord)) {
+      textParts.push(currentWord.trim());
+      method4Count++;
+    }
+    console.log("[extractPDFTextRobust] Method 4 (ASCII scan) extracted", method4Count, "parts");
   }
   
-  return textParts
+  // Join and clean
+  let result = textParts
     .join(" ")
     .replace(/\s+/g, " ")
-    .replace(/[^\x20-\x7E\xA0-\xFF]/g, " ")
     .trim();
+  
+  // Remove remaining binary garbage (sequences of non-printable chars)
+  result = result.replace(/[^\x20-\x7E\xA0-\xFF\u0100-\u017F]+/g, " ");
+  
+  console.log("[extractPDFTextRobust] Final text length:", result.length);
+  
+  // Check if result looks like valid text (has dates or common Portuguese words)
+  const hasValidContent = /\d{2}\/\d{2}\/\d{2,4}/.test(result) || 
+                          /bradesco|banco|conta|saldo|pix|transfer/i.test(result);
+  
+  if (!hasValidContent && result.length > 0) {
+    console.log("[extractPDFTextRobust] WARNING: Extracted text may be garbage, first 200 chars:", result.substring(0, 200));
+  }
+  
+  return result;
 }
 
 // ============================================
