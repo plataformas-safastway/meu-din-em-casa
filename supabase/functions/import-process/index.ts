@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.90.1";
 // @deno-types="https://esm.sh/xlsx@0.18.5/types/index.d.ts"
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
+// pako for zlib/deflate decompression (PDF FlateDecode streams)
+import pako from "https://esm.sh/pako@2.1.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -986,9 +988,118 @@ function extractPDFTextRobust(binaryContent: string): string {
   
   console.log("[extractPDFTextRobust] Starting extraction, content length:", binaryContent.length);
   
-  // Method 1: Extract stream content and decode text operators
+  // Convert string to Uint8Array for binary operations
+  const binaryArray = new Uint8Array(binaryContent.length);
+  for (let i = 0; i < binaryContent.length; i++) {
+    binaryArray[i] = binaryContent.charCodeAt(i) & 0xFF;
+  }
+  
+  // Method 0: Try to decompress FlateDecode streams first
+  // Look for stream objects with /FlateDecode filter
+  const streamRegex = /\/FlateDecode[\s\S]*?stream\s*([\s\S]*?)\s*endstream/gi;
+  let streamMatch;
+  let method0Count = 0;
+  
+  while ((streamMatch = streamRegex.exec(binaryContent)) !== null) {
+    try {
+      // Get the stream content as bytes
+      const streamStart = streamMatch.index + streamMatch[0].indexOf('stream') + 6;
+      const streamContent = streamMatch[1];
+      
+      // Skip initial whitespace/newline
+      let startOffset = 0;
+      while (startOffset < streamContent.length && 
+             (streamContent.charCodeAt(startOffset) === 10 || 
+              streamContent.charCodeAt(startOffset) === 13 ||
+              streamContent.charCodeAt(startOffset) === 32)) {
+        startOffset++;
+      }
+      
+      // Convert to bytes
+      const bytes = new Uint8Array(streamContent.length - startOffset);
+      for (let i = 0; i < bytes.length; i++) {
+        bytes[i] = streamContent.charCodeAt(startOffset + i) & 0xFF;
+      }
+      
+      // Try to decompress with pako (zlib inflate)
+      try {
+        const decompressed = pako.inflate(bytes);
+        const text = new TextDecoder('latin1').decode(decompressed);
+        
+        // Extract text from the decompressed content
+        // Look for text operators: (text)Tj or [(text)]TJ
+        const textOps = text.match(/\(([^)]*)\)\s*Tj|\[([^\]]*)\]\s*TJ/gi) || [];
+        for (const op of textOps) {
+          const matches = op.match(/\(([^)]*)\)/g) || [];
+          for (const m of matches) {
+            let decoded = m.slice(1, -1)
+              .replace(/\\n/g, "\n")
+              .replace(/\\r/g, "\r")
+              .replace(/\\t/g, " ")
+              .replace(/\\\(/g, "(")
+              .replace(/\\\)/g, ")")
+              .replace(/\\\\/g, "\\")
+              .replace(/\\(\d{1,3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)));
+            if (decoded.length > 0) {
+              textParts.push(decoded);
+              method0Count++;
+            }
+          }
+        }
+        
+        // Also try to find plain text sequences in decompressed content
+        const plainTextMatches = text.match(/[A-Za-zÀ-ÿ0-9\s\-\/\.,:\(\)]{5,}/g) || [];
+        for (const ptm of plainTextMatches) {
+          if (/\d{2}\/\d{2}\/\d{2,4}/.test(ptm) || /[A-Za-z]{3,}/.test(ptm)) {
+            textParts.push(ptm.trim());
+            method0Count++;
+          }
+        }
+      } catch (inflateErr) {
+        // Try raw inflate (no zlib header)
+        try {
+          const decompressed = pako.inflateRaw(bytes);
+          const text = new TextDecoder('latin1').decode(decompressed);
+          
+          const textOps = text.match(/\(([^)]*)\)\s*Tj|\[([^\]]*)\]\s*TJ/gi) || [];
+          for (const op of textOps) {
+            const matches = op.match(/\(([^)]*)\)/g) || [];
+            for (const m of matches) {
+              let decoded = m.slice(1, -1)
+                .replace(/\\n/g, "\n")
+                .replace(/\\r/g, "\r")
+                .replace(/\\t/g, " ")
+                .replace(/\\\(/g, "(")
+                .replace(/\\\)/g, ")")
+                .replace(/\\\\/g, "\\");
+              if (decoded.length > 0) {
+                textParts.push(decoded);
+                method0Count++;
+              }
+            }
+          }
+          
+          const plainTextMatches = text.match(/[A-Za-zÀ-ÿ0-9\s\-\/\.,:\(\)]{5,}/g) || [];
+          for (const ptm of plainTextMatches) {
+            if (/\d{2}\/\d{2}\/\d{2,4}/.test(ptm) || /[A-Za-z]{3,}/.test(ptm)) {
+              textParts.push(ptm.trim());
+              method0Count++;
+            }
+          }
+        } catch {
+          // Decompression failed, continue to next stream
+        }
+      }
+    } catch (e) {
+      // Stream processing failed, continue
+    }
+  }
+  
+  console.log("[extractPDFTextRobust] Method 0 (FlateDecode decompression) extracted", method0Count, "parts");
+  
+  // Method 1: Extract stream content and decode text operators (uncompressed streams)
   const streamMatches = binaryContent.match(/stream\s*([\s\S]*?)\s*endstream/gi) || [];
-  console.log("[extractPDFTextRobust] Found", streamMatches.length, "streams");
+  console.log("[extractPDFTextRobust] Found", streamMatches.length, "total streams");
   
   for (const stream of streamMatches) {
     // Try to extract text operators (Tj and TJ)
@@ -1011,7 +1122,7 @@ function extractPDFTextRobust(binaryContent: string): string {
     }
   }
   
-  console.log("[extractPDFTextRobust] Method 1 (streams) extracted", textParts.length, "parts");
+  console.log("[extractPDFTextRobust] Method 1 (streams) extracted", textParts.length, "total parts so far");
   
   // Method 2: Literal strings in parentheses (outside streams)
   const literalMatches = binaryContent.match(/\((?:[^()\\]|\\.)*\)/g) || [];
