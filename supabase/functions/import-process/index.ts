@@ -747,11 +747,14 @@ function parseBradescoText(text: string): ParsedTransaction[] {
     console.log(`[parseBradescoText] Strategy 4 total: ${transactions.length} transactions`);
   }
   
-  // Deduplicate by date + amount + first 15 chars of normalized description
+  // Deduplicate by date + amount + type + description prefix
+  // Keep transactions that have different descriptions even if same date/amount
   const unique = new Map<string, ParsedTransaction>();
+  const normalizeDesc = (d: string) => d.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 20);
+  
   for (const tx of transactions) {
-    // Use date + amount as primary key, ignore tiny description differences
-    const key = `${tx.date}-${tx.amount.toFixed(2)}-${tx.type}`;
+    // Include description prefix in key to allow multiple txs with same date/amount but different descriptions
+    const key = `${tx.date}-${tx.amount.toFixed(2)}-${tx.type}-${normalizeDesc(tx.description)}`;
     if (!unique.has(key)) {
       unique.set(key, tx);
     }
