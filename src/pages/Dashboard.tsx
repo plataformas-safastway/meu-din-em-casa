@@ -4,7 +4,6 @@ import { MonthSelector } from "@/components/MonthSelector";
 import { GlobalBalanceCard } from "@/components/home/GlobalBalanceCard";
 import { CreditCardsPreviewCard } from "@/components/home/CreditCardsPreviewCard";
 import { QuickActions } from "@/components/QuickActions";
-import { HomeShortcuts } from "@/components/HomeShortcuts";
 import { InsightList } from "@/components/InsightCard";
 import { CategoryChart } from "@/components/CategoryChart";
 import { GoalsWidget } from "@/components/goals/GoalsWidget";
@@ -31,7 +30,6 @@ interface DashboardProps {
   onLearnMore?: (tab?: "accounts" | "cards") => void;
   onBanksClick?: () => void;
   onCategoriesClick?: () => void;
-  onNavigate?: (tab: string) => void;
 }
 
 export function Dashboard({ 
@@ -40,7 +38,6 @@ export function Dashboard({
   onLearnMore,
   onBanksClick,
   onCategoriesClick,
-  onNavigate,
 }: DashboardProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
@@ -259,11 +256,6 @@ export function Dashboard({
           onAddGoal={handleAddGoal}
           onViewReceipts={handleViewReceipts}
         />
-
-        {/* Navigation Shortcuts */}
-        {onNavigate && (
-          <HomeShortcuts onNavigate={onNavigate} />
-        )}
 
         {/* Insights */}
         {insights.length > 0 && <InsightList insights={insights} />}

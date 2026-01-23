@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { defaultCategories, getCategoryById, getSubcategoryById } from "@/data/categories";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { ClassificationSelector, TransactionClassification } from "./ClassificationSelector";
 
 export interface TransactionReviewItemProps {
   transaction: {
@@ -16,8 +15,6 @@ export interface TransactionReviewItemProps {
     original_date?: string | null;
     amount: number;
     type: 'income' | 'expense';
-    direction?: 'credit' | 'debit' | null;
-    classification?: TransactionClassification | null;
     description: string | null;
     category_id: string;
     subcategory_id: string | null;
@@ -26,11 +23,9 @@ export interface TransactionReviewItemProps {
   };
   isSelected: boolean;
   categoryOverride?: { categoryId: string; subcategoryId: string | null };
-  classificationOverride?: TransactionClassification;
   descriptionOverride?: string;
   onToggleSelect: () => void;
   onCategoryChange: (categoryId: string, subcategoryId: string | null) => void;
-  onClassificationChange?: (classification: TransactionClassification) => void;
   onDescriptionChange: (description: string) => void;
   onDelete: () => void;
 }
@@ -39,16 +34,13 @@ export function TransactionReviewItem({
   transaction,
   isSelected,
   categoryOverride,
-  classificationOverride,
   descriptionOverride,
   onToggleSelect,
   onCategoryChange,
-  onClassificationChange,
   onDescriptionChange,
   onDelete,
 }: TransactionReviewItemProps) {
   const [isEditingCategory, setIsEditingCategory] = useState(false);
-  const [isEditingClassification, setIsEditingClassification] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [tempDescription, setTempDescription] = useState(
     descriptionOverride ?? transaction.description ?? ""
@@ -58,20 +50,13 @@ export function TransactionReviewItem({
   const effectiveCategoryId = categoryOverride?.categoryId ?? transaction.category_id;
   const effectiveSubcategoryId = categoryOverride?.subcategoryId ?? transaction.subcategory_id;
   const effectiveDescription = descriptionOverride ?? transaction.description ?? "";
-  const effectiveClassification: TransactionClassification = 
-    classificationOverride ?? 
-    (transaction.classification as TransactionClassification) ?? 
-    (transaction.type === 'income' ? 'income' : 'expense');
-  const effectiveDirection: 'credit' | 'debit' = 
-    transaction.direction ?? (transaction.amount >= 0 ? 'credit' : 'debit');
   
   const category = getCategoryById(effectiveCategoryId);
   const subcategory = effectiveSubcategoryId 
     ? getSubcategoryById(effectiveCategoryId, effectiveSubcategoryId) 
     : null;
   
-  const isCredit = effectiveDirection === 'credit';
-  const isExpense = effectiveClassification === 'expense' || effectiveDirection === 'debit';
+  const isExpense = transaction.type === 'expense';
   
   // Get subcategories for the selected category
   const subcategories = category?.subcategories ?? [];
@@ -104,7 +89,7 @@ export function TransactionReviewItem({
           ? "bg-primary/5 border-primary/30" 
           : "bg-card border-border/30",
         transaction.is_duplicate && "border-warning/50",
-        transaction.needs_review && !transaction.is_duplicate && "border-warning/30"
+        transaction.needs_review && !transaction.is_duplicate && "border-orange-500/50"
       )}
     >
       {/* Row 1: Checkbox, Icon, Description, Amount, Delete */}
@@ -195,60 +180,11 @@ export function TransactionReviewItem({
         </div>
       </div>
       
-      {/* Row 2: Classification Selector */}
-      {onClassificationChange && (
-        <div className="ml-[44px]">
-          {isEditingClassification ? (
-            <div className="space-y-2">
-              <ClassificationSelector
-                value={effectiveClassification}
-                onChange={(classification) => {
-                  onClassificationChange(classification);
-                  setIsEditingClassification(false);
-                }}
-                direction={effectiveDirection}
-                compact
-              />
-              <Button 
-                variant="ghost" 
-                size="sm"
-                className="text-xs"
-                onClick={() => setIsEditingClassification(false)}
-              >
-                <X className="w-3 h-3 mr-1" />
-                Fechar
-              </Button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsEditingClassification(true)}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <span className={cn(
-                "px-2 py-0.5 rounded-full",
-                effectiveClassification === 'income' && "bg-success/10 text-success",
-                effectiveClassification === 'expense' && "bg-destructive/10 text-destructive",
-                effectiveClassification === 'reimbursement' && "bg-warning/10 text-warning",
-                effectiveClassification === 'transfer' && "bg-info/10 text-info",
-                effectiveClassification === 'adjustment' && "bg-muted text-muted-foreground"
-              )}>
-                {effectiveClassification === 'income' && '↑ Receita'}
-                {effectiveClassification === 'expense' && '↓ Despesa'}
-                {effectiveClassification === 'reimbursement' && '↺ Reembolso'}
-                {effectiveClassification === 'transfer' && '↔ Transferência'}
-                {effectiveClassification === 'adjustment' && '⚙ Ajuste'}
-              </span>
-              <Edit2 className="w-3 h-3" />
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Row 3: Category + Subcategory Selection */}
+      {/* Row 2: Category + Subcategory Selection */}
       <div className="flex items-center gap-2 ml-[44px]">
         {isEditingCategory ? (
           <>
-            {/* Category Dropdown - show ALL categories, not filtered by type */}
+            {/* Category Dropdown */}
             <Select
               value={effectiveCategoryId}
               onValueChange={handleCategorySelect}
@@ -257,11 +193,13 @@ export function TransactionReviewItem({
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent className="bg-background border shadow-lg z-50">
-                {defaultCategories.map(cat => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.icon} {cat.name}
-                  </SelectItem>
-                ))}
+                {defaultCategories
+                  .filter(c => c.type === transaction.type)
+                  .map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             
@@ -322,7 +260,7 @@ export function TransactionReviewItem({
             </span>
           )}
           {transaction.needs_review && !transaction.is_duplicate && (
-            <span className="text-xs text-warning flex items-center gap-1">
+            <span className="text-xs text-orange-500 flex items-center gap-1">
               <AlertTriangle className="w-3 h-3" />
               Revisar categoria
             </span>
