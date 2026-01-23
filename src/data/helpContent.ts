@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 21/01/2026
-export const HELP_CENTER_VERSION = "21/01/2026";
+// Última atualização: 23/01/2026
+export const HELP_CENTER_VERSION = "23/01/2026";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -539,6 +539,27 @@ export const faqItems: FAQItem[] = [
     answer: "O OIK filtra automaticamente linhas que não são transações reais: 'SALDO ANTERIOR', 'SALDO TOTAL DISPONÍVEL DIA', 'Saldo Diário', limites e rodapés. Isso garante que apenas movimentações reais sejam importadas.",
     category: "import",
     keywords: ["saldo", "não aparece", "filtro", "importação", "anterior"],
+  },
+  {
+    id: "faq-data-lancamento",
+    question: "Como funciona a data dos lançamentos importados?",
+    answer: "A data do lançamento vem diretamente do extrato bancário, nunca da data do upload. Bradesco usa dd/mm/yy com carry-forward para linhas sem data. BTG usa dd/mm/yyyy hh'h'mm. Itaú e Santander usam dd/mm/yyyy. A ordem na revisão é cronológica crescente (mais antigos primeiro).",
+    category: "import",
+    keywords: ["data", "lançamento", "importação", "cronológica", "ordem", "extrato"],
+  },
+  {
+    id: "faq-ordem-lancamentos",
+    question: "Por que a ordem é do mais antigo para o mais recente?",
+    answer: "Os lançamentos importados são exibidos em ordem cronológica crescente (do primeiro ao último dia do mês) para facilitar a revisão e conferência com o extrato original do banco.",
+    category: "import",
+    keywords: ["ordem", "cronológica", "crescente", "antigo", "recente"],
+  },
+  {
+    id: "faq-editar-categoria-revisao",
+    question: "Como editar nome/categoria/subcategoria na revisão?",
+    answer: "Na tela de revisão, toque no nome do lançamento para editar a descrição. Toque na categoria para abrir os dropdowns de Categoria e Subcategoria (dependentes). Suas edições são salvas automaticamente e aplicadas ao confirmar.",
+    category: "import",
+    keywords: ["editar", "categoria", "subcategoria", "nome", "revisão", "descrição"],
   },
   {
     id: "faq-formato-melhor",

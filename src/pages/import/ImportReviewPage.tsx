@@ -1,13 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { 
-  ArrowLeft, Check, X, Edit2, Trash2, Loader2, AlertTriangle, 
+  ArrowLeft, Loader2, AlertTriangle, 
   CheckCircle2, RefreshCw, Upload, Clock, AlertCircle, Copy,
   MessageCircle, FileWarning, HelpCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { defaultCategories, getCategoryById } from "@/data/categories";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -36,6 +34,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { DetectedSourceHandler } from "@/components/import/DetectedSourceHandler";
+import { TransactionReviewItem } from "@/components/import/TransactionReviewItem";
 import { toast } from "sonner";
 
 // ============================================
@@ -499,8 +498,8 @@ export function ImportReviewPage() {
   const retryImport = useRetryImport();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [categoryUpdates, setCategoryUpdates] = useState<Record<string, { categoryId: string; subcategoryId: string | null }>>({});
+  const [descriptionUpdates, setDescriptionUpdates] = useState<Record<string, string>>({});
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([]);
@@ -697,13 +696,20 @@ export function ImportReviewPage() {
   const deselectAll = () => setSelectedIds(new Set());
   const selectNonDuplicates = () => setSelectedIds(new Set(transactions.filter(t => !t.is_duplicate).map(t => t.id)));
 
-  const handleCategoryChange = (transactionId: string, categoryId: string) => {
+  const handleCategoryChange = (transactionId: string, categoryId: string, subcategoryId: string | null) => {
     setCategoryUpdates(prev => ({
       ...prev,
-      [transactionId]: { categoryId, subcategoryId: null }
+      [transactionId]: { categoryId, subcategoryId }
     }));
-    updateTransaction.mutate({ id: transactionId, categoryId, subcategoryId: null });
-    setEditingId(null);
+    updateTransaction.mutate({ id: transactionId, categoryId, subcategoryId });
+  };
+
+  const handleDescriptionChange = (transactionId: string, description: string) => {
+    setDescriptionUpdates(prev => ({
+      ...prev,
+      [transactionId]: description
+    }));
+    updateTransaction.mutate({ id: transactionId, description });
   };
 
   const handleDeleteClick = (ids: string[]) => {
@@ -862,126 +868,19 @@ export function ImportReviewPage() {
 
           {/* Transaction List */}
           <div className="space-y-2">
-            {transactions.map((transaction) => {
-              const effectiveCategoryId = categoryUpdates[transaction.id]?.categoryId || transaction.category_id;
-              const category = getCategoryById(effectiveCategoryId);
-              const isSelected = selectedIds.has(transaction.id);
-              const isEditing = editingId === transaction.id;
-              const isExpense = transaction.type === 'expense';
-
-              return (
-                <div
-                  key={transaction.id}
-                  className={cn(
-                    "flex items-start gap-3 p-3 rounded-xl border transition-all",
-                    isSelected 
-                      ? "bg-primary/5 border-primary/30" 
-                      : "bg-card border-border/30",
-                    transaction.is_duplicate && "border-warning/50",
-                    transaction.needs_review && !transaction.is_duplicate && "border-orange-500/50"
-                  )}
-                >
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => toggleSelect(transaction.id)}
-                    className="mt-1"
-                  />
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start gap-2">
-                      <div 
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0"
-                        style={{ backgroundColor: `${category?.color}20` }}
-                      >
-                        {category?.icon || "📦"}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground text-sm truncate">
-                          {transaction.description || category?.name || 'Transação'}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{formatDate(transaction.date)}</span>
-                          {transaction.original_date && transaction.original_date !== transaction.date && (
-                            <span className="text-primary">
-                              (compra: {formatDate(transaction.original_date)})
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Category selector */}
-                        {isEditing ? (
-                          <Select
-                            value={effectiveCategoryId}
-                            onValueChange={(value) => handleCategoryChange(transaction.id, value)}
-                          >
-                            <SelectTrigger className="h-8 mt-2 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-background border-2 shadow-xl z-50">
-                              {defaultCategories
-                                .filter(c => c.type === transaction.type)
-                                .map(cat => (
-                                  <SelectItem key={cat.id} value={cat.id}>
-                                    {cat.icon} {cat.name}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <button
-                            onClick={() => setEditingId(transaction.id)}
-                            className="flex items-center gap-1 mt-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <span 
-                              className="px-2 py-0.5 rounded-full"
-                              style={{ backgroundColor: `${category?.color}20` }}
-                            >
-                              {category?.icon} {category?.name}
-                            </span>
-                            <Edit2 className="w-3 h-3" />
-                          </button>
-                        )}
-
-                        {/* Status badges */}
-                        <div className="flex gap-1 mt-1">
-                          {transaction.is_duplicate && (
-                            <span className="text-xs text-warning flex items-center gap-1">
-                              <AlertTriangle className="w-3 h-3" />
-                              Possível duplicata
-                            </span>
-                          )}
-                          {transaction.needs_review && !transaction.is_duplicate && (
-                            <span className="text-xs text-orange-500 flex items-center gap-1">
-                              <AlertTriangle className="w-3 h-3" />
-                              Revisar
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "font-semibold text-sm whitespace-nowrap",
-                      isExpense ? "text-destructive" : "text-success"
-                    )}>
-                      {isExpense ? "-" : "+"}{formatCurrency(transaction.amount)}
-                    </span>
-                    
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => handleDeleteClick([transaction.id])}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+            {transactions.map((transaction) => (
+              <TransactionReviewItem
+                key={transaction.id}
+                transaction={transaction}
+                isSelected={selectedIds.has(transaction.id)}
+                categoryOverride={categoryUpdates[transaction.id]}
+                descriptionOverride={descriptionUpdates[transaction.id]}
+                onToggleSelect={() => toggleSelect(transaction.id)}
+                onCategoryChange={(catId, subId) => handleCategoryChange(transaction.id, catId, subId)}
+                onDescriptionChange={(desc) => handleDescriptionChange(transaction.id, desc)}
+                onDelete={() => handleDeleteClick([transaction.id])}
+              />
+            ))}
           </div>
         </div>
       </main>
