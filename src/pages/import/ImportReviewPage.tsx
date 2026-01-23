@@ -499,6 +499,7 @@ export function ImportReviewPage() {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [categoryUpdates, setCategoryUpdates] = useState<Record<string, { categoryId: string; subcategoryId: string | null }>>({});
+  const [classificationUpdates, setClassificationUpdates] = useState<Record<string, string>>({});
   const [descriptionUpdates, setDescriptionUpdates] = useState<Record<string, string>>({});
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -712,6 +713,14 @@ export function ImportReviewPage() {
     updateTransaction.mutate({ id: transactionId, description });
   };
 
+  const handleClassificationChange = (transactionId: string, classification: string) => {
+    setClassificationUpdates(prev => ({
+      ...prev,
+      [transactionId]: classification
+    }));
+    updateTransaction.mutate({ id: transactionId, classification });
+  };
+
   const handleDeleteClick = (ids: string[]) => {
     setDeleteTargetIds(ids);
     setShowDeleteDialog(true);
@@ -829,9 +838,9 @@ export function ImportReviewPage() {
               </div>
             )}
             {needsReviewCount > 0 && (
-              <div className="flex-shrink-0 px-3 py-2 rounded-lg bg-orange-500/10">
+              <div className="flex-shrink-0 px-3 py-2 rounded-lg bg-warning/10">
                 <p className="text-xs text-muted-foreground">Revisar</p>
-                <p className="font-semibold text-orange-500">{needsReviewCount}</p>
+                <p className="font-semibold text-warning">{needsReviewCount}</p>
               </div>
             )}
           </div>
@@ -874,9 +883,11 @@ export function ImportReviewPage() {
                 transaction={transaction}
                 isSelected={selectedIds.has(transaction.id)}
                 categoryOverride={categoryUpdates[transaction.id]}
+                classificationOverride={classificationUpdates[transaction.id] as any}
                 descriptionOverride={descriptionUpdates[transaction.id]}
                 onToggleSelect={() => toggleSelect(transaction.id)}
                 onCategoryChange={(catId, subId) => handleCategoryChange(transaction.id, catId, subId)}
+                onClassificationChange={(classification) => handleClassificationChange(transaction.id, classification)}
                 onDescriptionChange={(desc) => handleDescriptionChange(transaction.id, desc)}
                 onDelete={() => handleDeleteClick([transaction.id])}
               />

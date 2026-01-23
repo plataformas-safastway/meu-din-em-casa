@@ -38,6 +38,8 @@ export interface ImportItem {
   original_date: string | null;
   amount: number;
   type: 'income' | 'expense';
+  direction?: 'credit' | 'debit' | null;
+  classification?: 'income' | 'expense' | 'transfer' | 'reimbursement' | 'adjustment' | null;
   description: string | null;
   category_id: string;
   subcategory_id: string | null;
@@ -592,11 +594,13 @@ export function useUpdateImportItem() {
       categoryId, 
       subcategoryId,
       description,
+      classification,
     }: { 
       id: string; 
       categoryId?: string; 
       subcategoryId?: string | null;
       description?: string;
+      classification?: string;
     }) => {
       const updateData: Record<string, unknown> = {};
       
@@ -608,6 +612,9 @@ export function useUpdateImportItem() {
       }
       if (description !== undefined) {
         updateData.description = description;
+      }
+      if (classification !== undefined) {
+        updateData.classification = classification;
       }
       
       if (Object.keys(updateData).length === 0) return;
