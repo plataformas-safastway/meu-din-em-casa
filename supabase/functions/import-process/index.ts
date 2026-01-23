@@ -19,6 +19,8 @@ interface ParsedTransaction {
   description: string;
   amount: number;
   type: "income" | "expense";
+  direction?: "credit" | "debit";
+  classification?: "income" | "expense" | "transfer" | "reimbursement" | "adjustment";
   fitid?: string;
   raw_data?: Record<string, unknown>;
 }
@@ -366,6 +368,17 @@ function normalizeDescription(desc: string): string {
     .replace(/[^\w\s]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/**
+ * Adds direction and classification to parsed transactions based on the original amount sign
+ */
+function enrichTransactions(transactions: ParsedTransaction[]): ParsedTransaction[] {
+  return transactions.map(tx => ({
+    ...tx,
+    direction: tx.type === "income" ? "credit" as const : "debit" as const,
+    classification: tx.type === "income" ? "income" as const : "expense" as const,
+  }));
 }
 
 // ============================================

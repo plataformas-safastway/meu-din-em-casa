@@ -38,6 +38,8 @@ export interface ImportItem {
   original_date: string | null;
   amount: number;
   type: 'income' | 'expense';
+  direction: 'credit' | 'debit' | null;
+  classification: 'income' | 'expense' | 'transfer' | 'reimbursement' | 'adjustment' | null;
   description: string | null;
   category_id: string;
   subcategory_id: string | null;
@@ -403,11 +405,15 @@ export function useConfirmImportBatch() {
     mutationFn: async ({ 
       importId, 
       selectedIds,
-      categoryUpdates 
+      categoryUpdates,
+      classificationUpdates,
+      descriptionUpdates,
     }: { 
       importId: string; 
       selectedIds: string[];
       categoryUpdates?: Record<string, { categoryId: string; subcategoryId: string | null }>;
+      classificationUpdates?: Record<string, 'income' | 'expense' | 'transfer' | 'reimbursement' | 'adjustment'>;
+      descriptionUpdates?: Record<string, string>;
     }) => {
       console.log(`[OIK Import] Confirming import: ${importId} with ${selectedIds.length} items`);
       
@@ -435,13 +441,21 @@ export function useConfirmImportBatch() {
       // Insert confirmed transactions
       const transactionsToInsert = pendingTx.map(pt => {
         const categoryUpdate = categoryUpdates?.[pt.id];
+        const classification = classificationUpdates?.[pt.id] || pt.classification || (pt.type === 'income' ? 'income' : 'expense');
+        const description = descriptionUpdates?.[pt.id] ?? pt.description;
+        
+        // Map classification to type for legacy compatibility
+        const effectiveType = (classification === 'income' ? 'income' : 'expense') as 'income' | 'expense';
+        
         return {
           family_id: pt.family_id,
           date: pt.date,
           original_date: pt.original_date,
           amount: pt.amount,
-          type: pt.type as 'income' | 'expense',
-          description: pt.description,
+          type: effectiveType,
+          direction: pt.direction,
+          classification: classification,
+          description: description,
           category_id: categoryUpdate?.categoryId || pt.category_id,
           subcategory_id: categoryUpdate?.subcategoryId || pt.subcategory_id,
           payment_method: (importData.import_type === 'credit_card' ? 'credit' : 'debit') as 'credit' | 'debit',
@@ -592,11 +606,13 @@ export function useUpdateImportItem() {
       categoryId, 
       subcategoryId,
       description,
+      classification,
     }: { 
       id: string; 
       categoryId?: string; 
       subcategoryId?: string | null;
       description?: string;
+      classification?: 'income' | 'expense' | 'transfer' | 'reimbursement' | 'adjustment';
     }) => {
       const updateData: Record<string, unknown> = {};
       
@@ -608,6 +624,9 @@ export function useUpdateImportItem() {
       }
       if (description !== undefined) {
         updateData.description = description;
+      }
+      if (classification !== undefined) {
+        updateData.classification = classification;
       }
       
       if (Object.keys(updateData).length === 0) return;

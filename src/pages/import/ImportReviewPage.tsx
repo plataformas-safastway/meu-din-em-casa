@@ -499,6 +499,7 @@ export function ImportReviewPage() {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [categoryUpdates, setCategoryUpdates] = useState<Record<string, { categoryId: string; subcategoryId: string | null }>>({});
+  const [classificationUpdates, setClassificationUpdates] = useState<Record<string, 'income' | 'expense' | 'transfer' | 'reimbursement' | 'adjustment'>>({});
   const [descriptionUpdates, setDescriptionUpdates] = useState<Record<string, string>>({});
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -704,6 +705,14 @@ export function ImportReviewPage() {
     updateTransaction.mutate({ id: transactionId, categoryId, subcategoryId });
   };
 
+  const handleClassificationChange = (transactionId: string, classification: 'income' | 'expense' | 'transfer' | 'reimbursement' | 'adjustment') => {
+    setClassificationUpdates(prev => ({
+      ...prev,
+      [transactionId]: classification
+    }));
+    updateTransaction.mutate({ id: transactionId, classification });
+  };
+
   const handleDescriptionChange = (transactionId: string, description: string) => {
     setDescriptionUpdates(prev => ({
       ...prev,
@@ -738,7 +747,9 @@ export function ImportReviewPage() {
       { 
         importId, 
         selectedIds: Array.from(selectedIds),
-        categoryUpdates 
+        categoryUpdates,
+        classificationUpdates,
+        descriptionUpdates,
       },
       {
         onSuccess: (data) => {
@@ -874,9 +885,11 @@ export function ImportReviewPage() {
                 transaction={transaction}
                 isSelected={selectedIds.has(transaction.id)}
                 categoryOverride={categoryUpdates[transaction.id]}
+                classificationOverride={classificationUpdates[transaction.id]}
                 descriptionOverride={descriptionUpdates[transaction.id]}
                 onToggleSelect={() => toggleSelect(transaction.id)}
                 onCategoryChange={(catId, subId) => handleCategoryChange(transaction.id, catId, subId)}
+                onClassificationChange={(classification) => handleClassificationChange(transaction.id, classification)}
                 onDescriptionChange={(desc) => handleDescriptionChange(transaction.id, desc)}
                 onDelete={() => handleDeleteClick([transaction.id])}
               />
