@@ -107,13 +107,15 @@ serve(async (req) => {
     }
 
     // Items (no filters by status; no pagination surprises)
+    // CRITICAL: Order by DATE ASC (chronological: oldest first), then by created_at ASC (source line order)
+    // NO LIMIT - return ALL items for the batch
     const { data: items, error: itemsErr } = await admin
       .from("import_pending_transactions")
       .select("*")
       .eq("import_id", importId)
       .eq("family_id", familyId)
-      .order("date", { ascending: false })
-      .order("created_at", { ascending: false });
+      .order("date", { ascending: true })
+      .order("created_at", { ascending: true });
 
     if (itemsErr) {
       console.error("[OIK Import][Review] items query error", { importId, message: itemsErr.message });

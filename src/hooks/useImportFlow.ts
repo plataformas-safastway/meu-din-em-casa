@@ -581,7 +581,7 @@ export function useCancelImportBatch() {
 }
 
 /**
- * Hook to update a pending transaction's category
+ * Hook to update a pending transaction's category and/or description
  */
 export function useUpdateImportItem() {
   const queryClient = useQueryClient();
@@ -590,18 +590,31 @@ export function useUpdateImportItem() {
     mutationFn: async ({ 
       id, 
       categoryId, 
-      subcategoryId 
+      subcategoryId,
+      description,
     }: { 
       id: string; 
-      categoryId: string; 
-      subcategoryId: string | null;
+      categoryId?: string; 
+      subcategoryId?: string | null;
+      description?: string;
     }) => {
+      const updateData: Record<string, unknown> = {};
+      
+      if (categoryId !== undefined) {
+        updateData.category_id = categoryId;
+      }
+      if (subcategoryId !== undefined) {
+        updateData.subcategory_id = subcategoryId;
+      }
+      if (description !== undefined) {
+        updateData.description = description;
+      }
+      
+      if (Object.keys(updateData).length === 0) return;
+      
       const { error } = await supabase
         .from('import_pending_transactions')
-        .update({ 
-          category_id: categoryId,
-          subcategory_id: subcategoryId,
-        })
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;
@@ -609,6 +622,7 @@ export function useUpdateImportItem() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['import-items'] });
       queryClient.invalidateQueries({ queryKey: ['pending-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['import-review'] });
     },
   });
 }
