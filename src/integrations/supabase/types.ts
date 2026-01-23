@@ -836,10 +836,14 @@ export type Database = {
         Row: {
           amount: number
           category_id: string
+          classification:
+            | Database["public"]["Enums"]["transaction_classification"]
+            | null
           confidence_score: number | null
           created_at: string
           date: string
           description: string | null
+          direction: Database["public"]["Enums"]["transaction_direction"] | null
           duplicate_transaction_id: string | null
           family_id: string
           id: string
@@ -855,10 +859,16 @@ export type Database = {
         Insert: {
           amount: number
           category_id?: string
+          classification?:
+            | Database["public"]["Enums"]["transaction_classification"]
+            | null
           confidence_score?: number | null
           created_at?: string
           date: string
           description?: string | null
+          direction?:
+            | Database["public"]["Enums"]["transaction_direction"]
+            | null
           duplicate_transaction_id?: string | null
           family_id: string
           id?: string
@@ -874,10 +884,16 @@ export type Database = {
         Update: {
           amount?: number
           category_id?: string
+          classification?:
+            | Database["public"]["Enums"]["transaction_classification"]
+            | null
           confidence_score?: number | null
           created_at?: string
           date?: string
           description?: string | null
+          direction?:
+            | Database["public"]["Enums"]["transaction_direction"]
+            | null
           duplicate_transaction_id?: string | null
           family_id?: string
           id?: string
@@ -1572,10 +1588,14 @@ export type Database = {
           bank_account_id: string | null
           category_id: string
           check_number: string | null
+          classification:
+            | Database["public"]["Enums"]["transaction_classification"]
+            | null
           created_at: string
           credit_card_id: string | null
           date: string
           description: string | null
+          direction: Database["public"]["Enums"]["transaction_direction"] | null
           family_id: string
           goal_id: string | null
           id: string
@@ -1598,10 +1618,16 @@ export type Database = {
           bank_account_id?: string | null
           category_id: string
           check_number?: string | null
+          classification?:
+            | Database["public"]["Enums"]["transaction_classification"]
+            | null
           created_at?: string
           credit_card_id?: string | null
           date: string
           description?: string | null
+          direction?:
+            | Database["public"]["Enums"]["transaction_direction"]
+            | null
           family_id: string
           goal_id?: string | null
           id?: string
@@ -1624,10 +1650,16 @@ export type Database = {
           bank_account_id?: string | null
           category_id?: string
           check_number?: string | null
+          classification?:
+            | Database["public"]["Enums"]["transaction_classification"]
+            | null
           created_at?: string
           credit_card_id?: string | null
           date?: string
           description?: string | null
+          direction?:
+            | Database["public"]["Enums"]["transaction_direction"]
+            | null
           family_id?: string
           goal_id?: string | null
           id?: string
@@ -1741,6 +1773,13 @@ export type Database = {
         | "pix"
         | "transfer"
         | "cheque"
+      transaction_classification:
+        | "income"
+        | "expense"
+        | "transfer"
+        | "reimbursement"
+        | "adjustment"
+      transaction_direction: "credit" | "debit"
       transaction_type: "income" | "expense"
     }
     CompositeTypes: {
@@ -1877,6 +1916,14 @@ export const Constants = {
       import_file_type: ["ofx", "xls", "xlsx", "pdf"],
       import_status: ["pending", "processing", "completed", "failed"],
       payment_method: ["cash", "debit", "credit", "pix", "transfer", "cheque"],
+      transaction_classification: [
+        "income",
+        "expense",
+        "transfer",
+        "reimbursement",
+        "adjustment",
+      ],
+      transaction_direction: ["credit", "debit"],
       transaction_type: ["income", "expense"],
     },
   },

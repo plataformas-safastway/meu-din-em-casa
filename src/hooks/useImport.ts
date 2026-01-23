@@ -20,6 +20,9 @@ export interface Import {
   created_by: string | null;
 }
 
+export type TransactionDirection = 'credit' | 'debit';
+export type TransactionClassification = 'income' | 'expense' | 'transfer' | 'reimbursement' | 'adjustment';
+
 export interface PendingTransaction {
   id: string;
   import_id: string;
@@ -28,6 +31,8 @@ export interface PendingTransaction {
   original_date: string | null;
   amount: number;
   type: 'income' | 'expense';
+  direction: TransactionDirection | null;
+  classification: TransactionClassification | null;
   description: string | null;
   category_id: string;
   subcategory_id: string | null;
@@ -131,11 +136,15 @@ export function useConfirmImport() {
     mutationFn: async ({ 
       importId, 
       selectedIds,
-      categoryUpdates 
+      categoryUpdates,
+      classificationUpdates,
+      descriptionUpdates,
     }: { 
       importId: string; 
       selectedIds: string[];
       categoryUpdates?: Record<string, { categoryId: string; subcategoryId: string | null }>;
+      classificationUpdates?: Record<string, TransactionClassification>;
+      descriptionUpdates?: Record<string, string>;
     }) => {
       // Get pending transactions to confirm
       const { data: pendingTx, error: fetchError } = await supabase
@@ -161,13 +170,21 @@ export function useConfirmImport() {
       // Insert confirmed transactions
       const transactionsToInsert = pendingTx.map(pt => {
         const categoryUpdate = categoryUpdates?.[pt.id];
+        const classification = classificationUpdates?.[pt.id] || pt.classification || (pt.type === 'income' ? 'income' : 'expense');
+        const description = descriptionUpdates?.[pt.id] ?? pt.description;
+        
+        // Map classification to type for legacy compatibility
+        const effectiveType = (classification === 'income' ? 'income' : 'expense') as 'income' | 'expense';
+        
         return {
           family_id: pt.family_id,
           date: pt.date,
           original_date: pt.original_date,
           amount: pt.amount,
-          type: pt.type as 'income' | 'expense',
-          description: pt.description,
+          type: effectiveType,
+          direction: pt.direction,
+          classification: classification,
+          description: description,
           category_id: categoryUpdate?.categoryId || pt.category_id,
           subcategory_id: categoryUpdate?.subcategoryId || pt.subcategory_id,
           payment_method: (importData.import_type === 'credit_card' ? 'credit' : 'debit') as 'credit' | 'debit',
@@ -312,18 +329,36 @@ export function useUpdatePendingTransaction() {
     mutationFn: async ({ 
       id, 
       categoryId, 
-      subcategoryId 
+      subcategoryId,
+      classification,
+      description,
     }: { 
       id: string; 
-      categoryId: string; 
-      subcategoryId: string | null;
+      categoryId?: string; 
+      subcategoryId?: string | null;
+      classification?: TransactionClassification;
+      description?: string;
     }) => {
+      const updateData: Record<string, unknown> = {};
+      
+      if (categoryId !== undefined) {
+        updateData.category_id = categoryId;
+      }
+      if (subcategoryId !== undefined) {
+        updateData.subcategory_id = subcategoryId;
+      }
+      if (classification !== undefined) {
+        updateData.classification = classification;
+      }
+      if (description !== undefined) {
+        updateData.description = description;
+      }
+      
+      if (Object.keys(updateData).length === 0) return;
+      
       const { error } = await supabase
         .from('import_pending_transactions')
-        .update({ 
-          category_id: categoryId,
-          subcategory_id: subcategoryId,
-        })
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;

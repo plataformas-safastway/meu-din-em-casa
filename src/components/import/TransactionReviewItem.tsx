@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Edit2, Trash2, AlertTriangle, Check, X } from "lucide-react";
+import { Edit2, Trash2, AlertTriangle, Check, X, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { defaultCategories, getCategoryById, getSubcategoryById } from "@/data/categories";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { ClassificationSelector, TransactionClassification } from "./ClassificationSelector";
 
 export interface TransactionReviewItemProps {
   transaction: {
@@ -15,6 +16,8 @@ export interface TransactionReviewItemProps {
     original_date?: string | null;
     amount: number;
     type: 'income' | 'expense';
+    direction?: 'credit' | 'debit' | null;
+    classification?: TransactionClassification | null;
     description: string | null;
     category_id: string;
     subcategory_id: string | null;
@@ -23,9 +26,11 @@ export interface TransactionReviewItemProps {
   };
   isSelected: boolean;
   categoryOverride?: { categoryId: string; subcategoryId: string | null };
+  classificationOverride?: TransactionClassification;
   descriptionOverride?: string;
   onToggleSelect: () => void;
   onCategoryChange: (categoryId: string, subcategoryId: string | null) => void;
+  onClassificationChange: (classification: TransactionClassification) => void;
   onDescriptionChange: (description: string) => void;
   onDelete: () => void;
 }
@@ -34,9 +39,11 @@ export function TransactionReviewItem({
   transaction,
   isSelected,
   categoryOverride,
+  classificationOverride,
   descriptionOverride,
   onToggleSelect,
   onCategoryChange,
+  onClassificationChange,
   onDescriptionChange,
   onDelete,
 }: TransactionReviewItemProps) {
@@ -50,13 +57,19 @@ export function TransactionReviewItem({
   const effectiveCategoryId = categoryOverride?.categoryId ?? transaction.category_id;
   const effectiveSubcategoryId = categoryOverride?.subcategoryId ?? transaction.subcategory_id;
   const effectiveDescription = descriptionOverride ?? transaction.description ?? "";
+  const effectiveClassification: TransactionClassification = 
+    classificationOverride ?? 
+    transaction.classification ?? 
+    (transaction.type === 'income' ? 'income' : 'expense');
   
   const category = getCategoryById(effectiveCategoryId);
   const subcategory = effectiveSubcategoryId 
     ? getSubcategoryById(effectiveCategoryId, effectiveSubcategoryId) 
     : null;
   
-  const isExpense = transaction.type === 'expense';
+  // For display purposes, use classification to determine color
+  const isCredit = transaction.direction === 'credit' || transaction.amount >= 0;
+  const displayAsExpense = effectiveClassification === 'expense' || effectiveClassification === 'reimbursement';
   
   // Get subcategories for the selected category
   const subcategories = category?.subcategories ?? [];
@@ -80,6 +93,9 @@ export function TransactionReviewItem({
     setTempDescription(effectiveDescription);
     setIsEditingDescription(false);
   };
+
+  const showReimbursementHint = effectiveClassification === 'reimbursement';
+  const showTransferHint = effectiveClassification === 'transfer';
 
   return (
     <div
@@ -164,9 +180,9 @@ export function TransactionReviewItem({
         <div className="flex items-center gap-2 shrink-0">
           <span className={cn(
             "font-semibold text-sm whitespace-nowrap",
-            isExpense ? "text-destructive" : "text-success"
+            isCredit ? "text-success" : "text-destructive"
           )}>
-            {isExpense ? "-" : "+"}{formatCurrency(transaction.amount)}
+            {isCredit ? "+" : "-"}{formatCurrency(transaction.amount)}
           </span>
           
           <Button
@@ -180,11 +196,20 @@ export function TransactionReviewItem({
         </div>
       </div>
       
-      {/* Row 2: Category + Subcategory Selection */}
+      {/* Row 2: Classification Selector */}
+      <div className="ml-[44px]">
+        <ClassificationSelector
+          value={effectiveClassification}
+          onChange={onClassificationChange}
+          direction={transaction.direction ?? undefined}
+        />
+      </div>
+      
+      {/* Row 3: Category + Subcategory Selection - NO TYPE FILTER */}
       <div className="flex items-center gap-2 ml-[44px]">
         {isEditingCategory ? (
           <>
-            {/* Category Dropdown */}
+            {/* Category Dropdown - ALL categories available */}
             <Select
               value={effectiveCategoryId}
               onValueChange={handleCategorySelect}
@@ -192,14 +217,13 @@ export function TransactionReviewItem({
               <SelectTrigger className="h-8 text-xs flex-1">
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
-              <SelectContent className="bg-background border shadow-lg z-50">
-                {defaultCategories
-                  .filter(c => c.type === transaction.type)
-                  .map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.icon} {cat.name}
-                    </SelectItem>
-                  ))}
+              <SelectContent className="bg-background border shadow-lg z-50 max-h-[300px]">
+                {/* Show ALL categories, not filtered by type */}
+                {defaultCategories.map(cat => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.icon} {cat.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             
@@ -212,7 +236,7 @@ export function TransactionReviewItem({
               <SelectTrigger className="h-8 text-xs flex-1">
                 <SelectValue placeholder="Subcategoria" />
               </SelectTrigger>
-              <SelectContent className="bg-background border shadow-lg z-50">
+              <SelectContent className="bg-background border shadow-lg z-50 max-h-[300px]">
                 <SelectItem value="__none__">
                   (Sem subcategoria)
                 </SelectItem>
@@ -250,7 +274,26 @@ export function TransactionReviewItem({
         )}
       </div>
       
-      {/* Row 3: Status badges */}
+      {/* Row 4: Hints for special classifications */}
+      {showReimbursementHint && (
+        <div className="flex items-center gap-2 ml-[44px] p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+          <Info className="w-4 h-4 text-blue-500 shrink-0" />
+          <p className="text-xs text-blue-600">
+            Reembolso entra na categoria para ajustar o realizado.
+          </p>
+        </div>
+      )}
+      
+      {showTransferHint && (
+        <div className="flex items-center gap-2 ml-[44px] p-2 rounded-lg bg-muted/50 border border-border">
+          <Info className="w-4 h-4 text-muted-foreground shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            Transferências não afetam receitas/despesas no orçamento.
+          </p>
+        </div>
+      )}
+      
+      {/* Row 5: Status badges */}
       {(transaction.is_duplicate || (transaction.needs_review && !transaction.is_duplicate)) && (
         <div className="flex gap-1 ml-[44px]">
           {transaction.is_duplicate && (
