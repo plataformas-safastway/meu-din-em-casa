@@ -376,26 +376,31 @@ function parseBradescoText(text: string): ParsedTransaction[] {
   
   console.log("[parseBradescoText] Starting, text length:", text.length);
   
-  // STEP 0: Clean text - remove non-printable characters and normalize
+  // STEP 0: Aggressive text cleaning - remove ALL encoding artifacts
   let cleanedText = text
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
-    .replace(/ï/g, '')
-    .replace(/[^\x20-\x7E\u00A0-\u00FF\u0100-\u017F\u0180-\u024F]/g, ' ')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '') // Control chars
+    .replace(/ï+/g, '')  // Common PDF encoding garbage
+    .replace(/[^\x20-\x7E\u00A0-\u00FF\u0100-\u017F\u0180-\u024F\u0250-\u02AF]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   
   console.log("[parseBradescoText] Cleaned text length:", cleanedText.length);
-  console.log("[parseBradescoText] Cleaned text preview:", cleanedText.substring(0, 500));
+  console.log("[parseBradescoText] Cleaned text preview (500):", cleanedText.substring(0, 500));
   
-  // STRATEGY 1: Parse format "AMOUNT DATE DESCRIPTION"
-  // Pattern seen in user's data: "150,00 01/12/2025 Rem: Thiago Paulo Silva de 01/12"
-  // Also handles negative: "-1.416,18 01/12/2025 Contr 535338085 Parc 005/024"
+  // === STRATEGY 1: Primary format "AMOUNT DATE DESCRIPTION" ===
+  // Examples from real Bradesco PDF:
+  // "150,00 01/12/2025 Rem: Thiago Paulo Silva de 01/12"
+  // "-1.416,18 01/12/2025 Contr 535338085 Parc 005/024"
+  // "50.000,00 11/12/2025 Rem: Thiago Paulo Silva de 11/12"
   
-  // Match: optional minus, amount (with dots and comma), date DD/MM/YYYY, then description until next amount or end
-  const amountDateDescPattern = /(-?\d{1,3}(?:\.\d{3})*,\d{2})\s+(\d{2}\/\d{2}\/\d{4})\s+([A-Za-zÀ-ÿ][\s\S]*?)(?=(?:-?\d{1,3}(?:\.\d{3})*,\d{2}\s+\d{2}\/\d{2}\/\d{4})|$)/g;
+  // This regex captures: optional minus, amount with dots/commas, date DD/MM/YYYY, then description
+  // Description ends at next amount-date pair or at end of string
+  const amtDateDescRegex = /(-?\d{1,3}(?:\.\d{3})*,\d{2})\s+(\d{2}\/\d{2}\/\d{4})\s+([A-Za-zÀ-ÿ][^\-]*?)(?=\s+-?\d{1,3}(?:\.\d{3})*,\d{2}\s+\d{2}\/\d{2}\/\d{4}|$)/g;
   
   let match;
-  while ((match = amountDateDescPattern.exec(cleanedText)) !== null) {
+  let strategy1Count = 0;
+  
+  while ((match = amtDateDescRegex.exec(cleanedText)) !== null) {
     const [, amtStr, dateStr, rawDesc] = match;
     
     const date = parseFlexibleDate(dateStr);
@@ -404,13 +409,13 @@ function parseBradescoText(text: string): ParsedTransaction[] {
     const amount = parseBrazilianAmount(amtStr);
     if (amount === null || Math.abs(amount) < 0.01) continue;
     
-    // Skip very large amounts that are likely balances (> 500k)
+    // Skip likely balance values (> 500k)
     if (Math.abs(amount) > 500000) continue;
     
-    // Clean description: remove trailing date fragments like "01/12" and extra whitespace
+    // Clean description: remove trailing "DD/MM" fragments, doc numbers, extra spaces
     let description = rawDesc
-      .replace(/\s+\d{2}\/\d{2}\s*$/, '')  // Remove trailing date fragment
-      .replace(/\d{9,}/g, '')               // Remove long doc numbers
+      .replace(/\s+\d{2}\/\d{2}\s*$/g, '')      // Remove trailing date "01/12"
+      .replace(/\d{9,}/g, '')                   // Remove long doc numbers
       .replace(/\s+/g, ' ')
       .trim();
     
@@ -419,37 +424,35 @@ function parseBradescoText(text: string): ParsedTransaction[] {
     // Skip noise lines
     if (/saldo\s*(anterior|total|final|di[aá]rio)|^total\s/i.test(description)) continue;
     
-    // Determine type: negative = expense, positive = income
     const isNegative = amtStr.trim().startsWith('-');
-    const type: "income" | "expense" = isNegative ? "expense" : "income";
     
     transactions.push({
       date,
       description: description.substring(0, 500),
       amount: Math.abs(amount),
-      type,
+      type: isNegative ? "expense" : "income",
       raw_data: { source: "bradesco-s1-amtDateDesc" },
     });
+    strategy1Count++;
   }
   
-  console.log("[parseBradescoText] Strategy 1 (Amount Date Desc) found:", transactions.length);
+  console.log("[parseBradescoText] Strategy 1 (Amount Date Desc) found:", strategy1Count);
   
-  // STRATEGY 2: Parse format "DATE DESCRIPTION AMOUNT"
-  // Traditional format: "01/12/25 Rem: Thiago Paulo 150,00"
+  // === STRATEGY 2: Alternative format "DATE DESCRIPTION AMOUNT" ===
+  // For older Bradesco statements
   if (transactions.length < 5) {
     console.log("[parseBradescoText] Trying Strategy 2 (Date Desc Amount)");
     
-    const dateDescAmtPattern = /(\d{2}\/\d{2}\/\d{2,4})\s+([A-Za-zÀ-ÿ][^0-9]*?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/g;
+    const dateDescAmtRegex = /(\d{2}\/\d{2}\/\d{2,4})\s+([A-Za-zÀ-ÿ][^\d]*?)\s+(-?\d{1,3}(?:\.\d{3})*,\d{2})/g;
     
-    while ((match = dateDescAmtPattern.exec(cleanedText)) !== null) {
+    while ((match = dateDescAmtRegex.exec(cleanedText)) !== null) {
       const [, dateStr, rawDesc, amtStr] = match;
       
       const date = parseFlexibleDate(dateStr);
       if (!date) continue;
       
       const amount = parseBrazilianAmount(amtStr);
-      if (amount === null || Math.abs(amount) < 0.01) continue;
-      if (Math.abs(amount) > 500000) continue;
+      if (amount === null || Math.abs(amount) < 0.01 || Math.abs(amount) > 500000) continue;
       
       let description = rawDesc.replace(/\s+/g, ' ').trim();
       if (description.length < 2) description = "(Transação Bradesco)";
@@ -469,46 +472,89 @@ function parseBradescoText(text: string): ParsedTransaction[] {
     console.log("[parseBradescoText] Strategy 2 found:", transactions.length);
   }
   
-  // STRATEGY 3: Scan for specific Bradesco keywords with amounts
+  // === STRATEGY 3: Keyword-based scan ===
+  // Scan for known Bradesco keywords and associate with nearest date/amount
   if (transactions.length < 5) {
     console.log("[parseBradescoText] Trying Strategy 3 (Keyword scan)");
     
-    // Keywords: Rem:, Des:, Transfe Pix, Gasto c Credito, Prest Fin Imob, etc.
-    const keywordPattern = /(Rem:|Des:|Transfe\s+Pix|Gasto\s+c\s+Credito|Prest\s+Fin\s+Imob|Resgate\s+Inv|Rent\.?inv|Apl\.?invest|Amortiz|Encargo|Iof\s+Util|Parc\s+Cred|Contr\s+\d+)\s*([A-Za-zÀ-ÿ\s\.\-\/]*?)(?:\s+\d{2}\/\d{2})?\s*(\d{6,9})?\s*(-?\d{1,3}(?:\.\d{3})*,\d{2})/gi;
-    
-    // Build date index for lookups
+    // Build indexes of all dates and amounts in text
     const datePattern = /(\d{2}\/\d{2}\/\d{4})/g;
-    const dates: { date: string; index: number }[] = [];
+    const allDates: { date: string; index: number }[] = [];
     let dm;
     while ((dm = datePattern.exec(cleanedText)) !== null) {
       const parsed = parseFlexibleDate(dm[1]);
-      if (parsed) dates.push({ date: parsed, index: dm.index });
+      if (parsed) allDates.push({ date: parsed, index: dm.index });
     }
     
-    while ((match = keywordPattern.exec(cleanedText)) !== null) {
-      const [fullMatch, keyword, name, , amtStr] = match;
-      const matchIdx = match.index;
-      
-      // Find nearest date before this match
-      let date: string | null = null;
-      for (const d of dates) {
-        if (d.index < matchIdx) date = d.date;
-        else break;
+    const amtPattern = /(-?\d{1,3}(?:\.\d{3})*,\d{2})/g;
+    const allAmounts: { amount: number; index: number; raw: string }[] = [];
+    let am;
+    while ((am = amtPattern.exec(cleanedText)) !== null) {
+      const parsed = parseBrazilianAmount(am[0]);
+      if (parsed !== null && Math.abs(parsed) >= 0.01 && Math.abs(parsed) < 500000) {
+        allAmounts.push({ amount: parsed, index: am.index, raw: am[0] });
       }
-      if (!date) continue;
+    }
+    
+    // Known Bradesco transaction keywords
+    const keywordPattern = /(Rem:|Des:|Transfe\s+Pix|Gasto\s+c\s+Credito|Prest\s+Fin\s+Imob|Resgate\s+Inv|Rent\.?inv|Apl\.?invest|Amortiz|Encargo|Iof\s+Util|Parc\s+Cred|Contr\s+\d+|Bradesco\s+Vida)/gi;
+    
+    const usedAmounts = new Set<number>();
+    let kwMatch;
+    
+    while ((kwMatch = keywordPattern.exec(cleanedText)) !== null) {
+      const kwStart = kwMatch.index;
       
-      const amount = parseBrazilianAmount(amtStr);
-      if (amount === null || Math.abs(amount) < 0.01) continue;
+      // Find the closest date BEFORE this keyword
+      let closestDate: string | null = null;
+      for (const d of allDates) {
+        if (d.index < kwStart && kwStart - d.index < 100) {
+          closestDate = d.date;
+        }
+      }
+      if (!closestDate) continue;
       
-      const description = `${keyword} ${(name || '').trim()}`.trim();
-      const isExpense = keyword.toLowerCase().startsWith('des') || 
-                        /gasto|prest|amortiz|encargo|iof|parc/i.test(keyword) ||
-                        amtStr.trim().startsWith('-');
+      // Find the closest amount NEAR this keyword (before or after, within 200 chars)
+      let closestAmt: { amount: number; raw: string; index: number } | null = null;
+      let minDist = 200;
+      
+      for (const a of allAmounts) {
+        if (usedAmounts.has(a.index)) continue;
+        const dist = Math.abs(a.index - kwStart);
+        if (dist < minDist) {
+          minDist = dist;
+          closestAmt = a;
+        }
+      }
+      
+      if (!closestAmt) continue;
+      usedAmounts.add(closestAmt.index);
+      
+      // Extract description: keyword + some following text
+      let descEnd = kwStart + 80;
+      for (const d of allDates) {
+        if (d.index > kwStart && d.index < descEnd) descEnd = d.index;
+      }
+      for (const a of allAmounts) {
+        if (a.index > kwStart && a.index < descEnd) descEnd = a.index;
+      }
+      
+      let description = cleanedText.substring(kwStart, descEnd)
+        .replace(/\s+\d{2}\/\d{2}\s*$/g, '')
+        .replace(/\d{9,}/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      if (description.length < 2) description = kwMatch[0];
+      if (/saldo/i.test(description)) continue;
+      
+      const isExpense = /des:|gasto|prest|amortiz|encargo|iof|parc/i.test(kwMatch[0]) ||
+                        closestAmt.raw.startsWith('-');
       
       transactions.push({
-        date,
-        description: description.substring(0, 500) || "(Transação Bradesco)",
-        amount: Math.abs(amount),
+        date: closestDate,
+        description: description.substring(0, 500),
+        amount: Math.abs(closestAmt.amount),
         type: isExpense ? "expense" : "income",
         raw_data: { source: "bradesco-s3-keyword" },
       });
@@ -517,39 +563,42 @@ function parseBradescoText(text: string): ParsedTransaction[] {
     console.log("[parseBradescoText] Strategy 3 found:", transactions.length);
   }
   
-  // STRATEGY 4: Lenient date+amount pairing
+  // === STRATEGY 4: Lenient date + amount pairing ===
+  // Last resort: pair each date with nearest amount
   if (transactions.length < 5) {
     console.log("[parseBradescoText] Trying Strategy 4 (lenient pairing)");
     
+    const datePattern2 = /(\d{2}\/\d{2}\/\d{2,4})/g;
     const dateMatches: { date: string; index: number; raw: string }[] = [];
-    const dateRx = /\d{2}\/\d{2}\/\d{2,4}/g;
-    let dm;
-    while ((dm = dateRx.exec(cleanedText)) !== null) {
-      const parsed = parseFlexibleDate(dm[0]);
-      if (parsed) dateMatches.push({ date: parsed, index: dm.index, raw: dm[0] });
+    let dm2;
+    while ((dm2 = datePattern2.exec(cleanedText)) !== null) {
+      const parsed = parseFlexibleDate(dm2[0]);
+      if (parsed) dateMatches.push({ date: parsed, index: dm2.index, raw: dm2[0] });
     }
     
+    const amtPattern2 = /-?\d{1,3}(?:\.\d{3})*,\d{2}/g;
     const amountMatches: { amount: number; index: number; raw: string }[] = [];
-    const amtRx = /-?\d{1,3}(?:\.\d{3})*,\d{2}/g;
-    let am;
-    while ((am = amtRx.exec(cleanedText)) !== null) {
-      const parsed = parseBrazilianAmount(am[0]);
+    let am2;
+    while ((am2 = amtPattern2.exec(cleanedText)) !== null) {
+      const parsed = parseBrazilianAmount(am2[0]);
       if (parsed !== null && Math.abs(parsed) >= 0.01 && Math.abs(parsed) < 500000) {
-        amountMatches.push({ amount: parsed, index: am.index, raw: am[0] });
+        amountMatches.push({ amount: parsed, index: am2.index, raw: am2[0] });
       }
     }
     
     console.log(`[parseBradescoText] S4: ${dateMatches.length} dates, ${amountMatches.length} amounts`);
     
-    const usedAmounts = new Set<number>();
+    const usedAmounts2 = new Set<number>();
     
     for (const d of dateMatches) {
       for (const a of amountMatches) {
-        if (usedAmounts.has(a.index)) continue;
+        if (usedAmounts2.has(a.index)) continue;
         const dist = a.index - d.index;
+        // Amount should be close to date (within 150 chars after)
         if (dist > 0 && dist < 150) {
-          usedAmounts.add(a.index);
+          usedAmounts2.add(a.index);
           
+          // Description between date and amount
           let desc = cleanedText.substring(d.index + d.raw.length, a.index).trim();
           desc = desc.replace(/\d{7,}/g, '').replace(/\s+/g, ' ').trim();
           
@@ -565,7 +614,7 @@ function parseBradescoText(text: string): ParsedTransaction[] {
             type: isNegative ? "expense" : "income",
             raw_data: { source: "bradesco-s4-lenient" },
           });
-          break;
+          break; // One amount per date
         }
       }
     }
@@ -573,10 +622,10 @@ function parseBradescoText(text: string): ParsedTransaction[] {
     console.log("[parseBradescoText] Strategy 4 found:", transactions.length);
   }
   
-  // Deduplicate by date+amount+normalized description
+  // Deduplicate by date + amount + normalized description prefix
   const unique = new Map<string, ParsedTransaction>();
   for (const tx of transactions) {
-    const key = `${tx.date}-${tx.amount.toFixed(2)}-${normalizeDescription(tx.description).substring(0, 20)}`;
+    const key = `${tx.date}-${tx.amount.toFixed(2)}-${normalizeDescription(tx.description).substring(0, 15)}`;
     if (!unique.has(key)) {
       unique.set(key, tx);
     }
@@ -584,7 +633,10 @@ function parseBradescoText(text: string): ParsedTransaction[] {
   
   console.log("[parseBradescoText] Final unique transactions:", unique.size);
   
-  return Array.from(unique.values());
+  // Sort by date ascending before returning
+  const sorted = Array.from(unique.values()).sort((a, b) => a.date.localeCompare(b.date));
+  
+  return sorted;
 }
 
 function parseBtgText(text: string): ParsedTransaction[] {
