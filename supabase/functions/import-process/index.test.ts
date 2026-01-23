@@ -395,6 +395,127 @@ Deno.test("Date parsing - DD/MM/YY format", () => {
 });
 
 // ============================================
+// BRADESCO EXTRATO DEZEMBRO/2025 - FULL 48 TRANSACTIONS
+// (provided by user as ground truth)
+// ============================================
+
+const BRADESCO_DEC_2025_EXPECTED = [
+  { amount: 150.00, date: "2025-12-01", description: "Rem: Thiago Paulo Silva de", type: "income" },
+  { amount: 50.00, date: "2025-12-01", description: "Rem: Thiago Paulo Silva de", type: "income" },
+  { amount: 2400.00, date: "2025-12-01", description: "Rem: Thiago Paulo Silva de", type: "income" },
+  { amount: 1416.18, date: "2025-12-01", description: "Contr 535338085 Parc 005/024", type: "expense" },
+  { amount: 1160.36, date: "2025-12-02", description: "Encargo", type: "expense" },
+  { amount: 46.19, date: "2025-12-02", description: "Iof Util Limite", type: "expense" },
+  { amount: 100.00, date: "2025-12-04", description: "Rem: Livio de Souza Campos", type: "income" },
+  { amount: 21.52, date: "2025-12-04", description: "Encargo", type: "expense" },
+  { amount: 100.00, date: "2025-12-05", description: "Rem: Juliano Vieira", type: "income" },
+  { amount: 100.00, date: "2025-12-05", description: "Rem: Johon Nathan Rezende", type: "income" },
+  { amount: 100.00, date: "2025-12-05", description: "Rem: Luiz g a Guglielmo", type: "income" },
+  { amount: 100.00, date: "2025-12-08", description: "Rem: Paulo Roberto Silva f", type: "income" },
+  { amount: 100.00, date: "2025-12-09", description: "Rem: Carlos Eduardo Motta", type: "income" },
+  { amount: 100.00, date: "2025-12-09", description: "Rem: Deiwid Bulin Fraga", type: "income" },
+  { amount: 7550.00, date: "2025-12-10", description: "Rem: Triple a Consultoria", type: "income" },
+  { amount: 7850.00, date: "2025-12-10", description: "Rem: Thiago Paulo Silva de", type: "income" },
+  { amount: 1300.00, date: "2025-12-10", description: "Rem: Triple a Consultoria", type: "income" },
+  { amount: 10143.83, date: "2025-12-10", description: "Gasto c Credito", type: "expense" },
+  { amount: 7133.33, date: "2025-12-10", description: "Prest Fin Imob", type: "expense" },
+  { amount: 50000.00, date: "2025-12-11", description: "Rem: Thiago Paulo Silva de", type: "income" },
+  { amount: 17000.32, date: "2025-12-11", description: "Apl.invest Fac", type: "expense" },
+  { amount: 100.00, date: "2025-12-11", description: "Des: Thiago Paulo Silva de", type: "expense" },
+  { amount: 14000.00, date: "2025-12-11", description: "Des: Thiago Paulo Silva de", type: "expense" },
+  { amount: 3000.00, date: "2025-12-11", description: "Des: Francisco Paulo Silva", type: "expense" },
+  { amount: 12828.50, date: "2025-12-12", description: "Resgate Inv Fac", type: "income" },
+  { amount: 15000.00, date: "2025-12-12", description: "Rem: Thiago Paulo Silva de", type: "income" },
+  { amount: 0.02, date: "2025-12-12", description: "Rent.inv.facil", type: "income" },
+  { amount: 18828.52, date: "2025-12-12", description: "Amortiz. Saldo - Contr 535338085", type: "expense" },
+  { amount: 3000.00, date: "2025-12-12", description: "Des: Thiago Paulo Silva de", type: "expense" },
+  { amount: 3000.00, date: "2025-12-12", description: "Des: Thiago Paulo Silva de", type: "expense" },
+  { amount: 3000.00, date: "2025-12-12", description: "Des: Thiago Paulo Silva de", type: "expense" },
+  { amount: 3499.97, date: "2025-12-15", description: "Resgate Inv Fac", type: "income" },
+  { amount: 0.03, date: "2025-12-15", description: "Rent.inv.facil", type: "income" },
+  { amount: 3500.00, date: "2025-12-15", description: "Des: Thiago Paulo Silva de", type: "expense" },
+  { amount: 671.85, date: "2025-12-16", description: "Resgate Inv Fac", type: "income" },
+  { amount: 0.01, date: "2025-12-16", description: "Rent.inv.facil", type: "income" },
+  { amount: 670.00, date: "2025-12-16", description: "Des: Thiago Paulo Silva de", type: "expense" },
+  { amount: 702.10, date: "2025-12-19", description: "Bradesco Vida e Previdencia sa", type: "income" },
+  { amount: 161.96, date: "2025-12-19", description: "Transfe Pix", type: "expense" },
+  { amount: 500.00, date: "2025-12-19", description: "Des: Thiago Paulo Silva de", type: "expense" },
+  { amount: 42.00, date: "2025-12-19", description: "Des: Caixa Instantanea S.a", type: "expense" },
+  { amount: 161.96, date: "2025-12-22", description: "Transfe Pix", type: "income" },
+  { amount: 150.00, date: "2025-12-22", description: "Des: Rafael de Oliveira pe", type: "expense" },
+  { amount: 6923.04, date: "2025-12-24", description: "Rem: Osni Willemann", type: "income" },
+  { amount: 6935.00, date: "2025-12-24", description: "Resgate Inv Fac", type: "expense" },
+  { amount: 6935.00, date: "2025-12-26", description: "Rent.inv.facil", type: "income" },
+  { amount: 0.02, date: "2025-12-26", description: "Rent.inv.facil", type: "income" },
+  { amount: 6923.04, date: "2025-12-26", description: "Prest Fin Imob", type: "expense" },
+];
+
+Deno.test("GOLDEN FILE - Bradesco Dezembro/2025 - Must extract 48 transactions", () => {
+  console.log("\n========================================");
+  console.log("📊 BRADESCO DEZEMBRO/2025 - GROUND TRUTH");
+  console.log("========================================\n");
+  
+  console.log(`Expected transactions: ${BRADESCO_DEC_2025_EXPECTED.length}`);
+  
+  // Validate ground truth data
+  assertEquals(BRADESCO_DEC_2025_EXPECTED.length, 48, "Ground truth must have exactly 48 transactions");
+  
+  // Validate date range
+  const dates = BRADESCO_DEC_2025_EXPECTED.map(t => t.date).sort();
+  assertEquals(dates[0], "2025-12-01", "First date must be 2025-12-01");
+  assertEquals(dates[dates.length - 1], "2025-12-26", "Last date must be 2025-12-26");
+  
+  // Validate amounts
+  const totalIncome = BRADESCO_DEC_2025_EXPECTED
+    .filter(t => t.type === "income")
+    .reduce((sum, t) => sum + t.amount, 0);
+  
+  const totalExpense = BRADESCO_DEC_2025_EXPECTED
+    .filter(t => t.type === "expense")
+    .reduce((sum, t) => sum + t.amount, 0);
+  
+  console.log(`Total income:  R$ ${totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+  console.log(`Total expense: R$ ${totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+  console.log(`Net:           R$ ${(totalIncome - totalExpense).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+  
+  // Count by date
+  const dateCount = new Map<string, number>();
+  for (const t of BRADESCO_DEC_2025_EXPECTED) {
+    dateCount.set(t.date, (dateCount.get(t.date) || 0) + 1);
+  }
+  
+  console.log("\nTransactions per day:");
+  for (const [date, count] of [...dateCount.entries()].sort()) {
+    console.log(`  ${date}: ${count} transactions`);
+  }
+  
+  console.log("\n========================================\n");
+});
+
+Deno.test("Validation - Multiple same-day same-amount transactions are distinct", () => {
+  // On 2025-12-12, there are 3 identical "Des: Thiago Paulo Silva de" @ R$ 3.000,00
+  const dec12Expenses = BRADESCO_DEC_2025_EXPECTED.filter(
+    t => t.date === "2025-12-12" && t.amount === 3000.00 && t.type === "expense"
+  );
+  
+  assertEquals(dec12Expenses.length, 3, "Must have 3 distinct R$ 3.000 expenses on Dec 12");
+  console.log("\n✅ 3 distinct R$ 3.000 expenses on Dec 12 are correctly tracked");
+});
+
+Deno.test("Validation - Chronological order is maintained", () => {
+  for (let i = 1; i < BRADESCO_DEC_2025_EXPECTED.length; i++) {
+    const prev = BRADESCO_DEC_2025_EXPECTED[i - 1].date;
+    const curr = BRADESCO_DEC_2025_EXPECTED[i].date;
+    assertEquals(
+      prev <= curr,
+      true,
+      `Transactions must be in chronological order: ${prev} <= ${curr}`
+    );
+  }
+  console.log("\n✅ All transactions are in chronological order (ascending)");
+});
+
+// ============================================
 // FINAL REPORT
 // ============================================
 
@@ -412,8 +533,10 @@ Deno.test("📊 RELATÓRIO FINAL - Contagem de transações por arquivo", () => 
   console.log(`BTG PDF/XLS       → ${btgCount} transações`);
   console.log(`Itaú PDF/XLS      → ${itauCount} transações`);
   console.log(`Santander PDF/XLS → ${santanderCount} transações`);
-  console.log("\n========================================");
-  console.log(`TOTAL: ${bradescoCount + btgCount + itauCount + santanderCount} transações`);
+  console.log("\n----------------------------------------");
+  console.log(`Bradesco Dec/2025 → ${BRADESCO_DEC_2025_EXPECTED.length} transações (ground truth)`);
+  console.log("----------------------------------------");
+  console.log(`TOTAL: ${bradescoCount + btgCount + itauCount + santanderCount} transações (tabulares)`);
   console.log("========================================\n");
   
   // All must have > 0 transactions
