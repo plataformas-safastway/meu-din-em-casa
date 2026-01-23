@@ -54,6 +54,16 @@ const MONTH_MAP: Record<string, string> = {
 
 type DetectedBank = "bradesco" | "btg" | "itau" | "santander" | "nubank" | "inter" | "c6" | "bb" | "caixa" | "unknown";
 
+// Detected source info (agency, account, etc.)
+interface DetectedSourceInfo {
+  sourceType: "bank_account" | "credit_card";
+  bankName: string;
+  bankDisplayName: string;
+  agency?: string;
+  accountNumber?: string;
+  last4?: string;
+}
+
 interface BankFingerprint {
   name: DetectedBank;
   displayName: string;
@@ -193,6 +203,92 @@ function detectBank(content: string): { bank: DetectedBank; displayName: string 
   }
   
   return { bank: detected, displayName };
+}
+
+// ============================================
+// EXTRACT ACCOUNT INFO (Agency, Account Number)
+// ============================================
+
+function extractAccountInfo(content: string, bank: DetectedBank): Omit<DetectedSourceInfo, "bankName" | "bankDisplayName"> {
+  const result: Omit<DetectedSourceInfo, "bankName" | "bankDisplayName"> = {
+    sourceType: "bank_account",
+  };
+  
+  const first5000 = content.substring(0, 5000);
+  
+  // Bradesco: "Ag: 1472 | Conta: 134020-4"
+  if (bank === "bradesco") {
+    const bradescoMatch = first5000.match(/ag[:\s]+(\d{4})\s*\|\s*conta[:\s]*([\d\-]+)/i);
+    if (bradescoMatch) {
+      result.agency = bradescoMatch[1];
+      result.accountNumber = bradescoMatch[2].replace(/-/g, "");
+      console.log(`[extractAccountInfo] Bradesco: Ag ${result.agency}, Conta ${result.accountNumber}`);
+    }
+  }
+  
+  // Itaú: "agência 1234 / conta 12345-6" or "AG 1234 C/C 12345-6"
+  if (bank === "itau") {
+    const itauMatch = first5000.match(/ag[êe]?ncia[:\s]+(\d{4})\s*[\/\|]\s*conta[:\s]*([\d\-]+)/i) ||
+                      first5000.match(/ag[:\s]+(\d{4})\s+c\/c[:\s]*([\d\-]+)/i);
+    if (itauMatch) {
+      result.agency = itauMatch[1];
+      result.accountNumber = itauMatch[2].replace(/-/g, "");
+      console.log(`[extractAccountInfo] Itaú: Ag ${result.agency}, Conta ${result.accountNumber}`);
+    }
+  }
+  
+  // Santander: "Agência e Conta: 1234 / 12345678-9"
+  if (bank === "santander") {
+    const santanderMatch = first5000.match(/ag[êe]?ncia\s+e\s+conta[:\s]+([\d]+)\s*[\/\|]\s*([\d\-]+)/i) ||
+                           first5000.match(/ag[:\s]+(\d{4})\s*conta[:\s]*([\d\-]+)/i);
+    if (santanderMatch) {
+      result.agency = santanderMatch[1];
+      result.accountNumber = santanderMatch[2].replace(/-/g, "");
+      console.log(`[extractAccountInfo] Santander: Ag ${result.agency}, Conta ${result.accountNumber}`);
+    }
+  }
+  
+  // BTG: Usually in client info block
+  if (bank === "btg") {
+    const btgMatch = first5000.match(/conta[:\s]*([\d\-]+)/i);
+    if (btgMatch) {
+      result.accountNumber = btgMatch[1].replace(/-/g, "");
+      console.log(`[extractAccountInfo] BTG: Conta ${result.accountNumber}`);
+    }
+  }
+  
+  // Generic fallback for any bank
+  if (!result.agency && !result.accountNumber) {
+    // Try generic patterns
+    const genericAgency = first5000.match(/ag[êe]?ncia[:\s]+(\d{3,5})/i);
+    const genericAccount = first5000.match(/conta[:\s]*([\d\-]{5,15})/i);
+    
+    if (genericAgency) {
+      result.agency = genericAgency[1];
+    }
+    if (genericAccount) {
+      result.accountNumber = genericAccount[1].replace(/-/g, "");
+    }
+    
+    if (result.agency || result.accountNumber) {
+      console.log(`[extractAccountInfo] Generic: Ag ${result.agency}, Conta ${result.accountNumber}`);
+    }
+  }
+  
+  // Check if this is a credit card statement
+  const isCreditCard = /fatura|invoice|cart[ãa]o\s+de\s+cr[ée]dito|credit\s+card/i.test(first5000);
+  if (isCreditCard) {
+    result.sourceType = "credit_card";
+    // Try to extract last 4 digits
+    const last4Match = first5000.match(/final[:\s]+(\d{4})/i) ||
+                       first5000.match(/\*{4}(\d{4})/);
+    if (last4Match) {
+      result.last4 = last4Match[1];
+      console.log(`[extractAccountInfo] Credit card last4: ${result.last4}`);
+    }
+  }
+  
+  return result;
 }
 
 // ============================================
@@ -1806,46 +1902,7 @@ function parseTextContent(text: string, bank: DetectedBank): ParsedTransaction[]
   return unique;
 }
 
-// ============================================
-// ACCOUNT INFO EXTRACTION
-// ============================================
-
-function extractAccountInfo(content: string): { agency?: string; accountNumber?: string } {
-  const result: { agency?: string; accountNumber?: string } = {};
-  
-  // Bradesco: "Ag: 1472 | Conta: 134020-4"
-  const bradescoMatch = content.match(/ag[:\s]*(\d{4,5})\s*\|\s*conta[:\s]*([\d\-]+)/i);
-  if (bradescoMatch) {
-    result.agency = bradescoMatch[1];
-    result.accountNumber = bradescoMatch[2];
-    return result;
-  }
-  
-  // Santander: "Agência e Conta: 1772 / 01003626-3"
-  const santanderMatch = content.match(/ag[eê]ncia\s+e\s+conta[:\s]*(\d{4,5})\s*\/\s*([\d\-\.]+)/i);
-  if (santanderMatch) {
-    result.agency = santanderMatch[1];
-    result.accountNumber = santanderMatch[2];
-    return result;
-  }
-  
-  // Itaú: "agência: 0414 conta: 02939-7"
-  const itauMatch = content.match(/ag[eê]ncia[:\s]*(\d{4,5})[\s\S]{0,20}conta[:\s]*([\d\-]+)/i);
-  if (itauMatch) {
-    result.agency = itauMatch[1];
-    result.accountNumber = itauMatch[2];
-    return result;
-  }
-  
-  // Generic
-  const agencyMatch = content.match(/ag[eê]ncia[:\s]*(\d{4,5})/i);
-  if (agencyMatch) result.agency = agencyMatch[1];
-  
-  const accountMatch = content.match(/conta[:\s]*([\d\-]{5,15})/i);
-  if (accountMatch) result.accountNumber = accountMatch[1];
-  
-  return result;
-}
+// (extractAccountInfo moved to top of file with bank parameter)
 
 // ============================================
 // CATEGORY SUGGESTION
@@ -2046,12 +2103,13 @@ serve(async (req) => {
 
     // Parse request
     let file_type: "ofx" | "xlsx" | "pdf";
-    let import_type: string;
-    let source_id: string;
+    let import_type: string = "";
+    let source_id: string = "";
     let invoice_month: string | undefined;
     let file_name = `import_${Date.now()}`;
     let fileBytes: Uint8Array | null = null;
     let fileContent = "";
+    let autoDetect = false;
 
     const contentType = req.headers.get("content-type") || "";
 
@@ -2062,6 +2120,7 @@ serve(async (req) => {
         import_type = formData.get("importType") as string || "";
         source_id = formData.get("sourceId") as string || "";
         invoice_month = formData.get("invoiceMonth") as string || undefined;
+        autoDetect = formData.get("autoDetect") === "true";
 
         if (!file) {
           return new Response(JSON.stringify({ error: "No file provided" }), {
@@ -2107,23 +2166,33 @@ serve(async (req) => {
       });
     }
 
-    if (!file_type || !import_type || !source_id) {
+    // For smart import (autoDetect), we don't require import_type and source_id upfront
+    if (!autoDetect && (!file_type || !import_type || !source_id)) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    console.log(`Processing ${file_type} file for ${import_type}, source: ${source_id}`);
+    console.log(`Processing ${file_type} file, autoDetect: ${autoDetect}, source: ${source_id || "(auto)"}`);
 
     let transactions: ParsedTransaction[] = [];
     let detectedBankName: string | null = null;
     let detectedBank: DetectedBank = "unknown";
+    let detectedSourceInfo: DetectedSourceInfo | null = null;
+    let rawTextContent = ""; // For account info extraction
 
     // Parse based on file type
     if (file_type === "ofx") {
       transactions = parseOFX(fileContent);
-      detectedBankName = "OFX Import";
+      rawTextContent = fileContent;
+      
+      // For OFX, detect bank from content
+      const detection = detectBank(fileContent);
+      detectedBank = detection.bank;
+      detectedBankName = detection.displayName !== "Banco não identificado" 
+        ? detection.displayName 
+        : "OFX Import";
     } else if (file_type === "xlsx" && fileBytes) {
       // Parse XLS/XLSX with SheetJS
       const rows = parseXLSWithSheetJS(fileBytes);
@@ -2141,8 +2210,8 @@ serve(async (req) => {
       }
       
       // Detect bank from row content
-      const rawText = rows.map(r => r.join(" ")).join("\n");
-      const detection = detectBank(rawText);
+      rawTextContent = rows.map(r => r.join(" ")).join("\n");
+      const detection = detectBank(rawTextContent);
       detectedBank = detection.bank;
       detectedBankName = detection.displayName;
       
@@ -2157,15 +2226,15 @@ serve(async (req) => {
         binaryString += String.fromCharCode(fileBytes[i]);
       }
       
-      const text = extractPDFTextRobust(binaryString);
-      console.log(`[PDF] Extracted text length: ${text.length} chars`);
+      rawTextContent = extractPDFTextRobust(binaryString);
+      console.log(`[PDF] Extracted text length: ${rawTextContent.length} chars`);
       
       // Log first 500 chars for debugging (no sensitive data)
-      if (text.length > 0) {
-        console.log(`[PDF] Text preview (first 500): ${text.substring(0, 500).replace(/\s+/g, ' ')}`);
+      if (rawTextContent.length > 0) {
+        console.log(`[PDF] Text preview (first 500): ${rawTextContent.substring(0, 500).replace(/\s+/g, ' ')}`);
       }
       
-      if (text.length < 50) {
+      if (rawTextContent.length < 50) {
         console.log("[PDF] Text too short, possibly scanned or encrypted");
         return new Response(JSON.stringify({ 
           success: false, 
@@ -2178,14 +2247,189 @@ serve(async (req) => {
       }
       
       // Detect bank
-      const detection = detectBank(text);
+      const detection = detectBank(rawTextContent);
       detectedBank = detection.bank;
       detectedBankName = detection.displayName;
       
       console.log(`[PDF] Detected bank: ${detectedBankName}`);
       
-      transactions = parseTextContent(text, detectedBank);
+      transactions = parseTextContent(rawTextContent, detectedBank);
       console.log(`[PDF] Final transaction count: ${transactions.length}`);
+    }
+
+    // ============================================
+    // AUTO-DETECT: Extract account info and resolve source
+    // ============================================
+    if (autoDetect && rawTextContent) {
+      const accountInfo = extractAccountInfo(rawTextContent, detectedBank);
+      
+      detectedSourceInfo = {
+        bankName: detectedBank,
+        bankDisplayName: detectedBankName || "Banco detectado",
+        sourceType: accountInfo.sourceType,
+        agency: accountInfo.agency,
+        accountNumber: accountInfo.accountNumber,
+        last4: accountInfo.last4,
+      };
+      
+      // Determine import_type based on detected source type
+      import_type = accountInfo.sourceType === "credit_card" ? "credit_card" : "bank_statement";
+      
+      console.log(`[AutoDetect] Source type: ${import_type}, Agency: ${accountInfo.agency || "(none)"}, Account: ${accountInfo.accountNumber ? "****" + accountInfo.accountNumber.slice(-4) : "(none)"}`);
+      
+      // Try to find matching existing source
+      if (accountInfo.sourceType === "bank_account") {
+        // Look for matching bank account
+        const { data: existingAccounts } = await adminClient
+          .from("bank_accounts")
+          .select("id, nickname, bank_id, custom_bank_name")
+          .eq("family_id", familyId)
+          .eq("is_active", true);
+        
+        // Score matches
+        let bestMatch: { id: string; score: number } | null = null;
+        
+        for (const acc of existingAccounts || []) {
+          let score = 0;
+          const nickname = (acc.nickname || "").toLowerCase();
+          
+          // Check if nickname contains the account number
+          if (accountInfo.accountNumber) {
+            const normalizedAccNum = accountInfo.accountNumber.replace(/-/g, "");
+            if (nickname.includes(normalizedAccNum) || nickname.includes(accountInfo.accountNumber)) {
+              score += 80;
+            }
+          }
+          
+          // Check bank name match
+          if (detectedBankName && nickname.includes(detectedBankName.toLowerCase())) {
+            score += 30;
+          }
+          
+          if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+            bestMatch = { id: acc.id, score };
+          }
+        }
+        
+        if (bestMatch && bestMatch.score >= 50) {
+          source_id = bestMatch.id;
+          console.log(`[AutoDetect] Matched existing bank account: ${source_id} (score: ${bestMatch.score})`);
+        } else if (accountInfo.accountNumber || detectedBankName) {
+          // Create new bank account automatically
+          const accountLast4 = accountInfo.accountNumber?.slice(-4) || "";
+          const nickname = accountInfo.accountNumber
+            ? `${detectedBankName || "Banco"} • ****${accountLast4}`
+            : detectedBankName || "Conta Importada";
+          
+          // Try to find bank_id
+          let bankId: string | null = null;
+          if (detectedBankName) {
+            const { data: banks } = await adminClient
+              .from("banks")
+              .select("id, name")
+              .ilike("name", `%${detectedBankName}%`)
+              .limit(1);
+            bankId = banks?.[0]?.id || null;
+          }
+          
+          const { data: newAccount, error: createError } = await adminClient
+            .from("bank_accounts")
+            .insert({
+              family_id: familyId,
+              bank_id: bankId,
+              custom_bank_name: bankId ? null : (detectedBankName || "Banco Importado"),
+              account_type: "checking",
+              nickname,
+              initial_balance: 0,
+            })
+            .select("id")
+            .single();
+          
+          if (createError) {
+            console.error("[AutoDetect] Failed to create bank account:", createError);
+            // Fallback: use first existing account or create a generic one
+          } else {
+            source_id = newAccount.id;
+            console.log(`[AutoDetect] Created new bank account: ${source_id} - ${nickname}`);
+          }
+        }
+        
+        // Final fallback: use first existing bank account
+        if (!source_id && existingAccounts && existingAccounts.length > 0) {
+          source_id = existingAccounts[0].id;
+          console.log(`[AutoDetect] Fallback to first bank account: ${source_id}`);
+        }
+      } else {
+        // Credit card - similar logic
+        const { data: existingCards } = await adminClient
+          .from("credit_cards")
+          .select("id, card_name")
+          .eq("family_id", familyId)
+          .eq("is_active", true);
+        
+        let bestMatch: { id: string; score: number } | null = null;
+        
+        for (const card of existingCards || []) {
+          let score = 0;
+          const cardName = (card.card_name || "").toLowerCase();
+          
+          if (accountInfo.last4 && cardName.includes(accountInfo.last4)) {
+            score += 80;
+          }
+          if (detectedBankName && cardName.includes(detectedBankName.toLowerCase())) {
+            score += 30;
+          }
+          
+          if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+            bestMatch = { id: card.id, score };
+          }
+        }
+        
+        if (bestMatch && bestMatch.score >= 50) {
+          source_id = bestMatch.id;
+          console.log(`[AutoDetect] Matched existing credit card: ${source_id}`);
+        } else if (accountInfo.last4 || detectedBankName) {
+          const cardName = accountInfo.last4
+            ? `${detectedBankName || "Cartão"} ****${accountInfo.last4}`
+            : detectedBankName || "Cartão Importado";
+          
+          const { data: newCard, error: createError } = await adminClient
+            .from("credit_cards")
+            .insert({
+              family_id: familyId,
+              card_name: cardName,
+              brand: "visa",
+              closing_day: 25,
+              due_day: 5,
+            })
+            .select("id")
+            .single();
+          
+          if (!createError) {
+            source_id = newCard.id;
+            console.log(`[AutoDetect] Created new credit card: ${source_id} - ${cardName}`);
+          }
+        }
+        
+        // Final fallback
+        if (!source_id && existingCards && existingCards.length > 0) {
+          source_id = existingCards[0].id;
+          console.log(`[AutoDetect] Fallback to first credit card: ${source_id}`);
+        }
+      }
+      
+      // If still no source_id after all attempts, fail gracefully
+      if (!source_id) {
+        console.error("[AutoDetect] Could not resolve source_id");
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: "Não foi possível identificar ou criar uma conta/cartão. Cadastre uma conta primeiro.",
+          error_code: "IMPORT_NO_SOURCE_RESOLVED"
+        } as ProcessResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
     }
 
     if (transactions.length === 0) {
@@ -2322,11 +2566,18 @@ serve(async (req) => {
       statusFinal: "reviewing",
     });
 
-    return new Response(JSON.stringify({
+    // Include detected info in response for UI display
+    const responseData: ProcessResponse & { detected?: DetectedSourceInfo } = {
       success: true,
       import_id: importId,
       transactions_count: itemsPersistedCount,
-    } as ProcessResponse), {
+    };
+    
+    if (detectedSourceInfo) {
+      responseData.detected = detectedSourceInfo;
+    }
+
+    return new Response(JSON.stringify(responseData), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
