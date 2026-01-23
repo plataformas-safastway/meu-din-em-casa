@@ -1381,7 +1381,9 @@ function parseBradescoXLSRows(rows: string[][]): ParsedTransaction[] {
   
   console.log(`[parseBradescoXLSRows] Processing ${rows.length} rows`);
   
-  // Extract statement period from header
+  // ============================================
+  // STEP 1: Extract statement period from header
+  // ============================================
   let periodStart: string | null = null;
   let periodEnd: string | null = null;
   
@@ -1396,44 +1398,43 @@ function parseBradescoXLSRows(rows: string[][]): ParsedTransaction[] {
     }
   }
   
-  // State for parsing
-  let currentDate: string | null = null;
-  let pendingDescription: string[] = []; // Buffer for multi-line descriptions
-  let lastAmount: { value: number; type: "income" | "expense" } | null = null;
-  let lastDocto: string = "";
-  let pastUltimosLancamentos = false;
-  
-  // Find header row index
+  // ============================================
+  // STEP 2: Find header row (Data | Histórico | Docto | Crédito | Débito | Saldo)
+  // ============================================
   let headerIdx = -1;
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const rowText = row.join(' ').toLowerCase();
-    if (rowText.includes('data') && rowText.includes('histórico') && rowText.includes('crédito')) {
+    if ((rowText.includes('data') && rowText.includes('histórico')) ||
+        (rowText.includes('data') && rowText.includes('crédito'))) {
       headerIdx = i;
       break;
     }
   }
   
-  console.log(`[parseBradescoXLSRows] Header found at row ${headerIdx}`);
+  if (headerIdx === -1) {
+    console.log(`[parseBradescoXLSRows] Header not found, trying from row 0`);
+    headerIdx = 0;
+  } else {
+    console.log(`[parseBradescoXLSRows] Header found at row ${headerIdx}`);
+  }
   
-  // Function to flush a transaction
-  const flushTransaction = () => {
-    if (currentDate && lastAmount && pendingDescription.length > 0) {
-      const desc = pendingDescription.join(' ').replace(/\s+/g, ' ').trim();
-      if (desc.length > 0 && !/^saldo\s*anterior$/i.test(desc)) {
-        transactions.push({
-          date: currentDate,
-          description: desc.substring(0, 500),
-          amount: lastAmount.value,
-          type: lastAmount.type,
-          raw_data: { source: "bradesco_xls", docto: lastDocto },
-        });
-      }
-    }
-    pendingDescription = [];
-    lastAmount = null;
-    lastDocto = "";
-  };
+  // ============================================
+  // STEP 3: Parse rows - create transactions
+  // Structure: Each transaction row has a date and amounts
+  // Continuation rows (Rem:, Des:, etc.) have NO date and NO amounts
+  // ============================================
+  
+  interface PendingTx {
+    date: string;
+    historico: string;
+    docto: string;
+    amount: number;
+    type: "income" | "expense";
+  }
+  
+  let lastTransaction: PendingTx | null = null;
+  let currentDate: string | null = null; // For carry-forward
   
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const row = rows[i];
@@ -1446,99 +1447,145 @@ function parseBradescoXLSRows(rows: string[][]): ParsedTransaction[] {
     const creditCell = (row[3] || "").toString().trim();
     const debitCell = (row[4] || "").toString().trim();
     
-    const rowText = row.join(' ').toLowerCase();
-    
-    // Stop at "Últimos Lançamentos" section
-    if (/últimos\s*lançamentos/i.test(historico) || /últimos\s*lançamentos/i.test(rowText)) {
+    // ============================================
+    // STOP CONDITIONS: Stop at "Últimos Lançamentos" or "Total"
+    // ============================================
+    if (/últimos\s*lançamentos/i.test(historico)) {
       console.log(`[parseBradescoXLSRows] Found 'Últimos Lançamentos' at row ${i}, stopping`);
-      pastUltimosLancamentos = true;
+      break;
+    }
+    if (/^total$/i.test(historico.trim())) {
+      console.log(`[parseBradescoXLSRows] Found 'Total' at row ${i}, stopping`);
       break;
     }
     
-    // Skip noise
-    if (/saldos?\s*invest\s*f[aá]cil/i.test(historico)) continue;
-    if (/telefones?\s*úteis/i.test(historico)) continue;
+    // Skip noise rows
     if (/dados\s*acima\s*têm/i.test(historico)) continue;
-    if (/^total$/i.test(historico.trim())) continue;
+    if (/saldos?\s*invest/i.test(historico)) continue;
+    if (/telefones?/i.test(historico)) continue;
+    if (!historico && !dateCell) continue;
     
-    // Check for date in first column
+    // ============================================
+    // Parse date
+    // ============================================
     const parsedDate = parseFlexibleDate(dateCell);
     
+    // ============================================
     // Parse amounts
+    // ============================================
     let credit: number | null = null;
     let debit: number | null = null;
     
     if (creditCell) {
-      const val = parseBrazilianAmount(creditCell);
+      const val = parseBrazilianAmount(creditCell.replace(/^-/, ""));
       if (val !== null && val > 0) credit = val;
     }
     if (debitCell) {
-      const val = parseBrazilianAmount(debitCell.replace(/^-/, ""));
+      // Remove leading minus if present (Bradesco sometimes uses "-1.416,18")
+      const val = parseBrazilianAmount(debitCell.replace(/^-\s*/, ""));
       if (val !== null && val > 0) debit = val;
     }
     
     const hasAmount = credit !== null || debit !== null;
-    const hasNewDate = parsedDate !== null;
     
-    if (hasNewDate) {
+    // ============================================
+    // CASE 1: Row with DATE and AMOUNT → New transaction
+    // ============================================
+    if (parsedDate && hasAmount) {
       // Validate date is within period
       if (periodStart && periodEnd) {
         if (parsedDate < periodStart || parsedDate > periodEnd) {
-          // Skip rows outside period (like SALDO ANTERIOR)
+          console.log(`[parseBradescoXLSRows] Skipping row ${i} - date ${parsedDate} outside period`);
           continue;
         }
       }
       
-      // If we have a new date and an amount, this is a new transaction
-      if (hasAmount) {
-        // Flush any pending transaction first
-        flushTransaction();
-        
-        currentDate = parsedDate;
-        pendingDescription = [historico];
-        lastAmount = credit !== null 
-          ? { value: credit, type: "income" }
-          : { value: debit!, type: "expense" };
-        lastDocto = doctoCell;
-      } else {
-        // Date but no amount - might be a date row followed by continuation
-        // Flush previous and start new pending
-        flushTransaction();
-        currentDate = parsedDate;
-        pendingDescription = historico ? [historico] : [];
+      // Skip SALDO ANTERIOR
+      if (/saldo\s*anterior/i.test(historico)) {
+        console.log(`[parseBradescoXLSRows] Skipping SALDO ANTERIOR at row ${i}`);
+        continue;
       }
-    } else if (!hasNewDate && hasAmount && currentDate) {
-      // No date but has amount - new transaction on same date
-      // First flush any pending transaction
-      flushTransaction();
       
-      pendingDescription = [historico];
-      lastAmount = credit !== null 
-        ? { value: credit, type: "income" }
-        : { value: debit!, type: "expense" };
-      lastDocto = doctoCell;
-    } else if (!hasNewDate && !hasAmount && historico && currentDate) {
-      // Continuation row (Rem:, Des:, Encargo, etc.)
-      // This adds context to the pending transaction
-      if (pendingDescription.length > 0 && lastAmount) {
-        // This is a continuation of the PREVIOUS transaction
-        pendingDescription.push(historico);
-      } else if (pendingDescription.length === 0) {
-        // No pending transaction - might be orphan description, skip
-        pendingDescription = [historico];
-      } else {
-        // pendingDescription exists but no amount yet - add to buffer
-        pendingDescription.push(historico);
+      // Flush previous transaction
+      if (lastTransaction) {
+        transactions.push({
+          date: lastTransaction.date,
+          description: lastTransaction.historico.substring(0, 500),
+          amount: lastTransaction.amount,
+          type: lastTransaction.type,
+          raw_data: { source: "bradesco_xls", docto: lastTransaction.docto },
+        });
+      }
+      
+      // Create new pending transaction
+      currentDate = parsedDate;
+      lastTransaction = {
+        date: parsedDate,
+        historico: historico,
+        docto: doctoCell,
+        amount: credit !== null ? credit : debit!,
+        type: credit !== null ? "income" : "expense",
+      };
+    }
+    // ============================================
+    // CASE 2: Row with NO date but HAS amount → New transaction on same date
+    // ============================================
+    else if (!parsedDate && hasAmount && currentDate) {
+      // Flush previous transaction
+      if (lastTransaction) {
+        transactions.push({
+          date: lastTransaction.date,
+          description: lastTransaction.historico.substring(0, 500),
+          amount: lastTransaction.amount,
+          type: lastTransaction.type,
+          raw_data: { source: "bradesco_xls", docto: lastTransaction.docto },
+        });
+      }
+      
+      // Create new pending transaction with carry-forward date
+      lastTransaction = {
+        date: currentDate,
+        historico: historico,
+        docto: doctoCell,
+        amount: credit !== null ? credit : debit!,
+        type: credit !== null ? "income" : "expense",
+      };
+    }
+    // ============================================
+    // CASE 3: Row with NO date and NO amount → Continuation (Rem:, Des:, etc.)
+    // ============================================
+    else if (!parsedDate && !hasAmount && historico && lastTransaction) {
+      // Append to the PREVIOUS transaction's description
+      // This handles lines like "Rem: Thiago Paulo Silva de 01/12"
+      lastTransaction.historico = lastTransaction.historico + " " + historico;
+    }
+    // ============================================
+    // CASE 4: Row with DATE but NO amount → Could be a header row or empty
+    // ============================================
+    else if (parsedDate && !hasAmount) {
+      // This might be "SALDO ANTERIOR" or similar - just update currentDate
+      if (periodStart && periodEnd && parsedDate >= periodStart && parsedDate <= periodEnd) {
+        currentDate = parsedDate;
       }
     }
   }
   
-  // Don't forget the last transaction
-  flushTransaction();
+  // Flush the last pending transaction
+  if (lastTransaction) {
+    transactions.push({
+      date: lastTransaction.date,
+      description: lastTransaction.historico.substring(0, 500),
+      amount: lastTransaction.amount,
+      type: lastTransaction.type,
+      raw_data: { source: "bradesco_xls", docto: lastTransaction.docto },
+    });
+  }
   
-  console.log(`[parseBradescoXLSRows] Found ${transactions.length} transactions (pastUltimosLancamentos: ${pastUltimosLancamentos})`);
+  console.log(`[parseBradescoXLSRows] Extracted ${transactions.length} transactions`);
   
-  // Sort by date
+  // ============================================
+  // STEP 4: Sort by date ascending
+  // ============================================
   transactions.sort((a, b) => a.date.localeCompare(b.date));
   
   return transactions;
