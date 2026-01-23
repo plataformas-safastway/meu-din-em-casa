@@ -377,106 +377,62 @@ function parseBradescoText(text: string): ParsedTransaction[] {
   console.log("[parseBradescoText] Starting, text length:", text.length);
   
   // ============================================
-  // STEP 1: Detect statement period
+  // STEP 1: Clean text and detect statement period
   // ============================================
-  const periodMatch = text.match(/entre\s+(\d{2}\/\d{2}\/\d{4})\s+e\s+(\d{2}\/\d{2}\/\d{4})/i);
+  
+  // Remove ï artifacts (common in Bradesco PDFs)
+  let cleanedText = text.replace(/ï+/g, ' ').replace(/\s+/g, ' ');
+  
+  // Extract statement period
+  const periodMatch = cleanedText.match(/entre\s+(\d{2})\/(\d{2})\/(\d{4})\s+e\s+(\d{2})\/(\d{2})\/(\d{4})/i);
   let periodStart: string | null = null;
   let periodEnd: string | null = null;
   
   if (periodMatch) {
-    periodStart = parseFlexibleDate(periodMatch[1]);
-    periodEnd = parseFlexibleDate(periodMatch[2]);
+    const [, d1, m1, y1, d2, m2, y2] = periodMatch;
+    periodStart = `${y1}-${m1}-${d1}`;
+    periodEnd = `${y2}-${m2}-${d2}`;
     console.log(`[parseBradescoText] Statement period: ${periodStart} to ${periodEnd}`);
   }
   
   // ============================================
   // STEP 2: Remove noise sections BEFORE parsing
   // ============================================
-  let cleanedText = text;
   
   // Find and remove "Últimos Lançamentos" section (Jan/26 data)
-  const ultimosMatches = [
-    cleanedText.toLowerCase().indexOf('últimos lançamentos'),
-    cleanedText.toLowerCase().indexOf('ultimos lancamentos'),
-    cleanedText.toLowerCase().indexOf('últimos lançam'),
+  const noiseMarkers = [
+    'últimos lançamentos', 'ultimos lancamentos',
+    'saldos invest', 'telefones úteis', 'ouvidoria',
+    'dados acima têm'
   ];
-  for (const idx of ultimosMatches) {
-    if (idx !== -1 && idx < cleanedText.length) {
+  
+  for (const marker of noiseMarkers) {
+    const idx = cleanedText.toLowerCase().indexOf(marker);
+    if (idx !== -1 && idx < cleanedText.length * 0.9) {
+      // Only truncate if marker is before 90% of text
       cleanedText = cleanedText.substring(0, idx);
+      console.log(`[parseBradescoText] Truncated at '${marker}' (index ${idx})`);
       break;
     }
   }
   
-  // Find and remove "Saldos Invest Fácil" section
-  const saldosInvestIdx = cleanedText.toLowerCase().indexOf('saldos invest');
-  if (saldosInvestIdx !== -1) {
-    cleanedText = cleanedText.substring(0, saldosInvestIdx);
-  }
-  
-  // Find and remove telephone section
-  const telefonesIdx = cleanedText.toLowerCase().indexOf('telefones úteis');
-  if (telefonesIdx !== -1) {
-    cleanedText = cleanedText.substring(0, telefonesIdx);
-  }
-  
-  console.log(`[parseBradescoText] After noise section removal, length: ${cleanedText.length}`);
+  console.log(`[parseBradescoText] After noise removal, length: ${cleanedText.length}`);
   
   // ============================================
-  // STEP 3: Split into lines and identify date-anchored groups
+  // STEP 3: Strategy A - Find structured date+description+amount patterns
+  // Using regex to find all occurrences of date patterns (DD/MM/YY or DD/MM/YYYY)
   // ============================================
-  const lines = cleanedText.split(/\n/);
   
-  // Date pattern: DD/MM/YY or DD/MM/YYYY at start of line
-  const dateStartPattern = /^\s*(\d{2})\/(\d{2})\/(\d{2,4})\b/;
+  // Pattern: Date followed by text and amounts
+  // Bradesco format: DD/MM/YY followed by description and BR amounts
+  const datePattern = /(\d{2})\/(\d{2})\/(\d{2,4})/g;
+  const amountPattern = /(-?\s*)(\d{1,3}(?:\.\d{3})*,\d{2})/g;
   
-  // Transaction markers
-  const TX_MARKERS = [
-    /transfe\s*pix/i, /pix\s*recebido/i, /pix\s*enviado/i, /pix\s*qrcode/i,
-    /rem:/i, /des:/i,
-    /resgate\s*inv/i, /rent\.?\s*inv/i, /apl\.?\s*invest/i,
-    /prest\s*fin\s*imob/i, /amortiz/i, /bx\.?ant\.?fin/i,
-    /encargo/i, /iof\s*util/i, /enc\s*lim/i,
-    /contr\s*\d+/i, /parc\s*cred/i,
-    /bradesco\s*vida/i, /seguro/i, /receb\s*pagfor/i,
-    /gasto\s*c\s*credito/i,
-    /ted/i, /doc/i, /saque/i, /deposito/i, /tarifa/i,
-  ];
+  // Find all dates in text
+  const dateMatches: { date: string; index: number }[] = [];
+  let match;
   
-  // Noise patterns to skip
-  const SKIP_PATTERNS = [
-    /^saldo\s*anterior/i,
-    /^saldo\s*total/i,
-    /^saldo\s*final/i,
-    /^\s*total\s*$/i,
-    /^data\s+hist[oó]rico/i,
-    /telefones?\s+úteis/i,
-    /ouvidoria/i,
-    /sac\s+\d{4}/i,
-    /^cnpj/i,
-    /^s\.?a\.?$/i,
-    /dados\s*acima\s*têm/i,
-  ];
-  
-  function shouldSkipLine(line: string): boolean {
-    const t = line.trim();
-    if (t.length < 3) return true;
-    for (const p of SKIP_PATTERNS) {
-      if (p.test(t)) return true;
-    }
-    return false;
-  }
-  
-  function hasTransactionMarker(t: string): boolean {
-    for (const p of TX_MARKERS) {
-      if (p.test(t)) return true;
-    }
-    return false;
-  }
-  
-  function extractDate(line: string): string | null {
-    const match = line.match(dateStartPattern);
-    if (!match) return null;
-    
+  while ((match = datePattern.exec(cleanedText)) !== null) {
     const [, day, month, year] = match;
     const fullYear = year.length === 2 ? `20${year}` : year;
     const dateStr = `${fullYear}-${month}-${day}`;
@@ -484,236 +440,243 @@ function parseBradescoText(text: string): ParsedTransaction[] {
     // Validate date
     const dayNum = parseInt(day);
     const monthNum = parseInt(month);
-    if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) return null;
+    if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) continue;
     
-    // Check if within period
+    // Check if within statement period
     if (periodStart && periodEnd) {
-      if (dateStr < periodStart || dateStr > periodEnd) return null;
+      if (dateStr < periodStart || dateStr > periodEnd) {
+        console.log(`[parseBradescoText] Skipping date ${dateStr} (outside period)`);
+        continue;
+      }
     }
     
-    return dateStr;
+    dateMatches.push({ date: dateStr, index: match.index });
   }
   
-  // Brazilian amount pattern (with optional negative)
-  const amountPattern = /(-?\s*)(\d{1,3}(?:\.\d{3})*,\d{2})\b/g;
+  console.log(`[parseBradescoText] Found ${dateMatches.length} dates within period`);
   
-  function extractAmounts(text: string): Array<{ amount: number; isNegative: boolean }> {
-    const results: Array<{ amount: number; isNegative: boolean }> = [];
-    const matches = [...text.matchAll(amountPattern)];
+  // ============================================
+  // STEP 4: For each date, extract text segment and find amounts
+  // ============================================
+  
+  const TX_MARKERS = [
+    'transfe pix', 'pix recebido', 'pix enviado', 'pix qrcode',
+    'rem:', 'des:',
+    'resgate inv', 'rent.inv', 'apl.invest', 'aplicacao inv',
+    'prest fin imob', 'amortiz', 'bx.ant.fin',
+    'encargo', 'iof util', 'enc lim',
+    'contr ', 'parc cred',
+    'bradesco vida', 'seguro', 'receb pagfor',
+    'gasto c credito',
+    'ted', 'doc', 'saque', 'deposito', 'tarifa',
+    'cartao credito', 'pagamento'
+  ];
+  
+  const SKIP_PATTERNS = [
+    /^saldo\s*anterior/i,
+    /^saldo\s*final/i,
+    /^saldo\s*total/i,
+    /^\s*total\s*$/i,
+  ];
+  
+  function hasTransactionMarker(text: string): boolean {
+    const lower = text.toLowerCase();
+    for (const marker of TX_MARKERS) {
+      if (lower.includes(marker)) return true;
+    }
+    return false;
+  }
+  
+  function shouldSkip(text: string): boolean {
+    for (const p of SKIP_PATTERNS) {
+      if (p.test(text)) return true;
+    }
+    return false;
+  }
+  
+  function extractAmounts(text: string): Array<{ amount: number; isNegative: boolean; index: number }> {
+    const results: Array<{ amount: number; isNegative: boolean; index: number }> = [];
+    const amtRegex = /(-?\s*)(\d{1,3}(?:\.\d{3})*,\d{2})/g;
+    let m;
     
-    for (const m of matches) {
+    while ((m = amtRegex.exec(text)) !== null) {
       const isNeg = m[1].includes('-');
       const val = parseBrazilianAmount(m[2]);
       if (val !== null && val >= 0.01 && val < 100000000) {
-        results.push({ amount: val, isNegative: isNeg });
+        results.push({ amount: val, isNegative: isNeg, index: m.index });
       }
     }
     
     return results;
   }
   
-  // Collect line groups by date
-  interface DateGroup {
-    date: string;
-    lines: string[];
-  }
-  
-  const groups: DateGroup[] = [];
-  let currentGroup: DateGroup | null = null;
-  
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
+  // Process each date and its following segment
+  for (let i = 0; i < dateMatches.length; i++) {
+    const current = dateMatches[i];
+    const next = dateMatches[i + 1];
     
-    const lineDate = extractDate(trimmed);
+    // Get text segment from this date to next date (or end of text)
+    const segmentEnd = next ? next.index : cleanedText.length;
+    const segment = cleanedText.substring(current.index, segmentEnd);
     
-    if (lineDate) {
-      // New date group
-      if (currentGroup) {
-        groups.push(currentGroup);
-      }
-      currentGroup = { date: lineDate, lines: [trimmed] };
-    } else if (currentGroup) {
-      // Add to current group (continuation)
-      currentGroup.lines.push(trimmed);
-    }
-  }
-  
-  // Don't forget the last group
-  if (currentGroup) {
-    groups.push(currentGroup);
-  }
-  
-  console.log(`[parseBradescoText] Found ${groups.length} date groups`);
-  
-  // ============================================
-  // STEP 4: Process each date group to extract transactions
-  // ============================================
-  
-  for (const group of groups) {
-    const combinedText = group.lines.join(' ');
+    if (shouldSkip(segment)) continue;
     
-    if (shouldSkipLine(combinedText)) continue;
-    
-    // Skip if no transaction markers and very short
-    if (!hasTransactionMarker(combinedText) && combinedText.length < 30) continue;
-    
-    const amounts = extractAmounts(combinedText);
+    // Extract amounts from this segment
+    const amounts = extractAmounts(segment);
     if (amounts.length === 0) continue;
     
     // Build description by removing dates and amounts
-    let description = combinedText
+    let description = segment
       .replace(/\d{2}\/\d{2}(\/\d{2,4})?\s*/g, '')
       .replace(/-?\s*\d{1,3}(?:\.\d{3})*,\d{2}/g, '')
-      .replace(/\b\d{7,}\b/g, '') // Remove document numbers
+      .replace(/\b\d{6,}\b/g, '') // Remove document numbers
       .replace(/\|/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
     
-    // Skip balance lines
-    if (/^saldo/i.test(description)) continue;
+    // If no description or just noise, try to use transaction marker
+    if (description.length < 3) {
+      description = '(Transação Bradesco)';
+    }
     
-    // For Bradesco, we need to be smart about multi-transaction groups
-    // Each transaction marker typically starts a new transaction
-    
-    // Split by transaction markers
-    const markerRegex = /(Transfe Pix|Rem:|Des:|Resgate Inv|Rent\.inv|Apl\.invest|Prest Fin|Gasto c Credito|Enc Lim|Iof Util|Parc Cred|Bx\.ant\.fin|Receb Pagfor|Pix Qrcode)/gi;
-    
-    const parts = combinedText.split(markerRegex).filter(p => p.trim());
-    
-    if (parts.length <= 2 && amounts.length === 1) {
-      // Simple case: one transaction
+    // For each amount in segment, create a transaction
+    // But be smart about grouping - if there's a clear description pattern, use it
+    if (amounts.length === 1) {
+      // Simple case: one amount per date
       const a = amounts[0];
       transactions.push({
-        date: group.date,
-        description: description.substring(0, 500) || "(Transação Bradesco)",
+        date: current.date,
+        description: description.substring(0, 500),
         amount: a.amount,
         type: a.isNegative ? "expense" : "income",
-        raw_data: { source: "bradesco-pdf" },
+        raw_data: { source: "bradesco-pdf-single" },
       });
     } else {
-      // Complex case: multiple transactions in one date group
-      // Try to match each transaction marker with its amount
-      
+      // Multiple amounts - try to split by transaction markers
+      const segmentLower = segment.toLowerCase();
       let usedAmounts = 0;
       
-      for (let i = 0; i < parts.length; i++) {
-        const part = parts[i].trim();
-        if (!part) continue;
-        
-        // Check if this part is a transaction marker
-        const isMarker = markerRegex.test(part);
-        if (!isMarker && part.length < 3) continue;
-        
-        // Get the combined text of marker + next part (description)
-        let txText = part;
-        if (isMarker && i + 1 < parts.length) {
-          txText += ' ' + parts[i + 1];
-          i++; // Skip next part
-        }
-        
-        // Extract amount from this portion
-        const partAmounts = extractAmounts(txText);
-        
-        if (partAmounts.length > 0) {
-          const a = partAmounts[0];
-          const txDesc = txText
-            .replace(/-?\s*\d{1,3}(?:\.\d{3})*,\d{2}/g, '')
-            .replace(/\b\d{7,}\b/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-          
-          transactions.push({
-            date: group.date,
-            description: txDesc.substring(0, 500) || "(Transação Bradesco)",
-            amount: a.amount,
-            type: a.isNegative ? "expense" : "income",
-            raw_data: { source: "bradesco-pdf-multi" },
-          });
-          usedAmounts++;
-        } else if (usedAmounts < amounts.length) {
-          // No amount in this part, use next available from global list
-          const a = amounts[usedAmounts];
-          const txDesc = txText
-            .replace(/\s+/g, ' ')
-            .trim();
-          
-          if (txDesc.length > 3 && hasTransactionMarker(txDesc)) {
-            transactions.push({
-              date: group.date,
-              description: txDesc.substring(0, 500) || "(Transação Bradesco)",
-              amount: a.amount,
-              type: a.isNegative ? "expense" : "income",
-              raw_data: { source: "bradesco-pdf-fallback" },
-            });
-            usedAmounts++;
+      for (const marker of TX_MARKERS) {
+        const markerIdx = segmentLower.indexOf(marker);
+        if (markerIdx !== -1 && usedAmounts < amounts.length) {
+          // Find the closest amount after this marker
+          for (const a of amounts) {
+            if (a.index > markerIdx && usedAmounts < amounts.length) {
+              const markerEnd = markerIdx + marker.length + 50;
+              const txDesc = segment.substring(markerIdx, Math.min(markerEnd, segment.length))
+                .replace(/-?\s*\d{1,3}(?:\.\d{3})*,\d{2}/g, '')
+                .replace(/\b\d{6,}\b/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+              
+              if (txDesc.length > 2) {
+                transactions.push({
+                  date: current.date,
+                  description: txDesc.substring(0, 500),
+                  amount: a.amount,
+                  type: a.isNegative ? "expense" : "income",
+                  raw_data: { source: "bradesco-pdf-multi" },
+                });
+                usedAmounts++;
+              }
+              break;
+            }
           }
         }
       }
       
-      // If we couldn't match properly, fall back to simple extraction
-      if (usedAmounts === 0 && amounts.length > 0) {
+      // If we couldn't match markers, just create transactions for each amount
+      if (usedAmounts === 0) {
         for (const a of amounts) {
           transactions.push({
-            date: group.date,
-            description: description.substring(0, 200) || "(Transação Bradesco)",
+            date: current.date,
+            description: description.substring(0, 300) || "(Transação Bradesco)",
             amount: a.amount,
             type: a.isNegative ? "expense" : "income",
-            raw_data: { source: "bradesco-pdf-simple" },
+            raw_data: { source: "bradesco-pdf-fallback" },
           });
         }
       }
     }
   }
   
-  console.log(`[parseBradescoText] After initial extraction: ${transactions.length} transactions`);
+  console.log(`[parseBradescoText] Strategy A extracted: ${transactions.length} transactions`);
   
   // ============================================
-  // STEP 5: Deduplication
+  // STEP 5: If Strategy A found nothing, try Strategy B (generic regex scan)
   // ============================================
   
-  // Use composite key: date + amount + type + normalized description prefix
+  if (transactions.length === 0) {
+    console.log("[parseBradescoText] Strategy A failed, trying Strategy B (regex scan)");
+    
+    // Pattern: Look for date followed by optional text and amount
+    const combinedPattern = /(\d{2})\/(\d{2})\/(\d{2,4})\s+([^-\d]*?)\s*(-?\s*)(\d{1,3}(?:\.\d{3})*,\d{2})/g;
+    
+    while ((match = combinedPattern.exec(cleanedText)) !== null) {
+      const [, day, month, year, desc, neg, amt] = match;
+      const fullYear = year.length === 2 ? `20${year}` : year;
+      const dateStr = `${fullYear}-${month}-${day}`;
+      
+      // Validate date
+      const dayNum = parseInt(day);
+      const monthNum = parseInt(month);
+      if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) continue;
+      
+      // Check period
+      if (periodStart && periodEnd) {
+        if (dateStr < periodStart || dateStr > periodEnd) continue;
+      }
+      
+      const amount = parseBrazilianAmount(amt);
+      if (!amount || amount < 0.01) continue;
+      
+      const description = desc.trim() || "(Transação Bradesco)";
+      if (shouldSkip(description)) continue;
+      
+      transactions.push({
+        date: dateStr,
+        description: description.substring(0, 500),
+        amount,
+        type: neg.includes('-') ? "expense" : "income",
+        raw_data: { source: "bradesco-pdf-strategyB" },
+      });
+    }
+    
+    console.log(`[parseBradescoText] Strategy B found: ${transactions.length} transactions`);
+  }
+  
+  // ============================================
+  // STEP 6: Deduplication by composite key
+  // ============================================
+  
   const normalizeForDedup = (d: string): string => {
     return d.toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]/g, '')
-      .substring(0, 25);
+      .substring(0, 20);
   };
   
-  const txByKey = new Map<string, ParsedTransaction[]>();
+  const seen = new Set<string>();
+  const dedupedTxs: ParsedTransaction[] = [];
   
   for (const tx of transactions) {
-    const baseKey = `${tx.date}-${tx.amount.toFixed(2)}-${tx.type}`;
-    if (!txByKey.has(baseKey)) {
-      txByKey.set(baseKey, []);
-    }
-    txByKey.get(baseKey)!.push(tx);
-  }
-  
-  const finalTxs: ParsedTransaction[] = [];
-  
-  for (const [, txGroup] of txByKey) {
-    const seenDescs = new Set<string>();
+    const key = `${tx.date}-${tx.amount.toFixed(2)}-${tx.type}-${normalizeForDedup(tx.description)}`;
     
-    for (const tx of txGroup) {
-      const descKey = normalizeForDedup(tx.description);
-      
-      if (!seenDescs.has(descKey)) {
-        seenDescs.add(descKey);
-        finalTxs.push(tx);
-      }
+    if (!seen.has(key)) {
+      seen.add(key);
+      dedupedTxs.push(tx);
     }
   }
   
-  console.log(`[parseBradescoText] After deduplication: ${finalTxs.length} transactions`);
+  console.log(`[parseBradescoText] After deduplication: ${dedupedTxs.length} transactions`);
   
   // ============================================
-  // STEP 6: Sort by date ascending
+  // STEP 7: Sort by date ascending
   // ============================================
-  finalTxs.sort((a, b) => a.date.localeCompare(b.date));
+  dedupedTxs.sort((a, b) => a.date.localeCompare(b.date));
   
-  return finalTxs;
+  return dedupedTxs;
 }
 
 function parseBtgText(text: string): ParsedTransaction[] {
