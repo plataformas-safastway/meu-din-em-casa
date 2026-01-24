@@ -19,6 +19,7 @@ import {
   Lock,
   AlertTriangle,
   Headphones,
+  Heart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { useFinancialAccess } from "@/hooks/useFinancialAccess";
 import { useSupportAccess } from "@/hooks/useSupportAccess";
+import { useCSAccess } from "@/hooks/useCSAccess";
 import { AdminUsersPage } from "./AdminUsersPage";
 import { AdminEbooksPage } from "./AdminEbooksPage";
 import { AdminMetricsPage } from "./AdminMetricsPage";
@@ -43,10 +45,16 @@ import {
   SupportUsersPage,
   SupportAuditPage,
 } from "./support";
+import {
+  CSOverviewPage,
+  CSUsersListPage,
+  CSAuditPage,
+} from "./cs";
 
 type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings" 
   | "fin-overview" | "fin-users" | "fin-payments" | "fin-invoices" | "fin-reports" | "fin-audit"
-  | "sup-errors" | "sup-users" | "sup-audit";
+  | "sup-errors" | "sup-users" | "sup-audit"
+  | "cs-overview" | "cs-users" | "cs-audit";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -56,6 +64,7 @@ export function AdminDashboard() {
 
   const { data: hasFinancialAccess } = useFinancialAccess();
   const { data: hasSupportAccess } = useSupportAccess();
+  const { data: hasCSAccess } = useCSAccess();
   const handleSignOut = async () => {
     await signOut();
     navigate("/login");
@@ -87,6 +96,13 @@ export function AdminDashboard() {
     { id: "sup-audit" as AdminTab, label: "Auditoria Suporte", icon: ClipboardList },
   ] : [];
 
+  // CS module menu - only for users with CS access
+  const csMenuItems = hasCSAccess ? [
+    { id: "cs-overview" as AdminTab, label: "Visão CS", icon: Heart },
+    { id: "cs-users" as AdminTab, label: "Base de Usuários", icon: Users },
+    { id: "cs-audit" as AdminTab, label: "Auditoria CS", icon: ClipboardList },
+  ] : [];
+
   const renderContent = () => {
     // Check financial access for financial tabs
     if (activeTab.startsWith('fin-') && !hasFinancialAccess) {
@@ -96,6 +112,11 @@ export function AdminDashboard() {
     // Check support access for support tabs
     if (activeTab.startsWith('sup-') && !hasSupportAccess) {
       return <AccessDenied message="Este módulo requer perfil ADMIN_MASTER ou SUPORTE" />;
+    }
+
+    // Check CS access for CS tabs
+    if (activeTab.startsWith('cs-') && !hasCSAccess) {
+      return <AccessDenied message="Este módulo requer perfil ADMIN_MASTER ou CUSTOMER_SUCCESS" />;
     }
 
     switch (activeTab) {
@@ -127,8 +148,14 @@ export function AdminDashboard() {
         return <SupportUsersPage />;
       case "sup-audit":
         return <SupportAuditPage />;
+      case "cs-overview":
+        return <CSOverviewPage />;
+      case "cs-users":
+        return <CSUsersListPage />;
+      case "cs-audit":
+        return <CSAuditPage />;
       default:
-        return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} hasSupportAccess={!!hasSupportAccess} />;
+        return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} hasSupportAccess={!!hasSupportAccess} hasCSAccess={!!hasCSAccess} />;
     }
   };
 
@@ -212,6 +239,30 @@ export function AdminDashboard() {
               })}
             </>
           )}
+          {csMenuItems.length > 0 && (
+            <>
+              <div className="pt-4 pb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Customer Success</p>
+              </div>
+              {csMenuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      activeTab === item.id
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
@@ -250,7 +301,7 @@ export function AdminDashboard() {
   );
 }
 
-function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess }: { onNavigate: (tab: AdminTab) => void; hasFinancialAccess: boolean; hasSupportAccess: boolean }) {
+function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCSAccess }: { onNavigate: (tab: AdminTab) => void; hasFinancialAccess: boolean; hasSupportAccess: boolean; hasCSAccess: boolean }) {
   const stats = [
     { label: "Total de Usuários", value: "—", icon: Users, color: "text-blue-500" },
     { label: "Famílias Ativas", value: "—", icon: Home, color: "text-green-500" },
@@ -268,6 +319,9 @@ function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess }: { o
     ] : []),
     ...(hasSupportAccess ? [
       { label: "Suporte", icon: Headphones, action: () => onNavigate("sup-errors") },
+    ] : []),
+    ...(hasCSAccess ? [
+      { label: "Customer Success", icon: Heart, action: () => onNavigate("cs-overview") },
     ] : []),
   ];
 
