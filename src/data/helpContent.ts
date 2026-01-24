@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 24/01/2026 - Sprint 3 Projeção, Orçamento & Educação
-export const HELP_CENTER_VERSION = "24/01/2026 v4";
+// Última atualização: 24/01/2026 - Sprint 4 Família, Permissões & Localização
+export const HELP_CENTER_VERSION = "24/01/2026 v5";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [

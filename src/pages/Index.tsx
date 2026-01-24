@@ -17,8 +17,10 @@ import { EducationPage } from "./EducationPage";
 import { LearnMorePage } from "./LearnMorePage";
 import EbooksAdminPage from "./EbooksAdminPage";
 import { OpenFinancePage } from "./OpenFinancePage";
+import { FamilyPage } from "./FamilyPage";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { WhatsAppCTA } from "@/components/WhatsAppCTA";
+import { LocationContextBanner } from "@/components/family";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -90,6 +92,8 @@ const Index = () => {
         return <BanksPage onBack={() => setActiveTab("settings")} />;
       case "openfinance":
         return <OpenFinancePage onBack={() => setActiveTab("settings")} />;
+      case "family":
+        return <FamilyPage onBack={() => setActiveTab("settings")} />;
       case "learn-more":
         return <LearnMorePage onBack={() => setActiveTab("dashboard")} initialTab={learnMoreTab} />;
       case "profile":
@@ -124,6 +128,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <LocationContextBanner />
       {renderPage()}
       <WhatsAppCTA />
       <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
