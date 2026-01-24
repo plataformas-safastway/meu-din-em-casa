@@ -1,7 +1,9 @@
-import { Plus, ArrowUpCircle, ArrowDownCircle, Target, Upload } from "lucide-react";
+import { Plus, ArrowUpCircle, ArrowDownCircle, Target, Upload, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useHasPermission } from "@/hooks/useFamilyPermissions";
+import { toast } from "sonner";
 
 interface QuickActionsProps {
   onAddIncome: () => void;
@@ -11,6 +13,7 @@ interface QuickActionsProps {
 
 export function QuickActions({ onAddIncome, onAddExpense, onAddGoal }: QuickActionsProps) {
   const navigate = useNavigate();
+  const { hasPermission: canInsert } = useHasPermission("can_insert_transactions");
 
   const handleImportClick = () => {
     navigate("/app/import");
@@ -24,22 +27,34 @@ export function QuickActions({ onAddIncome, onAddExpense, onAddGoal }: QuickActi
     }
   };
 
+  const handleBlockedAction = () => {
+    toast.error("Sem permissão", {
+      description: "Você não tem permissão para inserir lançamentos.",
+    });
+  };
+
   const actions = [
     {
       id: "income",
       label: "Receita",
       icon: ArrowUpCircle,
-      onClick: onAddIncome,
-      className: "bg-success/10 text-success hover:bg-success/20 active:bg-success/30",
-      iconBg: "bg-success/20",
+      onClick: canInsert ? onAddIncome : handleBlockedAction,
+      className: canInsert 
+        ? "bg-success/10 text-success hover:bg-success/20 active:bg-success/30"
+        : "bg-muted/50 text-muted-foreground cursor-not-allowed",
+      iconBg: canInsert ? "bg-success/20" : "bg-muted",
+      disabled: !canInsert,
     },
     {
       id: "expense",
       label: "Despesa",
       icon: ArrowDownCircle,
-      onClick: onAddExpense,
-      className: "bg-destructive/10 text-destructive hover:bg-destructive/20 active:bg-destructive/30",
-      iconBg: "bg-destructive/20",
+      onClick: canInsert ? onAddExpense : handleBlockedAction,
+      className: canInsert
+        ? "bg-destructive/10 text-destructive hover:bg-destructive/20 active:bg-destructive/30"
+        : "bg-muted/50 text-muted-foreground cursor-not-allowed",
+      iconBg: canInsert ? "bg-destructive/20" : "bg-muted",
+      disabled: !canInsert,
     },
     {
       id: "goal",
@@ -48,6 +63,7 @@ export function QuickActions({ onAddIncome, onAddExpense, onAddGoal }: QuickActi
       onClick: handleGoalClick,
       className: "bg-info/10 text-info hover:bg-info/20 active:bg-info/30",
       iconBg: "bg-info/20",
+      disabled: false,
     },
     {
       id: "import",
@@ -56,6 +72,7 @@ export function QuickActions({ onAddIncome, onAddExpense, onAddGoal }: QuickActi
       onClick: handleImportClick,
       className: "bg-warning/10 text-warning hover:bg-warning/20 active:bg-warning/30",
       iconBg: "bg-warning/20",
+      disabled: false,
     },
   ];
 
@@ -67,14 +84,14 @@ export function QuickActions({ onAddIncome, onAddExpense, onAddGoal }: QuickActi
       className="grid grid-cols-4 gap-3"
     >
       {actions.map((action, index) => {
-        const Icon = action.icon;
+        const Icon = action.disabled ? Lock : action.icon;
         return (
           <motion.button
             key={action.id}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.2, delay: index * 0.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: action.disabled ? 1 : 0.95 }}
             onClick={action.onClick}
             className={cn(
               "flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-200 min-h-[80px] touch-target",

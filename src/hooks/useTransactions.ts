@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { STALE_TIMES, invalidateQueryGroup } from "@/lib/queryConfig";
+import { useLogActivity } from "@/hooks/useFamilyActivity";
 
 export interface TransactionInput {
   type: "income" | "expense";
@@ -125,12 +126,13 @@ export function useTransactionsCurrentYear() {
 export function useCreateTransaction() {
   const queryClient = useQueryClient();
   const { family } = useAuth();
+  const logActivity = useLogActivity();
 
   return useMutation({
     mutationFn: async (data: TransactionInput) => {
       if (!family) throw new Error("No family");
 
-      const { error } = await supabase.from("transactions").insert({
+      const { data: inserted, error } = await supabase.from("transactions").insert({
         family_id: family.id,
         type: data.type,
         amount: data.amount,
@@ -143,11 +145,23 @@ export function useCreateTransaction() {
         credit_card_id: data.credit_card_id,
         is_recurring: data.is_recurring || false,
         notes: data.notes,
-      });
+      }).select("id").single();
 
       if (error) throw error;
+      return { id: inserted.id, ...data };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      // Log family activity for push notifications
+      logActivity.mutate({
+        action_type: "transaction_created",
+        entity_type: "transaction",
+        entity_id: result.id,
+        metadata: {
+          type: result.type,
+          amount: result.amount,
+          category_id: result.category_id,
+        },
+      });
       // Invalidate all transaction-related queries for multi-device sync
       invalidateQueryGroup(queryClient, 'transactionMutation');
     },
@@ -164,6 +178,7 @@ export interface TransactionUpdate {
 
 export function useUpdateTransaction() {
   const queryClient = useQueryClient();
+  const logActivity = useLogActivity();
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: TransactionUpdate }) => {
@@ -172,8 +187,15 @@ export function useUpdateTransaction() {
         .update(data)
         .eq("id", id);
       if (error) throw error;
+      return { id, ...data };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      logActivity.mutate({
+        action_type: "transaction_updated",
+        entity_type: "transaction",
+        entity_id: result.id,
+        metadata: { amount: result.amount, category_id: result.category_id },
+      });
       invalidateQueryGroup(queryClient, 'transactionMutation');
     },
   });
@@ -181,13 +203,20 @@ export function useUpdateTransaction() {
 
 export function useDeleteTransaction() {
   const queryClient = useQueryClient();
+  const logActivity = useLogActivity();
 
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("transactions").delete().eq("id", id);
       if (error) throw error;
+      return id;
     },
-    onSuccess: () => {
+    onSuccess: (deletedId) => {
+      logActivity.mutate({
+        action_type: "transaction_deleted",
+        entity_type: "transaction",
+        entity_id: deletedId,
+      });
       invalidateQueryGroup(queryClient, 'transactionMutation');
     },
   });

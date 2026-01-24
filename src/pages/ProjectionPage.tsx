@@ -10,7 +10,8 @@ import {
   ChevronRight,
   Sparkles,
   RefreshCw,
-  HelpCircle
+  HelpCircle,
+  Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import { MoneyLoader } from "@/components/ui/money-loader";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useProjection, MonthProjection } from "@/hooks/useProjection";
 import { useDebouncedLoading } from "@/hooks/useLoading";
+import { useHasPermission } from "@/hooks/useFamilyPermissions";
 import { getCategoryById } from "@/data/categories";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -267,8 +269,35 @@ function ProjectionDetail({ projection }: { projection: MonthProjection }) {
 export function ProjectionPage({ onBack }: ProjectionPageProps) {
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
   const { data, isLoading, error, refetch, isFetching } = useProjection(6, true);
+  const { hasPermission: canViewProjection } = useHasPermission("can_view_projection");
   
   const showLoading = useDebouncedLoading(isLoading, { delay: 300 });
+
+  // Check permission to view projection
+  if (!canViewProjection) {
+    return (
+      <div className="min-h-screen bg-background pb-24">
+        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border/50">
+          <div className="container px-4 py-4">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={onBack}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-lg font-semibold">Projeção Financeira</h1>
+            </div>
+          </div>
+        </header>
+        <main className="container px-4 py-12 text-center">
+          <Lock className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+          <h2 className="text-lg font-semibold mb-2">Acesso restrito</h2>
+          <p className="text-muted-foreground text-sm">
+            Você não tem permissão para visualizar as projeções.
+            Entre em contato com o administrador da família.
+          </p>
+        </main>
+      </div>
+    );
+  }
 
   if (showLoading) {
     return (

@@ -1,16 +1,26 @@
 import { useState, useEffect } from "react";
-import { Save, Loader2 } from "lucide-react";
+import { Save, Loader2, Trash2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { defaultCategories, getCategoryById } from "@/data/categories";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useUpdateTransaction, useDeleteTransaction } from "@/hooks/useTransactions";
+import { useMyPermissions } from "@/hooks/useFamilyPermissions";
 
 interface Transaction {
   id: string;
@@ -32,8 +42,14 @@ export function EditTransactionSheet({ open, onOpenChange, transaction }: EditTr
   const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [saving, setSaving] = useState(false);
-  const queryClient = useQueryClient();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const { data: myPermissions } = useMyPermissions();
+  const updateTransaction = useUpdateTransaction();
+  const deleteTransaction = useDeleteTransaction();
+
+  const canEdit = myPermissions?.can_edit_all ?? false;
+  const canDelete = myPermissions?.can_delete_transactions ?? false;
 
   useEffect(() => {
     if (transaction) {
@@ -44,7 +60,6 @@ export function EditTransactionSheet({ open, onOpenChange, transaction }: EditTr
   }, [transaction]);
 
   const handleAmountChange = (value: string) => {
-    // Allow only numbers and comma
     const cleanValue = value.replace(/[^\d,]/g, '');
     setAmount(cleanValue);
   };
@@ -57,35 +72,54 @@ export function EditTransactionSheet({ open, onOpenChange, transaction }: EditTr
   const handleSave = async () => {
     if (!transaction) return;
 
+    if (!canEdit) {
+      toast.error("Sem permissão", {
+        description: "Você não tem permissão para editar lançamentos.",
+      });
+      return;
+    }
+
     const parsedAmount = parseAmount(amount);
     if (parsedAmount <= 0) {
       toast.error("Valor inválido");
       return;
     }
 
-    setSaving(true);
     try {
-      const { error } = await supabase
-        .from('transactions')
-        .update({
+      await updateTransaction.mutateAsync({
+        id: transaction.id,
+        data: {
           category_id: categoryId,
           description: description.trim() || null,
           amount: parsedAmount,
-        })
-        .eq('id', transaction.id);
-
-      if (error) throw error;
-
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['finance-summary'] });
-
+        },
+      });
       toast.success("Transação atualizada");
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating transaction:', error);
       toast.error("Erro ao atualizar transação");
-    } finally {
-      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!transaction) return;
+
+    if (!canDelete) {
+      toast.error("Sem permissão", {
+        description: "Você não tem permissão para excluir lançamentos.",
+      });
+      return;
+    }
+
+    try {
+      await deleteTransaction.mutateAsync(transaction.id);
+      toast.success("Transação excluída");
+      setShowDeleteConfirm(false);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast.error("Erro ao excluir transação");
     }
   };
 
@@ -171,26 +205,68 @@ export function EditTransactionSheet({ open, onOpenChange, transaction }: EditTr
             </div>
           </div>
 
-          {/* Save Button */}
-          <Button
-            className="w-full h-12"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 mr-2" />
-                Salvar Alterações
-              </>
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            {canDelete && (
+              <Button
+                variant="outline"
+                className="h-12 text-destructive border-destructive/30 hover:bg-destructive/10"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={deleteTransaction.isPending}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
             )}
-          </Button>
+            <Button
+              className="flex-1 h-12"
+              onClick={handleSave}
+              disabled={updateTransaction.isPending || !canEdit}
+            >
+              {updateTransaction.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : !canEdit ? (
+                <>
+                  <Lock className="w-4 h-4 mr-2" />
+                  Sem Permissão
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Salvar Alterações
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </SheetContent>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir lançamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O lançamento será removido permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteTransaction.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "Excluir"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }
