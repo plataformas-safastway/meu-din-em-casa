@@ -5,15 +5,23 @@ import { useNavigate } from "react-router-dom";
 interface QuickActionsProps {
   onAddIncome: () => void;
   onAddExpense: () => void;
-  onAddGoal: () => void;
-  onViewReceipts: () => void;
+  onAddGoal?: () => void;
 }
 
-export function QuickActions({ onAddIncome, onAddExpense, onAddGoal, onViewReceipts }: QuickActionsProps) {
+export function QuickActions({ onAddIncome, onAddExpense, onAddGoal }: QuickActionsProps) {
   const navigate = useNavigate();
 
   const handleImportClick = () => {
     navigate("/app/import");
+  };
+
+  const handleGoalClick = () => {
+    if (onAddGoal) {
+      onAddGoal();
+    } else {
+      // Fallback: navigate directly to goals page
+      navigate("/app/goals");
+    }
   };
 
   const actions = [
@@ -35,7 +43,7 @@ export function QuickActions({ onAddIncome, onAddExpense, onAddGoal, onViewRecei
       id: "goal",
       label: "Meta",
       icon: Target,
-      onClick: onAddGoal,
+      onClick: handleGoalClick,
       className: "bg-info/10 text-info hover:bg-info/20",
     },
     {
