@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 24/01/2026 - Sprint 5 Dashboard Admin
-export const HELP_CENTER_VERSION = "24/01/2026 v6";
+// Última atualização: 24/01/2026 - Sprint 6 CS Automation + IA
+export const HELP_CENTER_VERSION = "24/01/2026 v7";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [

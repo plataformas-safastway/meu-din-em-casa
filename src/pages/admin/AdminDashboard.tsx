@@ -56,6 +56,7 @@ import {
   CSUsersListPage,
   CSAuditPage,
   CSAutomationPage,
+  CSHealthPage,
 } from "./cs";
 import {
   TechHealthPage,
@@ -71,7 +72,7 @@ import { useExecutiveAccess } from "@/hooks/useExecutiveReports";
 type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings" 
   | "fin-overview" | "fin-users" | "fin-payments" | "fin-invoices" | "fin-reports" | "fin-audit"
   | "sup-errors" | "sup-users" | "sup-audit"
-  | "cs-overview" | "cs-users" | "cs-automation" | "cs-audit"
+  | "cs-overview" | "cs-users" | "cs-automation" | "cs-health" | "cs-audit"
   | "tech-health" | "tech-logs" | "tech-integrations" | "tech-keys" | "tech-flags" | "tech-audit"
   | "exec-reports";
 
@@ -122,6 +123,7 @@ export function AdminDashboard() {
   const csMenuItems = hasCSAccess ? [
     { id: "cs-overview" as AdminTab, label: "Visão CS", icon: Heart },
     { id: "cs-users" as AdminTab, label: "Base de Usuários", icon: Users },
+    { id: "cs-health" as AdminTab, label: "Saúde da Base", icon: Activity },
     { id: "cs-automation" as AdminTab, label: "Automação + IA", icon: Cpu },
     { id: "cs-audit" as AdminTab, label: "Auditoria CS", icon: ClipboardList },
   ] : [];
@@ -200,6 +202,8 @@ export function AdminDashboard() {
         return <CSOverviewPage />;
       case "cs-users":
         return <CSUsersListPage />;
+      case "cs-health":
+        return <CSHealthPage />;
       case "cs-automation":
         return <CSAutomationPage />;
       case "cs-audit":
