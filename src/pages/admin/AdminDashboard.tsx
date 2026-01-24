@@ -55,6 +55,7 @@ import {
   CSOverviewPage,
   CSUsersListPage,
   CSAuditPage,
+  CSAutomationPage,
 } from "./cs";
 import {
   TechHealthPage,
@@ -64,12 +65,15 @@ import {
   TechFeatureFlagsPage,
   TechAuditPage,
 } from "./tech";
+import ExecutiveReportsPage from "./executive/ExecutiveReportsPage";
+import { useExecutiveAccess } from "@/hooks/useExecutiveReports";
 
 type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings" 
   | "fin-overview" | "fin-users" | "fin-payments" | "fin-invoices" | "fin-reports" | "fin-audit"
   | "sup-errors" | "sup-users" | "sup-audit"
-  | "cs-overview" | "cs-users" | "cs-audit"
-  | "tech-health" | "tech-logs" | "tech-integrations" | "tech-keys" | "tech-flags" | "tech-audit";
+  | "cs-overview" | "cs-users" | "cs-automation" | "cs-audit"
+  | "tech-health" | "tech-logs" | "tech-integrations" | "tech-keys" | "tech-flags" | "tech-audit"
+  | "exec-reports";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -81,6 +85,8 @@ export function AdminDashboard() {
   const { data: hasSupportAccess } = useSupportAccess();
   const { data: hasCSAccess } = useCSAccess();
   const { data: hasTechAccess } = useTechAccess();
+  const { data: hasExecutiveAccess } = useExecutiveAccess();
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/login");
@@ -116,7 +122,13 @@ export function AdminDashboard() {
   const csMenuItems = hasCSAccess ? [
     { id: "cs-overview" as AdminTab, label: "Visão CS", icon: Heart },
     { id: "cs-users" as AdminTab, label: "Base de Usuários", icon: Users },
+    { id: "cs-automation" as AdminTab, label: "Automação + IA", icon: Cpu },
     { id: "cs-audit" as AdminTab, label: "Auditoria CS", icon: ClipboardList },
+  ] : [];
+
+  // Executive reports menu - only for users with executive access
+  const executiveMenuItems = hasExecutiveAccess ? [
+    { id: "exec-reports" as AdminTab, label: "Relatórios Executivos", icon: BarChart3 },
   ] : [];
 
   // Tech module menu - only for users with tech access
@@ -148,6 +160,11 @@ export function AdminDashboard() {
     // Check Tech access for Tech tabs
     if (activeTab.startsWith('tech-') && !hasTechAccess) {
       return <AccessDenied message="Este módulo requer perfil ADMIN_MASTER ou TECNOLOGIA" />;
+    }
+
+    // Check Executive access for Executive tabs
+    if (activeTab.startsWith('exec-') && !hasExecutiveAccess) {
+      return <AccessDenied message="Este módulo requer perfil ADMIN_MASTER, DIRETORIA ou GESTÃO ESTRATÉGICA" />;
     }
 
     switch (activeTab) {
@@ -183,6 +200,8 @@ export function AdminDashboard() {
         return <CSOverviewPage />;
       case "cs-users":
         return <CSUsersListPage />;
+      case "cs-automation":
+        return <CSAutomationPage />;
       case "cs-audit":
         return <CSAuditPage />;
       case "tech-health":
@@ -197,8 +216,10 @@ export function AdminDashboard() {
         return <TechFeatureFlagsPage />;
       case "tech-audit":
         return <TechAuditPage />;
+      case "exec-reports":
+        return <ExecutiveReportsPage />;
       default:
-        return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} hasSupportAccess={!!hasSupportAccess} hasCSAccess={!!hasCSAccess} hasTechAccess={!!hasTechAccess} />;
+        return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} hasSupportAccess={!!hasSupportAccess} hasCSAccess={!!hasCSAccess} hasTechAccess={!!hasTechAccess} hasExecutiveAccess={!!hasExecutiveAccess} />;
     }
   };
 
@@ -330,6 +351,30 @@ export function AdminDashboard() {
               })}
             </>
           )}
+          {executiveMenuItems.length > 0 && (
+            <>
+              <div className="pt-4 pb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Diretoria</p>
+              </div>
+              {executiveMenuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      activeTab === item.id
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
@@ -368,7 +413,7 @@ export function AdminDashboard() {
   );
 }
 
-function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCSAccess, hasTechAccess }: { onNavigate: (tab: AdminTab) => void; hasFinancialAccess: boolean; hasSupportAccess: boolean; hasCSAccess: boolean; hasTechAccess: boolean }) {
+function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCSAccess, hasTechAccess, hasExecutiveAccess }: { onNavigate: (tab: AdminTab) => void; hasFinancialAccess: boolean; hasSupportAccess: boolean; hasCSAccess: boolean; hasTechAccess: boolean; hasExecutiveAccess: boolean }) {
   const stats = [
     { label: "Total de Usuários", value: "—", icon: Users, color: "text-blue-500" },
     { label: "Famílias Ativas", value: "—", icon: Home, color: "text-green-500" },
@@ -392,6 +437,9 @@ function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCS
     ] : []),
     ...(hasTechAccess ? [
       { label: "Tecnologia", icon: Cpu, action: () => onNavigate("tech-health") },
+    ] : []),
+    ...(hasExecutiveAccess ? [
+      { label: "Relatórios Executivos", icon: BarChart3, action: () => onNavigate("exec-reports") },
     ] : []),
   ];
 
