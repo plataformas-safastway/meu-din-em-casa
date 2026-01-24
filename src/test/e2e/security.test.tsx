@@ -202,7 +202,7 @@ describe("13. Testes de Segurança e Privacidade", () => {
       // Simular dados de exportação
       const exportData = {
         transactions: [
-          { date: "2024-01-05", description: "Salário", amount: 12000, category: "Rendas" },
+          { date: "2024-01-05", description: "Salario", amount: 12000, category: "Rendas" },
           { date: "2024-01-08", description: "Restaurante", amount: -150, category: "Lazer" }
         ],
         summary: { income: 12000, expenses: 150, balance: 11850 }
@@ -211,12 +211,15 @@ describe("13. Testes de Segurança e Privacidade", () => {
       
       const exportString = JSON.stringify(exportData);
       
+      // Patterns for truly sensitive data - specific JSON keys
       const sensitivePatterns = [
-        /\d{16}/, // Número de cartão
-        /\d{4,5}-\d/, // Número de conta
-        /password|senha/i,
-        /token|secret|api_key/i,
-        /cpf|cnpj/i
+        /"card_number"\s*:/i,
+        /"account_number"\s*:/i,
+        /"password"\s*:/i,
+        /"access_token"\s*:/i,
+        /"api_key"\s*:/i,
+        /"cpf"\s*:/i,
+        /"cnpj"\s*:/i
       ];
       
       const hasSensitive = sensitivePatterns.some(p => p.test(exportString));

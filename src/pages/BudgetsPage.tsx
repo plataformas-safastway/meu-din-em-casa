@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Target, Plus, Trash2, Edit2, AlertTriangle, CheckCircle, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowLeft, Target, Plus, Trash2, Edit2, AlertTriangle, CheckCircle, TrendingDown, TrendingUp, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { MonthSelector } from "@/components/MonthSelector";
 import { MoneyLoader } from "@/components/ui/money-loader";
 import { useBudgets, useCreateBudget, useUpdateBudget, useDeleteBudget, useBudgetAlerts, useBudgetSummary } from "@/hooks/useBudgets";
 import { useDebouncedLoading } from "@/hooks/useLoading";
+import { useHasPermission } from "@/hooks/useFamilyPermissions";
 import { defaultCategories, getCategoryById, getExpenseCategories } from "@/data/categories";
 import { formatCurrency } from "@/lib/formatters";
 import { toast } from "sonner";
@@ -39,9 +40,38 @@ export function BudgetsPage({ onBack }: BudgetsPageProps) {
   const createBudget = useCreateBudget();
   const updateBudget = useUpdateBudget();
   const deleteBudget = useDeleteBudget();
+  
+  const { hasPermission: canViewBudget } = useHasPermission("can_view_budget");
+  const { hasPermission: canEditAll } = useHasPermission("can_edit_all");
 
   const expenseCategories = getExpenseCategories();
   const selectedCategory = getCategoryById(categoryId);
+
+  // Check permission to view budget
+  if (!canViewBudget) {
+    return (
+      <div className="min-h-screen bg-background pb-24">
+        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border/50">
+          <div className="container px-4 py-4">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={onBack}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-lg font-semibold">Orçamentos</h1>
+            </div>
+          </div>
+        </header>
+        <main className="container px-4 py-12 text-center">
+          <Lock className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+          <h2 className="text-lg font-semibold mb-2">Acesso restrito</h2>
+          <p className="text-muted-foreground text-sm">
+            Você não tem permissão para visualizar os orçamentos.
+            Entre em contato com o administrador da família.
+          </p>
+        </main>
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
     if (!categoryId || !monthlyLimit) {
