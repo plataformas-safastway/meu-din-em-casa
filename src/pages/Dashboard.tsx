@@ -256,7 +256,6 @@ export function Dashboard({
           onAddIncome={handleAddIncome}
           onAddExpense={handleAddExpense}
           onAddGoal={handleAddGoal}
-          onViewReceipts={handleViewReceipts}
         />
 
         {/* Insights */}
