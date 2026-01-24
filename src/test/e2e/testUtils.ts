@@ -242,27 +242,40 @@ export function restoreDate() {
 // ===== CONSOLE LOG CAPTURE =====
 export class LogCapture {
   private logs: string[] = [];
-  private originalConsole: typeof console;
+  private originalLog: typeof console.log;
+  private originalWarn: typeof console.warn;
+  private originalError: typeof console.error;
 
   constructor() {
-    this.originalConsole = { ...console };
+    // Bind the original console functions to preserve context
+    this.originalLog = console.log.bind(console);
+    this.originalWarn = console.warn.bind(console);
+    this.originalError = console.error.bind(console);
   }
 
   start() {
-    const capture = (level: string) => (...args: unknown[]) => {
-      this.logs.push(`[${level}] ${args.map(a => String(a)).join(" ")}`);
-      (this.originalConsole as unknown as Record<string, (...args: unknown[]) => void>)[level](...args);
+    const self = this;
+    
+    console.log = (...args: unknown[]) => {
+      self.logs.push(`[LOG] ${args.map(a => String(a)).join(" ")}`);
+      self.originalLog(...args);
     };
 
-    console.log = capture("LOG");
-    console.warn = capture("WARN");
-    console.error = capture("ERROR");
+    console.warn = (...args: unknown[]) => {
+      self.logs.push(`[WARN] ${args.map(a => String(a)).join(" ")}`);
+      self.originalWarn(...args);
+    };
+
+    console.error = (...args: unknown[]) => {
+      self.logs.push(`[ERROR] ${args.map(a => String(a)).join(" ")}`);
+      self.originalError(...args);
+    };
   }
 
   stop() {
-    console.log = this.originalConsole.log;
-    console.warn = this.originalConsole.warn;
-    console.error = this.originalConsole.error;
+    console.log = this.originalLog;
+    console.warn = this.originalWarn;
+    console.error = this.originalError;
   }
 
   getLogs(): string[] {
