@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 24/01/2026 - Sprint 4 Família, Permissões & Localização
-export const HELP_CENTER_VERSION = "24/01/2026 v5";
+// Última atualização: 24/01/2026 - Sprint 5 Dashboard Admin
+export const HELP_CENTER_VERSION = "24/01/2026 v6";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -742,23 +742,32 @@ export const helpArticles: HelpArticle[] = [
     title: "Família e Permissões",
     category: "family",
     icon: "👨‍👩‍👧‍👦",
-    summary: "Convide membros e gerencie permissões no Oik",
+    summary: "Convide membros e gerencie permissões granulares no Oik",
     steps: [
       {
         title: "Convide familiares",
-        description: "Em Configurações > Família, toque em 'Convidar membro'.",
+        description: "Em Configurações > Família, toque em 'Convidar membro'. O convite é enviado por email.",
       },
       {
-        title: "Funções",
-        description: "O dono (owner) tem controle total. Membros podem visualizar e adicionar lançamentos.",
+        title: "Perfis de permissão",
+        description: "Escolha entre 3 perfis prontos: Visualizador (só vê), Editor (adiciona e edita) ou Administrador (controle total).",
+        tip: "Use o perfil mais restrito necessário para cada membro.",
+      },
+      {
+        title: "Permissões granulares",
+        description: "O dono pode definir individualmente: ver tudo, editar tudo, inserir lançamentos, excluir lançamentos, ver projeção, ver orçamento e gerenciar família.",
       },
       {
         title: "Compartilhamento",
-        description: "Todos os membros da família veem os mesmos dados financeiros.",
-        tip: "Conversem em família sobre o uso do Oik para melhor organização.",
+        description: "Todos os membros da família veem os mesmos dados financeiros conforme suas permissões.",
+        tip: "Alterações de permissão refletem imediatamente.",
+      },
+      {
+        title: "Atividade da família",
+        description: "Um feed mostra quem adicionou, editou ou removeu lançamentos, com data e hora.",
       },
     ],
-    keywords: ["família", "membro", "convidar", "permissão", "compartilhar"],
+    keywords: ["família", "membro", "convidar", "permissão", "compartilhar", "perfil", "granular", "atividade"],
     deepLink: "settings",
   },
 
@@ -1159,6 +1168,80 @@ export const faqItems: FAQItem[] = [
     answer: "Se uma linha tem valor mas não tem data, o OIK usa a data da linha anterior. Isso é comum em extratos Bradesco onde múltiplas transações do mesmo dia aparecem sem repetir a data. A ordem original do arquivo é preservada.",
     category: "import",
     keywords: ["data", "carry", "forward", "anterior", "mesma", "bradesco"],
+  },
+];
+
+// ===== ADMIN DASHBOARD FAQ (Internal Use) =====
+export const adminFaqItems: FAQItem[] = [
+  {
+    id: "admin-faq-1",
+    question: "Quais são os perfis de acesso no Dashboard Admin?",
+    answer: "Admin Master (acesso total), Financeiro (métricas, planos, NF), Customer Success (engajamento, saúde do cliente), Suporte (erros, acesso assistido) e Tecnologia (APIs, logs, integrações). Cada perfil só vê os módulos autorizados.",
+    category: "admin",
+    keywords: ["perfil", "acesso", "rbac", "admin", "permissão"],
+  },
+  {
+    id: "admin-faq-2",
+    question: "Como funciona o acesso assistido no Suporte?",
+    answer: "O acesso assistido é somente leitura (read-only) por padrão. O colaborador pode visualizar a conta do usuário para ajudar na navegação. Todas as ações são registradas em trilha de auditoria para LGPD.",
+    category: "admin",
+    keywords: ["acesso", "assistido", "suporte", "read-only", "auditoria"],
+  },
+  {
+    id: "admin-faq-3",
+    question: "O que são os sinais de comportamento no CS?",
+    answer: "São indicadores automáticos como 'dias sem login', 'sem importação após cadastro', 'sem orçamento com transações'. Cada sinal pode disparar sugestões de ação ou automações configuráveis.",
+    category: "admin",
+    keywords: ["sinal", "comportamento", "cs", "automação", "engajamento"],
+  },
+  {
+    id: "admin-faq-4",
+    question: "Como a IA do CS funciona?",
+    answer: "A IA analisa PADRÕES DE USO (nunca dados financeiros), gera sugestões com explicação clara do motivo, e NUNCA executa ações automaticamente sem aprovação. Respeita preferências de consentimento do usuário.",
+    category: "admin",
+    keywords: ["ia", "cs", "sugestão", "automação", "consentimento"],
+  },
+  {
+    id: "admin-faq-5",
+    question: "O que são os Relatórios Executivos?",
+    answer: "Visão estratégica consolidada com métricas de crescimento, receita (MRR/ARR), engajamento e produto. Restrito para ADMIN_MASTER, DIRETORIA e GESTÃO ESTRATÉGICA. Todos os acessos são auditados.",
+    category: "admin",
+    keywords: ["executivo", "relatório", "mrr", "diretoria", "estratégico"],
+  },
+  {
+    id: "admin-faq-6",
+    question: "Como rotacionar chaves de API?",
+    answer: "No módulo Tecnologia > Chaves API, selecione a chave e use 'Rotacionar'. Uma nova chave é gerada e a anterior é desativada. A ação é registrada em auditoria.",
+    category: "admin",
+    keywords: ["api", "chave", "rotacionar", "tecnologia", "segurança"],
+  },
+  {
+    id: "admin-faq-7",
+    question: "O que são Feature Flags?",
+    answer: "Permitem ativar/desativar funcionalidades sem deploy. Útil para testes A/B, rollouts graduais e kill switches. Controlado pelo módulo Tecnologia.",
+    category: "admin",
+    keywords: ["feature", "flag", "toggle", "rollout", "tecnologia"],
+  },
+  {
+    id: "admin-faq-8",
+    question: "Como emitir Nota Fiscal pelo Dashboard?",
+    answer: "No módulo Financeiro > Notas Fiscais, selecione o pagamento e use 'Emitir NF'. O sistema integra com o provedor configurado. Erros de emissão são exibidos com opção de retry.",
+    category: "admin",
+    keywords: ["nota", "fiscal", "nf", "emitir", "financeiro"],
+  },
+  {
+    id: "admin-faq-9",
+    question: "Onde vejo os logs de auditoria?",
+    answer: "Cada módulo tem sua aba de 'Auditoria' com trilha de todas as ações realizadas por colaboradores. Logs incluem usuário, ação, timestamp e detalhes mascarados conforme LGPD.",
+    category: "admin",
+    keywords: ["auditoria", "log", "trilha", "lgpd", "registro"],
+  },
+  {
+    id: "admin-faq-10",
+    question: "Como verificar a saúde do sistema?",
+    answer: "Módulo Tecnologia > Saúde do Sistema mostra uptime, tempo médio de resposta, erros recentes e status das integrações. Alertas são exibidos quando há degradação.",
+    category: "admin",
+    keywords: ["saúde", "sistema", "uptime", "erro", "monitoramento"],
   },
 ];
 
