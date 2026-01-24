@@ -491,6 +491,83 @@ export type Database = {
           },
         ]
       }
+      cs_ai_suggestions: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          confidence_score: number | null
+          created_at: string
+          description: string
+          executed_at: string | null
+          expires_at: string | null
+          family_id: string
+          id: string
+          priority: string | null
+          reason: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          related_signals: string[] | null
+          status: string | null
+          suggested_action: Json | null
+          suggestion_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          description: string
+          executed_at?: string | null
+          expires_at?: string | null
+          family_id: string
+          id?: string
+          priority?: string | null
+          reason: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          related_signals?: string[] | null
+          status?: string | null
+          suggested_action?: Json | null
+          suggestion_type: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          description?: string
+          executed_at?: string | null
+          expires_at?: string | null
+          family_id?: string
+          id?: string
+          priority?: string | null
+          reason?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          related_signals?: string[] | null
+          status?: string | null
+          suggested_action?: Json | null
+          suggestion_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_ai_suggestions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cs_audit_log: {
         Row: {
           action: string
@@ -524,8 +601,181 @@ export type Database = {
         }
         Relationships: []
       }
+      cs_automation_executions: {
+        Row: {
+          action_payload: Json | null
+          action_type: string
+          consent_verified: boolean | null
+          created_at: string
+          error_message: string | null
+          executed_at: string | null
+          executed_by: string | null
+          family_id: string
+          id: string
+          result: Json | null
+          rule_id: string | null
+          status: string | null
+          suggestion_id: string | null
+          triggered_by: string
+        }
+        Insert: {
+          action_payload?: Json | null
+          action_type: string
+          consent_verified?: boolean | null
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          executed_by?: string | null
+          family_id: string
+          id?: string
+          result?: Json | null
+          rule_id?: string | null
+          status?: string | null
+          suggestion_id?: string | null
+          triggered_by: string
+        }
+        Update: {
+          action_payload?: Json | null
+          action_type?: string
+          consent_verified?: boolean | null
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          executed_by?: string | null
+          family_id?: string
+          id?: string
+          result?: Json | null
+          rule_id?: string | null
+          status?: string | null
+          suggestion_id?: string | null
+          triggered_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_automation_executions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cs_automation_executions_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "cs_automation_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cs_automation_executions_suggestion_id_fkey"
+            columns: ["suggestion_id"]
+            isOneToOne: false
+            referencedRelation: "cs_ai_suggestions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cs_automation_rules: {
+        Row: {
+          action_config: Json
+          action_type: string
+          cooldown_hours: number | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          priority: number | null
+          requires_consent: boolean | null
+          trigger_signal: string
+          updated_at: string
+        }
+        Insert: {
+          action_config: Json
+          action_type: string
+          cooldown_hours?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          priority?: number | null
+          requires_consent?: boolean | null
+          trigger_signal: string
+          updated_at?: string
+        }
+        Update: {
+          action_config?: Json
+          action_type?: string
+          cooldown_hours?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          priority?: number | null
+          requires_consent?: boolean | null
+          trigger_signal?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cs_behavior_signals: {
+        Row: {
+          created_at: string
+          detected_at: string
+          family_id: string
+          id: string
+          is_active: boolean | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          signal_code: string
+          signal_type: string
+          signal_value: Json | null
+        }
+        Insert: {
+          created_at?: string
+          detected_at?: string
+          family_id: string
+          id?: string
+          is_active?: boolean | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          signal_code: string
+          signal_type: string
+          signal_value?: Json | null
+        }
+        Update: {
+          created_at?: string
+          detected_at?: string
+          family_id?: string
+          id?: string
+          is_active?: boolean | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          signal_code?: string
+          signal_type?: string
+          signal_value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_behavior_signals_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cs_engagement_metrics: {
         Row: {
+          ai_analysis_at: string | null
+          ai_churn_probability: number | null
+          ai_engagement_prediction: string | null
+          ai_next_best_action: string | null
+          ai_risk_score: number | null
           calculated_at: string
           family_id: string
           has_budget: boolean | null
@@ -539,6 +789,11 @@ export type Database = {
           total_logins_30d: number | null
         }
         Insert: {
+          ai_analysis_at?: string | null
+          ai_churn_probability?: number | null
+          ai_engagement_prediction?: string | null
+          ai_next_best_action?: string | null
+          ai_risk_score?: number | null
           calculated_at?: string
           family_id: string
           has_budget?: boolean | null
@@ -552,6 +807,11 @@ export type Database = {
           total_logins_30d?: number | null
         }
         Update: {
+          ai_analysis_at?: string | null
+          ai_churn_probability?: number | null
+          ai_engagement_prediction?: string | null
+          ai_next_best_action?: string | null
+          ai_risk_score?: number | null
           calculated_at?: string
           family_id?: string
           has_budget?: boolean | null
@@ -567,6 +827,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "cs_engagement_metrics_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: true
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cs_user_preferences: {
+        Row: {
+          allow_ai_analysis: boolean | null
+          allow_notifications: boolean | null
+          allow_proactive_contact: boolean | null
+          allow_smart_tips: boolean | null
+          family_id: string
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          allow_ai_analysis?: boolean | null
+          allow_notifications?: boolean | null
+          allow_proactive_contact?: boolean | null
+          allow_smart_tips?: boolean | null
+          family_id: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          allow_ai_analysis?: boolean | null
+          allow_notifications?: boolean | null
+          allow_proactive_contact?: boolean | null
+          allow_smart_tips?: boolean | null
+          family_id?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_user_preferences_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: true
             referencedRelation: "families"
@@ -2882,6 +3183,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_cs_signals: { Args: { _family_id: string }; Returns: Json }
       calculate_onboarding_progress: {
         Args: {
           onboarding_row: Database["public"]["Tables"]["user_onboarding"]["Row"]
