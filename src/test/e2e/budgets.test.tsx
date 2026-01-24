@@ -137,7 +137,7 @@ describe("5. Testes de Metas/Orçamentos e Alertas", () => {
       const percentage = (spent / limit) * 100;
       const exceeded = spent - limit;
       
-      expect(percentage).toBe(110);
+      expect(percentage).toBeCloseTo(110, 5);
       expect(exceeded).toBe(50);
       
       runner.addStep(

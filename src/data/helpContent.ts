@@ -189,6 +189,80 @@ export const helpArticles: HelpArticle[] = [
   },
 
   {
+    id: "transaction-types",
+    title: "Tipos de Lançamento: Guia Completo",
+    category: "transactions",
+    icon: "🔄",
+    summary: "Entenda a diferença entre Receita, Despesa, Reembolso, Transferência e Ajuste",
+    steps: [
+      {
+        title: "Receita 💚",
+        description: "Dinheiro entrando como ganho real: salário, pro-labore, freelance, vendas, dividendos. Entra no cálculo de receitas mensais.",
+        tip: "Use para qualquer dinheiro novo que entra no seu patrimônio.",
+      },
+      {
+        title: "Despesa 🔴",
+        description: "Dinheiro saindo como gasto: compras, contas, assinaturas, alimentação. Entra no cálculo de despesas mensais.",
+        tip: "A categoria escolhida afeta os relatórios e metas de orçamento.",
+      },
+      {
+        title: "Reembolso 💙",
+        description: "Devolução de uma despesa feita anteriormente. Reduz o total gasto na categoria original.",
+        tip: "Exemplo: Gastou R$100 em Saúde, plano devolveu R$30. Classifique como Reembolso em Saúde = R$70 líquido.",
+      },
+      {
+        title: "Transferência ⚪",
+        description: "Movimentação entre suas próprias contas. NÃO conta como receita nem despesa.",
+        tip: "Use para: PIX entre contas, TED para investimentos, resgate de aplicação. Não infla seus números.",
+      },
+      {
+        title: "Ajuste ⚙️",
+        description: "Correção ou acerto contábil. Para arrumar saldos ou registrar diferenças.",
+        tip: "Raramente usado. Ideal para correções de erros ou ajustes de conciliação.",
+      },
+      {
+        title: "Como escolher?",
+        description: "Dinheiro novo = Receita. Gasto real = Despesa. Devolução = Reembolso. Entre contas = Transferência.",
+      },
+    ],
+    keywords: ["tipo", "lançamento", "receita", "despesa", "reembolso", "transferência", "ajuste", "diferença", "classificação", "como escolher", "guia"],
+    deepLink: "dashboard",
+  },
+
+  {
+    id: "choose-bank-account",
+    title: "Escolher Conta Bancária Correta",
+    category: "transactions",
+    icon: "🏦",
+    summary: "Como selecionar a conta ou cartão certo ao lançar",
+    steps: [
+      {
+        title: "Por que vincular conta?",
+        description: "Vinculando a conta, você sabe de onde saiu ou entrou o dinheiro. Facilita a conciliação com extratos.",
+      },
+      {
+        title: "Conta para PIX/Débito/Transferência",
+        description: "Selecione a conta bancária de onde saiu ou entrou o dinheiro. O saldo da conta será afetado.",
+      },
+      {
+        title: "Cartão de Crédito",
+        description: "Para compras no crédito, selecione o cartão. O valor entra na fatura do cartão.",
+        tip: "A fatura aparece no mês do fechamento, não da compra.",
+      },
+      {
+        title: "Dinheiro ou Cheque",
+        description: "Não precisa vincular conta. Para cheque, informe o número no campo específico.",
+      },
+      {
+        title: "Posso não vincular?",
+        description: "Sim, o campo é opcional. Mas vincular ajuda nos relatórios por conta e na conciliação.",
+      },
+    ],
+    keywords: ["conta", "bancária", "escolher", "vincular", "cartão", "crédito", "débito", "pix", "qual"],
+    deepLink: "dashboard",
+  },
+
+  {
     id: "statement-filters",
     title: "Extrato e Filtros",
     category: "transactions",
