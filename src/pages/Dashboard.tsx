@@ -13,11 +13,13 @@ import { AddTransactionSheet } from "@/components/AddTransactionSheet";
 import { EditTransactionSheet } from "@/components/EditTransactionSheet";
 import { FabButton } from "@/components/QuickActions";
 import { SkeletonHome } from "@/components/ui/money-loader";
+import { WelcomeModal, OnboardingChecklist } from "@/components/onboarding";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions, useFinanceSummary, useCreateTransaction, useTransactionsLast6Months } from "@/hooks/useTransactions";
 import { useInsights } from "@/hooks/useInsights";
 import { useHomeSummary } from "@/hooks/useHomeSummary";
 import { useDebouncedLoading } from "@/hooks/useLoading";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { getCategoryById } from "@/data/categories";
 import { Transaction, TransactionType } from "@/types/finance";
 import { toast } from "sonner";
@@ -57,6 +59,7 @@ export function Dashboard({
   const { data: last6MonthsTransactions = [] } = useTransactionsLast6Months();
   const { insights } = useInsights();
   const createTransaction = useCreateTransaction();
+  const { state: onboardingState } = useOnboarding();
 
   // Get user's first name for greeting
   const userName = useMemo(() => {
@@ -222,11 +225,19 @@ export function Dashboard({
 
   return (
     <div className="min-h-screen bg-background pb-24">
+      {/* Welcome Modal for new users */}
+      <WelcomeModal />
+
       <Header userName={userName} onSettingsClick={onSettingsClick} />
 
       <main className="container px-4 space-y-4 py-4">
         {/* Month Selector */}
         <MonthSelector selectedDate={selectedDate} onMonthChange={setSelectedDate} />
+
+        {/* Onboarding Checklist - show if not complete */}
+        {onboardingState.progressPercent < 100 && (
+          <OnboardingChecklist />
+        )}
 
         {/* Global Balance Card with Accounts Preview */}
         <GlobalBalanceCard
