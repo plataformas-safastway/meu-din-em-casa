@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 24/01/2026 - Sprint 2 UX Core & Daily Usage
-export const HELP_CENTER_VERSION = "24/01/2026 v3";
+// Última atualização: 24/01/2026 - Sprint 3 Projeção, Orçamento & Educação
+export const HELP_CENTER_VERSION = "24/01/2026 v4";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -372,23 +372,130 @@ export const helpArticles: HelpArticle[] = [
       {
         title: "Crie uma meta",
         description: "Em Metas, toque em 'Nova Meta'. Escolha uma categoria e defina o limite mensal.",
+        tip: "Orçamento é uma referência, não um limite rígido. Use para entender padrões.",
+      },
+      {
+        title: "Previsto vs Realizado",
+        description: "Veja a comparação clara entre o que vocês planejaram (previsto) e o que realmente gastaram (realizado).",
+        tip: "A diferença positiva significa economia. Negativa significa que gastaram mais que o planejado.",
       },
       {
         title: "Alerta de 80%",
-        description: "Quando vocês atingirem 80% do limite, verão um alerta amarelo com a mensagem 'Atenção com [Categoria]'.",
+        description: "Quando vocês atingirem 80% do limite, verão um alerta amarelo suave: 'Vocês já usaram 80% do orçamento desta categoria'.",
+        tip: "Esses alertas podem ser fechados e silenciados por categoria.",
       },
       {
         title: "Limite excedido (100%)",
-        description: "Ao ultrapassar 100%, o alerta fica vermelho: 'O limite de [Categoria] foi ultrapassado'.",
+        description: "Ao ultrapassar 100%, o alerta fica vermelho. Vocês podem ajustar o orçamento ou revisar os lançamentos.",
+        tip: "Exceder não é 'errar' — é um sinal para reavaliar ou aceitar que essa categoria precisa de mais.",
       },
       {
         title: "Ajuste metas",
-        description: "Vocês podem editar ou remover metas a qualquer momento. Após exceder, é possível aumentar o limite.",
+        description: "Vocês podem editar ou remover metas a qualquer momento. Metas futuras também podem ser configuradas.",
         tip: "Comece com metas realistas baseadas no seu histórico.",
       },
+      {
+        title: "Integração com Projeção",
+        description: "As metas de orçamento impactam a projeção financeira futura, ajudando a visualizar o impacto das escolhas.",
+      },
     ],
-    keywords: ["meta", "orçamento", "limite", "alerta", "objetivo", "controle", "80%", "100%", "excedido"],
+    keywords: ["meta", "orçamento", "limite", "alerta", "objetivo", "controle", "80%", "100%", "excedido", "previsto", "realizado", "comparação"],
     deepLink: "goals",
+  },
+
+  // ===== PROJEÇÃO =====
+  {
+    id: "projection-intro",
+    title: "O que é Projeção Financeira?",
+    category: "projection",
+    icon: "🔮",
+    summary: "Entenda como ver o futuro financeiro sem editar nada",
+    steps: [
+      {
+        title: "Visualização, não controle",
+        description: "A Projeção mostra o impacto futuro das suas decisões atuais. Você não edita nada — apenas observa e planeja.",
+        tip: "Enxergue antes de sentir. Essa é a ideia central da projeção.",
+      },
+      {
+        title: "Timeline mensal",
+        description: "Veja os próximos 6 meses em cards horizontais. Cada card mostra o saldo projetado. Toque para ver detalhes.",
+      },
+      {
+        title: "Receitas projetadas",
+        description: "Baseadas nas suas transações recorrentes (salário, pro-labore, renda fixa) e na média histórica.",
+      },
+      {
+        title: "Despesas projetadas",
+        description: "Incluem gastos fixos (recorrentes), parcelas de cartão e uma estimativa baseada no seu padrão de consumo.",
+      },
+      {
+        title: "Saldo projetado",
+        description: "Receitas menos despesas. Se ficar negativo, o card fica vermelho com alerta. Se positivo, está tudo bem.",
+        tip: "Vermelho não é erro — é um sinal para planejar com antecedência.",
+      },
+    ],
+    keywords: ["projeção", "futuro", "próximos meses", "previsão", "visualizar", "timeline", "saldo projetado"],
+    deepLink: "projection",
+  },
+
+  {
+    id: "projection-credit-cards",
+    title: "Parcelas do Cartão na Projeção",
+    category: "projection",
+    icon: "💳",
+    summary: "Como as parcelas impactam seus meses futuros",
+    steps: [
+      {
+        title: "Detalhamento de parcelas",
+        description: "A projeção mostra cada parcela individualmente: descrição, número da parcela (ex: 3/12) e valor.",
+        tip: "Parcelas são compromissos fixos — entram automaticamente no cálculo.",
+      },
+      {
+        title: "Impacto no orçamento",
+        description: "Se suas parcelas representam mais de 30% da receita projetada, você verá um alerta educativo.",
+        tip: "Parcelar espalha o impacto no tempo — pode ser bom, mas requer atenção.",
+      },
+      {
+        title: "Concentração de parcelas",
+        description: "A projeção destaca quando um cartão concentra muitas parcelas em um período específico.",
+      },
+      {
+        title: "Dica: não é sugestão de troca",
+        description: "O Oik não sugere trocar de cartão. Apenas mostra os dados para você decidir conscientemente.",
+      },
+    ],
+    keywords: ["cartão", "parcela", "crédito", "fatura", "projeção", "impacto", "futuro", "concentração"],
+    deepLink: "projection",
+  },
+
+  {
+    id: "projection-ai-tips",
+    title: "Dicas de IA na Projeção",
+    category: "projection",
+    icon: "✨",
+    summary: "Como funcionam as dicas inteligentes baseadas nos seus dados",
+    steps: [
+      {
+        title: "Análise agregada",
+        description: "A IA analisa dados agregados (totais, médias, tendências) — nunca vê transações individuais.",
+        tip: "Sua privacidade é preservada. A IA vê números, não descrições.",
+      },
+      {
+        title: "Dicas personalizadas",
+        description: "Baseadas no seu padrão: taxa de economia, categorias mais gastas, tendências de mês a mês.",
+      },
+      {
+        title: "Alertas quando necessário",
+        description: "Se a projeção indicar risco (saldo negativo futuro, gastos muito altos), você verá um alerta.",
+        tip: "Alertas são informativos, não cobranças. O Oik não julga.",
+      },
+      {
+        title: "Recomendações práticas",
+        description: "Sugestões simples e acionáveis como 'revisar gastos fixos' ou 'manter reserva de emergência'.",
+      },
+    ],
+    keywords: ["ia", "inteligência artificial", "dicas", "recomendação", "alerta", "automático", "personalizado"],
+    deepLink: "projection",
   },
 
   // ===== IMPORTAÇÃO =====

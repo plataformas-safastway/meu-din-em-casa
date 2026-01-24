@@ -46,6 +46,8 @@ const Index = () => {
             onBanksClick={() => setActiveTab("banks")}
             onCategoriesClick={() => setActiveTab("categories")}
             onTransactionsClick={() => setActiveTab("transactions")}
+            onBudgetsClick={() => setActiveTab("goals")}
+            onProjectionClick={() => setActiveTab("projection")}
           />
         );
       case "transactions":
