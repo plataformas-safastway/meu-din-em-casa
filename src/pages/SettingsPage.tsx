@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, Wifi } from "lucide-react";
+import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, Wifi, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { EditFamilyProfileSheet } from "@/components/profile/EditFamilyProfileSheet";
+import { EducationPreferences } from "@/components/onboarding";
 
 interface SettingsPageProps {
   onBack: () => void;
@@ -14,6 +15,7 @@ interface SettingsPageProps {
 export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
   const { family, familyMember, signOut } = useAuth();
   const [showFamilySheet, setShowFamilySheet] = useState(false);
+  const [showEducationPrefs, setShowEducationPrefs] = useState(false);
 
   const handleAction = (id: string) => {
     switch (id) {
@@ -31,6 +33,9 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
         break;
       case "family":
         setShowFamilySheet(true);
+        break;
+      case "education":
+        setShowEducationPrefs(!showEducationPrefs);
         break;
       case "help":
         onNavigate?.("help");
@@ -67,6 +72,7 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
     {
       title: "Suporte",
       items: [
+        { id: "education", label: "Dicas e Educação", icon: BookOpen, action: "component" },
         { id: "help", label: "Central de Ajuda", icon: HelpCircle, action: "navigate" },
       ],
     },
@@ -141,6 +147,11 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
                 );
               })}
             </div>
+            {section.title === "Suporte" && showEducationPrefs && (
+              <div className="p-4 border-t border-border/30">
+                <EducationPreferences />
+              </div>
+            )}
           </div>
         ))}
 
