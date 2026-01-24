@@ -70,8 +70,11 @@ export type Database = {
           family_id: string | null
           id: string
           ip_address: string | null
+          metadata: Json | null
+          module: string | null
           new_value: Json | null
           old_value: Json | null
+          severity: string | null
           user_agent: string | null
           user_id: string
         }
@@ -83,8 +86,11 @@ export type Database = {
           family_id?: string | null
           id?: string
           ip_address?: string | null
+          metadata?: Json | null
+          module?: string | null
           new_value?: Json | null
           old_value?: Json | null
+          severity?: string | null
           user_agent?: string | null
           user_id: string
         }
@@ -96,8 +102,11 @@ export type Database = {
           family_id?: string | null
           id?: string
           ip_address?: string | null
+          metadata?: Json | null
+          module?: string | null
           new_value?: Json | null
           old_value?: Json | null
+          severity?: string | null
           user_agent?: string | null
           user_id?: string
         }
@@ -574,6 +583,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      financial_metrics_cache: {
+        Row: {
+          calculated_at: string
+          id: string
+          metadata: Json | null
+          metric_date: string
+          metric_type: string
+          metric_value: number
+        }
+        Insert: {
+          calculated_at?: string
+          id?: string
+          metadata?: Json | null
+          metric_date: string
+          metric_type: string
+          metric_value: number
+        }
+        Update: {
+          calculated_at?: string
+          id?: string
+          metadata?: Json | null
+          metric_date?: string
+          metric_type?: string
+          metric_value?: number
+        }
+        Relationships: []
       }
       goal_contributions: {
         Row: {
@@ -1062,6 +1098,93 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount: number
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          created_at: string
+          customer_document: string
+          customer_email: string | null
+          customer_name: string
+          error_code: string | null
+          error_message: string | null
+          external_invoice_id: string | null
+          family_id: string
+          id: string
+          invoice_number: string | null
+          issued_at: string | null
+          payment_id: string | null
+          pdf_url: string | null
+          retry_count: number | null
+          service_description: string
+          status: string
+          updated_at: string
+          xml_url: string | null
+        }
+        Insert: {
+          amount: number
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          customer_document: string
+          customer_email?: string | null
+          customer_name: string
+          error_code?: string | null
+          error_message?: string | null
+          external_invoice_id?: string | null
+          family_id: string
+          id?: string
+          invoice_number?: string | null
+          issued_at?: string | null
+          payment_id?: string | null
+          pdf_url?: string | null
+          retry_count?: number | null
+          service_description?: string
+          status?: string
+          updated_at?: string
+          xml_url?: string | null
+        }
+        Update: {
+          amount?: number
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          customer_document?: string
+          customer_email?: string | null
+          customer_name?: string
+          error_code?: string | null
+          error_message?: string | null
+          external_invoice_id?: string | null
+          family_id?: string
+          id?: string
+          invoice_number?: string | null
+          issued_at?: string | null
+          payment_id?: string | null
+          pdf_url?: string | null
+          retry_count?: number | null
+          service_description?: string
+          status?: string
+          updated_at?: string
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_payments"
             referencedColumns: ["id"]
           },
         ]
@@ -1582,6 +1705,117 @@ export type Database = {
           },
         ]
       }
+      subscription_payments: {
+        Row: {
+          amount: number
+          attempts: number
+          created_at: string
+          due_date: string
+          external_payment_id: string | null
+          failure_reason: string | null
+          family_id: string
+          id: string
+          last_attempt_at: string | null
+          paid_at: string | null
+          payment_method: string | null
+          refund_amount: number | null
+          refund_reason: string | null
+          refunded_at: string | null
+          status: string
+          subscription_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          attempts?: number
+          created_at?: string
+          due_date: string
+          external_payment_id?: string | null
+          failure_reason?: string | null
+          family_id: string
+          id?: string
+          last_attempt_at?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          refund_amount?: number | null
+          refund_reason?: string | null
+          refunded_at?: string | null
+          status?: string
+          subscription_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          attempts?: number
+          created_at?: string
+          due_date?: string
+          external_payment_id?: string | null
+          failure_reason?: string | null
+          family_id?: string
+          id?: string
+          last_attempt_at?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          refund_amount?: number | null
+          refund_reason?: string | null
+          refunded_at?: string | null
+          status?: string
+          subscription_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          billing_cycle: string
+          created_at: string
+          description: string | null
+          features: Json | null
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          billing_cycle?: string
+          created_at?: string
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          billing_cycle?: string
+          created_at?: string
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -1736,6 +1970,75 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          external_customer_id: string | null
+          family_id: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          plan_id: string
+          started_at: string
+          status: string
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          external_customer_id?: string | null
+          family_id: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          plan_id: string
+          started_at?: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          external_customer_id?: string | null
+          family_id?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          plan_id?: string
+          started_at?: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1748,6 +2051,7 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_role"]
       }
       has_any_admin: { Args: never; Returns: boolean }
+      has_financial_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1755,6 +2059,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_tech_access: { Args: { _user_id: string }; Returns: boolean }
       is_family_member: { Args: { f_id: string }; Returns: boolean }
       is_family_owner: { Args: { f_id: string }; Returns: boolean }
     }
