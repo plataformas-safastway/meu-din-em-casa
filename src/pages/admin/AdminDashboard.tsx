@@ -11,24 +11,41 @@ import {
   UserCog,
   FileText,
   TrendingUp,
-  Building2
+  Building2,
+  DollarSign,
+  Receipt,
+  FileSpreadsheet,
+  ClipboardList,
+  Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
+import { useFinancialAccess } from "@/hooks/useFinancialAccess";
 import { AdminUsersPage } from "./AdminUsersPage";
 import { AdminEbooksPage } from "./AdminEbooksPage";
 import { AdminMetricsPage } from "./AdminMetricsPage";
 import { AdminOpenFinancePage } from "./AdminOpenFinancePage";
+import {
+  FinancialOverviewPage,
+  FinancialUsersPage,
+  FinancialPaymentsPage,
+  FinancialInvoicesPage,
+  FinancialReportsPage,
+  FinancialAuditPage
+} from "./finance";
 
-type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings";
+type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings" 
+  | "fin-overview" | "fin-users" | "fin-payments" | "fin-invoices" | "fin-reports" | "fin-audit";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
   const { user, familyMember, signOut } = useAuth();
   const { role, isAdmin, isCS } = useIsAdmin();
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+
+  const { data: hasFinancialAccess } = useFinancialAccess();
 
   const handleSignOut = async () => {
     await signOut();
@@ -44,7 +61,22 @@ export function AdminDashboard() {
     ...(isAdmin ? [{ id: "settings" as AdminTab, label: "Configurações", icon: Settings }] : []),
   ];
 
+  // Financial module menu - only for users with financial access
+  const financialMenuItems = hasFinancialAccess ? [
+    { id: "fin-overview" as AdminTab, label: "Visão Financeira", icon: DollarSign },
+    { id: "fin-users" as AdminTab, label: "Gestão Usuários", icon: UserCog },
+    { id: "fin-payments" as AdminTab, label: "Cobranças", icon: Receipt },
+    { id: "fin-invoices" as AdminTab, label: "Notas Fiscais", icon: FileText },
+    { id: "fin-reports" as AdminTab, label: "Relatórios", icon: FileSpreadsheet },
+    { id: "fin-audit" as AdminTab, label: "Auditoria", icon: ClipboardList },
+  ] : [];
+
   const renderContent = () => {
+    // Check financial access for financial tabs
+    if (activeTab.startsWith('fin-') && !hasFinancialAccess) {
+      return <AccessDenied />;
+    }
+
     switch (activeTab) {
       case "users":
         return <AdminUsersPage />;
@@ -56,8 +88,20 @@ export function AdminDashboard() {
         return <AdminOpenFinancePage />;
       case "settings":
         return <AdminSettingsPlaceholder />;
+      case "fin-overview":
+        return <FinancialOverviewPage />;
+      case "fin-users":
+        return <FinancialUsersPage />;
+      case "fin-payments":
+        return <FinancialPaymentsPage />;
+      case "fin-invoices":
+        return <FinancialInvoicesPage />;
+      case "fin-reports":
+        return <FinancialReportsPage />;
+      case "fin-audit":
+        return <FinancialAuditPage />;
       default:
-        return <AdminOverview onNavigate={setActiveTab} />;
+        return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} />;
     }
   };
 
@@ -131,7 +175,7 @@ export function AdminDashboard() {
   );
 }
 
-function AdminOverview({ onNavigate }: { onNavigate: (tab: AdminTab) => void }) {
+function AdminOverview({ onNavigate, hasFinancialAccess }: { onNavigate: (tab: AdminTab) => void; hasFinancialAccess: boolean }) {
   const stats = [
     { label: "Total de Usuários", value: "—", icon: Users, color: "text-blue-500" },
     { label: "Famílias Ativas", value: "—", icon: Home, color: "text-green-500" },
@@ -144,6 +188,9 @@ function AdminOverview({ onNavigate }: { onNavigate: (tab: AdminTab) => void }) 
     { label: "Gerenciar eBooks", icon: BookOpen, action: () => onNavigate("ebooks") },
     { label: "Ver Métricas", icon: BarChart3, action: () => onNavigate("metrics") },
     { label: "Open Finance", icon: Building2, action: () => onNavigate("openfinance") },
+    ...(hasFinancialAccess ? [
+      { label: "Financeiro", icon: DollarSign, action: () => onNavigate("fin-overview") },
+    ] : []),
   ];
 
   return (
@@ -214,6 +261,24 @@ function AdminSettingsPlaceholder() {
         <CardContent className="p-8 text-center text-muted-foreground">
           <Settings className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p>Configurações em desenvolvimento</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AccessDenied() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">Acesso Não Autorizado</h2>
+        <p className="text-muted-foreground">Você não tem permissão para acessar este módulo</p>
+      </div>
+      
+      <Card>
+        <CardContent className="p-8 text-center text-muted-foreground">
+          <Lock className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p>Este módulo requer perfil ADMIN_MASTER ou FINANCEIRO</p>
         </CardContent>
       </Card>
     </div>
