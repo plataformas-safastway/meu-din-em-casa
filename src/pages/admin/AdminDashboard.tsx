@@ -212,6 +212,7 @@ export function AdminDashboard() {
               })}
             </>
           )}
+        </nav>
 
         <div className="p-4 border-t border-border space-y-2">
           <div className="px-3 py-2">
@@ -249,7 +250,7 @@ export function AdminDashboard() {
   );
 }
 
-function AdminOverview({ onNavigate, hasFinancialAccess }: { onNavigate: (tab: AdminTab) => void; hasFinancialAccess: boolean }) {
+function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess }: { onNavigate: (tab: AdminTab) => void; hasFinancialAccess: boolean; hasSupportAccess: boolean }) {
   const stats = [
     { label: "Total de Usuários", value: "—", icon: Users, color: "text-blue-500" },
     { label: "Famílias Ativas", value: "—", icon: Home, color: "text-green-500" },
@@ -264,6 +265,9 @@ function AdminOverview({ onNavigate, hasFinancialAccess }: { onNavigate: (tab: A
     { label: "Open Finance", icon: Building2, action: () => onNavigate("openfinance") },
     ...(hasFinancialAccess ? [
       { label: "Financeiro", icon: DollarSign, action: () => onNavigate("fin-overview") },
+    ] : []),
+    ...(hasSupportAccess ? [
+      { label: "Suporte", icon: Headphones, action: () => onNavigate("sup-errors") },
     ] : []),
   ];
 
@@ -341,7 +345,7 @@ function AdminSettingsPlaceholder() {
   );
 }
 
-function AccessDenied() {
+function AccessDenied({ message }: { message?: string }) {
   return (
     <div className="space-y-6">
       <div>
@@ -352,7 +356,7 @@ function AccessDenied() {
       <Card>
         <CardContent className="p-8 text-center text-muted-foreground">
           <Lock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>Este módulo requer perfil ADMIN_MASTER ou FINANCEIRO</p>
+          <p>{message || "Este módulo requer perfil ADMIN_MASTER ou FINANCEIRO"}</p>
         </CardContent>
       </Card>
     </div>
