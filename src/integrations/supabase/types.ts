@@ -1035,6 +1035,78 @@ export type Database = {
           },
         ]
       }
+      executive_reports_audit: {
+        Row: {
+          accessed_at: string
+          action: string
+          export_format: string | null
+          id: string
+          ip_address: string | null
+          period_end: string | null
+          period_start: string | null
+          report_type: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accessed_at?: string
+          action: string
+          export_format?: string | null
+          id?: string
+          ip_address?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          report_type: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accessed_at?: string
+          action?: string
+          export_format?: string | null
+          id?: string
+          ip_address?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          report_type?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      executive_reports_cache: {
+        Row: {
+          calculated_at: string
+          created_by: string | null
+          data: Json
+          expires_at: string
+          id: string
+          period_end: string
+          period_start: string
+          report_type: string
+        }
+        Insert: {
+          calculated_at?: string
+          created_by?: string | null
+          data: Json
+          expires_at: string
+          id?: string
+          period_end: string
+          period_start: string
+          report_type: string
+        }
+        Update: {
+          calculated_at?: string
+          created_by?: string | null
+          data?: Json
+          expires_at?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          report_type?: string
+        }
+        Relationships: []
+      }
       families: {
         Row: {
           created_at: string
@@ -3191,6 +3263,14 @@ export type Database = {
         Returns: number
       }
       expire_old_imports: { Args: never; Returns: undefined }
+      get_engagement_metrics_report: { Args: never; Returns: Json }
+      get_executive_metrics: {
+        Args: { _period_end?: string; _period_start?: string }
+        Returns: Json
+      }
+      get_growth_metrics: { Args: { _months?: number }; Returns: Json }
+      get_product_stability_metrics: { Args: never; Returns: Json }
+      get_revenue_metrics: { Args: { _months?: number }; Returns: Json }
       get_user_family_id: { Args: never; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
@@ -3198,6 +3278,7 @@ export type Database = {
       }
       has_any_admin: { Args: never; Returns: boolean }
       has_cs_access: { Args: { _user_id: string }; Returns: boolean }
+      has_executive_access: { Args: { _user_id: string }; Returns: boolean }
       has_financial_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
