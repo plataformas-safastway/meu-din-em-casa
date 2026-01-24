@@ -21,6 +21,7 @@ import { FamilyPage } from "./FamilyPage";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { WhatsAppCTA } from "@/components/WhatsAppCTA";
 import { LocationContextBanner } from "@/components/family";
+import { CSInAppMessage } from "@/components/cs/CSInAppMessage";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -131,6 +132,7 @@ const Index = () => {
       <LocationContextBanner />
       {renderPage()}
       <WhatsAppCTA />
+      <CSInAppMessage />
       <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   );
