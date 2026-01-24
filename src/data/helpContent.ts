@@ -21,20 +21,21 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 24/01/2026
-export const HELP_CENTER_VERSION = "24/01/2026";
+// Última atualização: 24/01/2026 - Sprint 1 Import Fix
+export const HELP_CENTER_VERSION = "24/01/2026 v2";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
-  { name: "Bradesco", formats: ["PDF", "XLS"], tested: true },
-  { name: "BTG Pactual", formats: ["PDF", "XLS"], tested: true },
-  { name: "Itaú", formats: ["PDF", "XLS"], tested: true },
-  { name: "Santander", formats: ["PDF", "XLS"], tested: true },
+  { name: "Bradesco", formats: ["PDF", "XLS", "XLSX"], tested: true },
+  { name: "BTG Pactual", formats: ["PDF", "XLS", "XLSX"], tested: true },
+  { name: "Itaú", formats: ["PDF", "XLS", "XLSX"], tested: true },
+  { name: "Santander", formats: ["PDF", "XLS", "XLSX"], tested: true },
   { name: "Nubank", formats: ["OFX"], tested: true },
   { name: "Inter", formats: ["OFX"], tested: true },
   { name: "C6 Bank", formats: ["OFX"], tested: true },
   { name: "Caixa", formats: ["OFX"], tested: false },
   { name: "Banco do Brasil", formats: ["OFX"], tested: false },
+  { name: "Outros", formats: ["OFX", "XLS", "XLSX"], tested: false },
 ] as const;
 
 export const helpArticles: HelpArticle[] = [
@@ -322,44 +323,165 @@ export const helpArticles: HelpArticle[] = [
     title: "Importar Extratos",
     category: "import",
     icon: "📥",
-    summary: "Importe arquivos OFX, XLSX ou PDF no Oik",
+    summary: "Importe arquivos OFX, XLSX, XLS ou PDF no Oik",
     steps: [
       {
         title: "Formatos suportados",
-        description: "OFX (padrão bancário universal), XLSX/XLS (Excel) e PDF. Todos os formatos são aceitos para extratos de conta corrente.",
+        description: "OFX (padrão bancário universal), XLSX/XLS (Excel) e PDF. O OIK detecta automaticamente as colunas e banco emissor.",
+        tip: "Excel é o formato mais confiável para extratos brasileiros. OFX funciona com qualquer banco.",
       },
       {
         title: "Bancos compatíveis (testados)",
         description: "Bradesco, BTG Pactual, Itaú e Santander foram testados com arquivos PDF e XLS reais. Nubank, Inter e C6 funcionam via OFX.",
-        tip: "Outros bancos também podem funcionar. Se o seu não for reconhecido, exporte o extrato em OFX.",
+        tip: "O parser universal funciona com qualquer banco que exporte Excel com colunas padrão (Data, Descrição, Valor).",
       },
       {
         title: "Upload do arquivo",
-        description: "Vá em Configurações > Importar ou use o atalho na tela inicial. O OIK detecta automaticamente o banco e tipo de documento.",
+        description: "Vá em Configurações > Importar ou use o atalho na tela inicial. Selecione o arquivo e confirme a titularidade.",
+      },
+      {
+        title: "Detecção automática de colunas",
+        description: "O OIK identifica colunas automaticamente: Data (Data, Dt, Data Lançamento), Descrição (Histórico, Movimentação), Valor (Crédito, Débito, Valor R$).",
+        tip: "Se seu Excel tiver cabeçalhos padrão, a importação funciona sem configuração.",
       },
       {
         title: "Arquivos com senha (Inteligente)",
-        description: "Se o arquivo estiver protegido, o OIK tenta desbloquear automaticamente usando padrões de CPF: 11 dígitos, 3, 4, 5, 6, 7, 8, 9 ou 10 primeiros dígitos.",
+        description: "Se o arquivo estiver protegido, o OIK tenta desbloquear automaticamente usando padrões de CPF: 11, 10, 9, 8, 7, 6, 5, 4 ou 3 primeiros dígitos.",
         tip: "O sistema aprende o padrão de cada banco para acelerar futuras importações.",
       },
       {
         title: "Confirmação de titularidade",
-        description: "Antes de importar, você confirma que o arquivo pertence a você ou sua família. Isso é obrigatório por segurança.",
+        description: "Antes de importar, você confirma que o arquivo pertence a você ou sua família. Isso é obrigatório por segurança e LGPD.",
       },
       {
-        title: "Detecção automática",
-        description: "O OIK identifica automaticamente: banco emissor (Bradesco, BTG, Itaú, Santander, etc.), tipo (extrato ou fatura), conta/cartão associado, e categoriza as transações.",
+        title: "Detecção automática de conta",
+        description: "O OIK identifica agência e conta no cabeçalho do arquivo. Se não existir no cadastro, oferece criar automaticamente.",
       },
       {
         title: "Revisão obrigatória",
-        description: "Antes de salvar, vocês SEMPRE revisam as transações. Linhas de saldo (ex: 'SALDO ANTERIOR', 'Saldo Diário') são filtradas automaticamente.",
+        description: "Antes de salvar, vocês SEMPRE revisam as transações. Linhas de saldo e cabeçalho são filtradas automaticamente.",
+      },
+      {
+        title: "Edição na revisão",
+        description: "Você pode editar: descrição (nome do lançamento), classificação (Receita/Despesa/Transferência/Reembolso/Ajuste), categoria e subcategoria.",
+      },
+      {
+        title: "Linhas multi-linha (Rem:/Des:)",
+        description: "Descrições que continuam em linhas abaixo (como 'Rem: Fulano' ou 'Des: Pagamento') são concatenadas automaticamente.",
       },
       {
         title: "Aprendizado contínuo",
         description: "Ao corrigir uma categoria, o OIK aprende para próximas importações. Padrões de senha também são aprendidos por banco.",
       },
     ],
-    keywords: ["importar", "extrato", "banco", "ofx", "excel", "xlsx", "xls", "pdf", "senha", "cpf", "duplicado", "automático", "inteligente", "bradesco", "btg", "itau", "santander"],
+    keywords: ["importar", "extrato", "banco", "ofx", "excel", "xlsx", "xls", "pdf", "senha", "cpf", "duplicado", "automático", "inteligente", "bradesco", "btg", "itau", "santander", "colunas", "heurística"],
+    deepLink: "settings",
+  },
+
+  {
+    id: "import-excel-tips",
+    title: "Dicas para Importar Excel",
+    category: "import",
+    icon: "📊",
+    summary: "Como preparar seu arquivo Excel para melhor importação",
+    steps: [
+      {
+        title: "Colunas reconhecidas",
+        description: "O OIK detecta automaticamente: Data, Dt, Data Lançamento, Data Movimento | Descrição, Histórico, Movimentação, Lançamento | Valor, Crédito, Débito, Valor R$.",
+        tip: "Use nomes de coluna em português para melhor detecção.",
+      },
+      {
+        title: "Formato de data",
+        description: "Aceitos: DD/MM/YYYY, DD/MM/YY, DD-MM-YYYY, ou serial do Excel (número). Datas sem ano usam o ano do período do extrato.",
+      },
+      {
+        title: "Formato de valor",
+        description: "Aceitos: 1.234,56 (brasileiro) ou 1234.56 (internacional). Valores negativos indicam débito. Colunas separadas de Crédito/Débito também funcionam.",
+      },
+      {
+        title: "Linhas de cabeçalho",
+        description: "O OIK pula linhas de título, período e cabeçalho automaticamente. Procura a primeira linha com 'Data' e padrões similares.",
+      },
+      {
+        title: "Linhas de rodapé",
+        description: "Linhas com 'Últimos Lançamentos', 'Total', 'Telefones úteis' ou 'Dados acima' são ignoradas automaticamente.",
+      },
+      {
+        title: "Se não funcionar",
+        description: "Exporte o extrato em formato OFX (disponível em todos os internet bankings). OFX é o formato mais universal e confiável.",
+      },
+    ],
+    keywords: ["excel", "xlsx", "xls", "colunas", "formato", "data", "valor", "preparar", "dicas"],
+    deepLink: "settings",
+  },
+
+  {
+    id: "import-password-cpf",
+    title: "Arquivos com Senha (CPF)",
+    category: "import",
+    icon: "🔐",
+    summary: "Como o OIK desbloqueia arquivos protegidos por senha",
+    steps: [
+      {
+        title: "Detecção de proteção",
+        description: "Ao enviar um PDF ou Excel protegido, o OIK detecta automaticamente que precisa de senha.",
+      },
+      {
+        title: "Tentativa automática com CPF",
+        description: "O sistema tenta padrões de CPF: 11 dígitos completos, depois 10, 9, 8, 7, 6, 5, 4 e 3 primeiros dígitos.",
+        tip: "Bradesco geralmente usa CPF completo (11 dígitos). Outros bancos variam.",
+      },
+      {
+        title: "Aprendizado por banco",
+        description: "Quando um padrão funciona, o OIK memoriza para aquele banco. Próximas importações tentam esse padrão primeiro.",
+      },
+      {
+        title: "Segurança do CPF",
+        description: "Seu CPF é criptografado e NUNCA aparece em logs. Senhas de arquivo são usadas apenas no momento do desbloqueio e descartadas.",
+      },
+      {
+        title: "Se não conseguir desbloquear",
+        description: "Verifique se o CPF cadastrado está correto. Se o arquivo usa outra senha (data de nascimento, código do banco), exporte em OFX.",
+      },
+    ],
+    keywords: ["senha", "cpf", "protegido", "desbloquear", "automático", "segurança", "lgpd"],
+    deepLink: "settings",
+  },
+
+  {
+    id: "import-troubleshooting",
+    title: "Problemas na Importação",
+    category: "import",
+    icon: "🔧",
+    summary: "Soluções para erros comuns de importação",
+    steps: [
+      {
+        title: "Erro: 'Nenhuma transação encontrada'",
+        description: "O arquivo pode estar vazio, em formato não suportado, ou as colunas não foram reconhecidas. Tente exportar em OFX.",
+        tip: "PDFs escaneados (imagem) não funcionam. Precisa ser PDF com texto selecionável.",
+      },
+      {
+        title: "Erro: 'Não foi possível ler o Excel'",
+        description: "O arquivo pode estar corrompido ou em formato muito antigo. Abra no Excel, salve como XLSX e tente novamente.",
+      },
+      {
+        title: "Erro: 'Arquivo protegido'",
+        description: "O OIK não conseguiu desbloquear com CPF. Verifique se seu CPF está cadastrado corretamente ou exporte em OFX (sem senha).",
+      },
+      {
+        title: "Tela branca na revisão",
+        description: "Toque em 'Atualizar'. Se persistir, volte e tente novamente. O OIK nunca perde seus dados — eles ficam salvos no servidor.",
+      },
+      {
+        title: "Valores errados",
+        description: "Se os valores estão trocados (crédito como débito), edite a classificação na revisão. Se os números estão errados, o arquivo pode ter formato incomum — use OFX.",
+      },
+      {
+        title: "Falar com suporte",
+        description: "Na tela de erro, use 'Falar com suporte' no WhatsApp. Informe o código do erro (ex: IMPORT-003) para agilizar o atendimento.",
+      },
+    ],
+    keywords: ["erro", "problema", "não funciona", "falhou", "branco", "corrompido", "suporte"],
     deepLink: "settings",
   },
 
@@ -821,6 +943,41 @@ export const faqItems: FAQItem[] = [
     answer: "Cronológica crescente (do mais antigo para o mais recente). Isso facilita conferir com o extrato original do banco, que geralmente segue a mesma ordem. O primeiro item é o mais antigo do período.",
     category: "import",
     keywords: ["ordem", "cronológica", "crescente", "primeiro", "antigo"],
+  },
+  {
+    id: "faq-import-adv-6",
+    question: "O OIK funciona com qualquer banco?",
+    answer: "Sim! O parser universal detecta colunas automaticamente (Data, Descrição, Valor/Crédito/Débito). Se seu banco exportar Excel com essas colunas, a importação funciona. Para PDFs, testamos Bradesco, BTG, Itaú e Santander. Para outros bancos, use OFX.",
+    category: "import",
+    keywords: ["qualquer", "banco", "universal", "parser", "funciona"],
+  },
+  {
+    id: "faq-import-adv-7",
+    question: "Como o OIK detecta as colunas do Excel?",
+    answer: "O sistema procura cabeçalhos com sinônimos: 'Data' ou 'Dt' ou 'Data Lançamento', 'Descrição' ou 'Histórico' ou 'Movimentação', 'Valor' ou 'Crédito'/'Débito'. Variações com acentos e maiúsculas são aceitas. Se encontrar Data + alguma coluna de valor, consegue importar.",
+    category: "import",
+    keywords: ["detecta", "colunas", "cabeçalho", "excel", "sinônimos", "heurística"],
+  },
+  {
+    id: "faq-import-adv-8",
+    question: "Por que algumas linhas foram ignoradas?",
+    answer: "O OIK filtra automaticamente: linhas sem data E sem valor, 'SALDO ANTERIOR', 'SALDO TOTAL', 'Total', 'Últimos Lançamentos', cabeçalhos repetidos, e linhas de rodapé com telefones/avisos. Apenas transações reais são importadas.",
+    category: "import",
+    keywords: ["ignoradas", "filtradas", "saldo", "linhas", "removidas"],
+  },
+  {
+    id: "faq-import-adv-9",
+    question: "Posso importar fatura de cartão de crédito?",
+    answer: "Sim! O OIK detecta automaticamente se é extrato de conta corrente ou fatura de cartão. Para faturas, identifica os 4 últimos dígitos e associa ao cartão cadastrado ou cria automaticamente.",
+    category: "import",
+    keywords: ["fatura", "cartão", "crédito", "detecta", "automaticamente"],
+  },
+  {
+    id: "faq-import-adv-10",
+    question: "Como funciona o 'date carry-forward'?",
+    answer: "Se uma linha tem valor mas não tem data, o OIK usa a data da linha anterior. Isso é comum em extratos Bradesco onde múltiplas transações do mesmo dia aparecem sem repetir a data. A ordem original do arquivo é preservada.",
+    category: "import",
+    keywords: ["data", "carry", "forward", "anterior", "mesma", "bradesco"],
   },
 ];
 

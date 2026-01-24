@@ -1468,9 +1468,385 @@ function parseXLSWithSheetJS(uint8Array: Uint8Array): string[][] {
   }
 }
 
+// ============================================
+// UNIVERSAL EXCEL PARSER WITH COLUMN HEURISTICS
+// Main parser that works without bank-specific logic
+// ============================================
+
+// Column synonyms for universal detection (case-insensitive, accent-normalized)
+const COLUMN_SYNONYMS = {
+  DATE: ["data", "dt", "data lancamento", "data lançamento", "data movimento", "data movimentacao", "lancamento", "lançamento", "date"],
+  DESCRIPTION: ["descricao", "descrição", "historico", "histórico", "movimentacao", "movimentação", "lancamento", "lançamento", "desc", "description", "memo", "transacao", "transação"],
+  VALUE: ["valor", "vlr", "value", "valor r$", "valor (r$)", "amount"],
+  CREDIT: ["credito", "crédito", "credit", "credito (r$)", "crédito (r$)", "entrada", "receita"],
+  DEBIT: ["debito", "débito", "debit", "debito (r$)", "débito (r$)", "saida", "saída", "despesa"],
+  BALANCE: ["saldo", "balance", "saldo (r$)"],
+  DOC: ["docto", "documento", "doc", "numero", "número", "nr"],
+};
+
+interface ColumnMapping {
+  dateIdx: number;
+  descIdx: number;
+  valueIdx: number;
+  creditIdx: number;
+  debitIdx: number;
+  balanceIdx: number;
+  docIdx: number;
+}
+
+function normalizeForColumnMatch(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/g, "")
+    .trim();
+}
+
+function detectColumns(headerRow: string[]): ColumnMapping | null {
+  const mapping: ColumnMapping = {
+    dateIdx: -1,
+    descIdx: -1,
+    valueIdx: -1,
+    creditIdx: -1,
+    debitIdx: -1,
+    balanceIdx: -1,
+    docIdx: -1,
+  };
+  
+  for (let i = 0; i < headerRow.length; i++) {
+    const normalized = normalizeForColumnMatch(headerRow[i] || "");
+    if (!normalized) continue;
+    
+    // Check each column type
+    if (mapping.dateIdx === -1 && COLUMN_SYNONYMS.DATE.some(s => normalized.includes(normalizeForColumnMatch(s)))) {
+      mapping.dateIdx = i;
+    }
+    if (mapping.descIdx === -1 && COLUMN_SYNONYMS.DESCRIPTION.some(s => normalized.includes(normalizeForColumnMatch(s)))) {
+      mapping.descIdx = i;
+    }
+    if (mapping.creditIdx === -1 && COLUMN_SYNONYMS.CREDIT.some(s => normalized.includes(normalizeForColumnMatch(s)))) {
+      mapping.creditIdx = i;
+    }
+    if (mapping.debitIdx === -1 && COLUMN_SYNONYMS.DEBIT.some(s => normalized.includes(normalizeForColumnMatch(s)))) {
+      mapping.debitIdx = i;
+    }
+    if (mapping.valueIdx === -1 && COLUMN_SYNONYMS.VALUE.some(s => normalized.includes(normalizeForColumnMatch(s)))) {
+      // Only set value if it's not already mapped to credit/debit
+      if (i !== mapping.creditIdx && i !== mapping.debitIdx) {
+        mapping.valueIdx = i;
+      }
+    }
+    if (mapping.balanceIdx === -1 && COLUMN_SYNONYMS.BALANCE.some(s => normalized.includes(normalizeForColumnMatch(s)))) {
+      mapping.balanceIdx = i;
+    }
+    if (mapping.docIdx === -1 && COLUMN_SYNONYMS.DOC.some(s => normalized.includes(normalizeForColumnMatch(s)))) {
+      mapping.docIdx = i;
+    }
+  }
+  
+  // Must have at least date and (value OR credit/debit)
+  const hasAmount = mapping.valueIdx !== -1 || mapping.creditIdx !== -1 || mapping.debitIdx !== -1;
+  if (mapping.dateIdx === -1 || !hasAmount) {
+    return null;
+  }
+  
+  // If no description column found, try to infer (first text column after date that isn't a number column)
+  if (mapping.descIdx === -1) {
+    for (let i = 0; i < headerRow.length; i++) {
+      if (i !== mapping.dateIdx && i !== mapping.valueIdx && i !== mapping.creditIdx && 
+          i !== mapping.debitIdx && i !== mapping.balanceIdx && i !== mapping.docIdx) {
+        const normalized = normalizeForColumnMatch(headerRow[i] || "");
+        if (normalized.length > 0 && !/^[\d.,\-r$\s]+$/.test(normalized)) {
+          mapping.descIdx = i;
+          break;
+        }
+      }
+    }
+  }
+  
+  return mapping;
+}
+
+function findHeaderRow(rows: string[][]): { headerIdx: number; mapping: ColumnMapping } | null {
+  // Try first 20 rows to find a header
+  for (let i = 0; i < Math.min(20, rows.length); i++) {
+    const mapping = detectColumns(rows[i]);
+    if (mapping) {
+      console.log(`[findHeaderRow] Found header at row ${i}:`, {
+        date: mapping.dateIdx,
+        desc: mapping.descIdx,
+        value: mapping.valueIdx,
+        credit: mapping.creditIdx,
+        debit: mapping.debitIdx,
+      });
+      return { headerIdx: i, mapping };
+    }
+  }
+  return null;
+}
+
+// Parse Excel date serial number
+function parseExcelDateSerial(serial: number): string | null {
+  if (serial < 1 || serial > 100000) return null;
+  
+  // Excel epoch is January 1, 1900 (but with a bug: it thinks 1900 was a leap year)
+  const excelEpoch = new Date(1899, 11, 30);
+  const date = new Date(excelEpoch.getTime() + serial * 24 * 60 * 60 * 1000);
+  
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  
+  if (year < 1990 || year > 2100) return null;
+  
+  return `${year}-${month}-${day}`;
+}
+
+function parseUniversalExcelRows(rows: string[][]): ParsedTransaction[] {
+  const transactions: ParsedTransaction[] = [];
+  
+  console.log(`[parseUniversalExcelRows] Starting with ${rows.length} rows`);
+  
+  // ============================================
+  // STEP 1: Find header row and detect column mapping
+  // ============================================
+  const headerInfo = findHeaderRow(rows);
+  
+  if (!headerInfo) {
+    console.log("[parseUniversalExcelRows] Could not detect header - falling back to position-based");
+    return []; // Let specific parser handle it
+  }
+  
+  const { headerIdx, mapping } = headerInfo;
+  
+  // ============================================
+  // STEP 2: Extract statement period if present (for date-only parsing)
+  // ============================================
+  let defaultYear = new Date().getFullYear().toString();
+  let periodStart: string | null = null;
+  let periodEnd: string | null = null;
+  
+  for (let i = 0; i < Math.min(headerIdx, 15); i++) {
+    const rowText = rows[i].join(" ");
+    const periodMatch = rowText.match(/entre\s+(\d{2})[\/\-](\d{2})[\/\-](\d{4})\s+e\s+(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i);
+    if (periodMatch) {
+      const [, d1, m1, y1, d2, m2, y2] = periodMatch;
+      periodStart = `${y1}-${m1}-${d1}`;
+      periodEnd = `${y2}-${m2}-${d2}`;
+      defaultYear = y2;
+      console.log(`[parseUniversalExcelRows] Found period: ${periodStart} to ${periodEnd}`);
+      break;
+    }
+  }
+  
+  // ============================================
+  // STEP 3: Parse rows with date-carry-forward and multiline support
+  // ============================================
+  
+  interface PendingTx {
+    date: string;
+    description: string;
+    docto: string;
+    amount: number;
+    type: "income" | "expense";
+    sourceRowIndex: number;
+  }
+  
+  let lastTransaction: PendingTx | null = null;
+  let currentDate: string | null = null;
+  
+  const flushTransaction = () => {
+    if (lastTransaction) {
+      transactions.push({
+        date: lastTransaction.date,
+        description: lastTransaction.description.substring(0, 500) || "(Transação importada)",
+        amount: lastTransaction.amount,
+        type: lastTransaction.type,
+        raw_data: { 
+          source: "universal_xls", 
+          docto: lastTransaction.docto,
+          sourceRowIndex: lastTransaction.sourceRowIndex,
+        },
+      });
+    }
+    lastTransaction = null;
+  };
+  
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length === 0) continue;
+    
+    // Get cell values
+    const dateCell = (row[mapping.dateIdx] || "").toString().trim();
+    const descCell = mapping.descIdx !== -1 ? (row[mapping.descIdx] || "").toString().trim() : "";
+    const docCell = mapping.docIdx !== -1 ? (row[mapping.docIdx] || "").toString().trim() : "";
+    
+    // ============================================
+    // STOP CONDITIONS: Stop at common footer markers
+    // ============================================
+    const rowText = row.join(" ").toLowerCase();
+    if (/últimos\s*lançamentos/i.test(rowText) ||
+        /^total$/i.test(descCell.trim()) ||
+        /dados\s*acima\s*têm/i.test(rowText) ||
+        /telefones?\s*úteis/i.test(rowText)) {
+      console.log(`[parseUniversalExcelRows] Stop marker found at row ${i}`);
+      break;
+    }
+    
+    // Skip noise rows
+    if (isNoiseLine(descCell) || /saldos?\s*invest/i.test(descCell)) {
+      continue;
+    }
+    
+    // ============================================
+    // Parse date (support multiple formats)
+    // ============================================
+    let parsedDate: string | null = null;
+    
+    // Try Excel serial number first
+    const numericDate = parseFloat(dateCell);
+    if (!isNaN(numericDate) && numericDate > 1 && numericDate < 100000) {
+      parsedDate = parseExcelDateSerial(numericDate);
+    }
+    
+    // Try string date formats
+    if (!parsedDate) {
+      parsedDate = parseFlexibleDate(dateCell);
+    }
+    
+    // Try DD/MM format with default year
+    if (!parsedDate && /^\d{2}\/\d{2}$/.test(dateCell)) {
+      const [day, month] = dateCell.split("/");
+      const dayNum = parseInt(day);
+      const monthNum = parseInt(month);
+      if (dayNum >= 1 && dayNum <= 31 && monthNum >= 1 && monthNum <= 12) {
+        parsedDate = `${defaultYear}-${month}-${day}`;
+      }
+    }
+    
+    // Validate date is within period if defined
+    if (parsedDate && periodStart && periodEnd) {
+      if (parsedDate < periodStart || parsedDate > periodEnd) {
+        parsedDate = null; // Outside period, ignore
+      }
+    }
+    
+    // ============================================
+    // Parse amounts (Credit/Debit columns OR single Value column)
+    // ============================================
+    let credit: number | null = null;
+    let debit: number | null = null;
+    
+    if (mapping.creditIdx !== -1) {
+      const creditCell = (row[mapping.creditIdx] || "").toString().trim();
+      const val = parseBrazilianAmount(creditCell.replace(/^-\s*/, ""));
+      if (val !== null && val > 0.01) credit = val;
+    }
+    
+    if (mapping.debitIdx !== -1) {
+      const debitCell = (row[mapping.debitIdx] || "").toString().trim();
+      const val = parseBrazilianAmount(debitCell.replace(/^-\s*/, ""));
+      if (val !== null && val > 0.01) debit = val;
+    }
+    
+    // If no credit/debit columns, try single value column
+    if (credit === null && debit === null && mapping.valueIdx !== -1) {
+      const valueCell = (row[mapping.valueIdx] || "").toString().trim();
+      const val = parseBrazilianAmount(valueCell);
+      if (val !== null && Math.abs(val) > 0.01) {
+        if (val >= 0) {
+          credit = val;
+        } else {
+          debit = Math.abs(val);
+        }
+      }
+    }
+    
+    const hasAmount = credit !== null || debit !== null;
+    
+    // ============================================
+    // CASE 1: Row with DATE and AMOUNT → New transaction
+    // ============================================
+    if (parsedDate && hasAmount) {
+      // Flush previous transaction
+      flushTransaction();
+      
+      currentDate = parsedDate;
+      
+      lastTransaction = {
+        date: parsedDate,
+        description: descCell,
+        docto: docCell,
+        amount: credit !== null ? credit : debit!,
+        type: credit !== null ? "income" : "expense",
+        sourceRowIndex: i,
+      };
+    }
+    // ============================================
+    // CASE 2: Row with NO date but HAS amount → New transaction on same date (carry-forward)
+    // ============================================
+    else if (!parsedDate && hasAmount && currentDate) {
+      // Flush previous transaction
+      flushTransaction();
+      
+      lastTransaction = {
+        date: currentDate,
+        description: descCell,
+        docto: docCell,
+        amount: credit !== null ? credit : debit!,
+        type: credit !== null ? "income" : "expense",
+        sourceRowIndex: i,
+      };
+    }
+    // ============================================
+    // CASE 3: Row with NO date and NO amount → Continuation line (Rem:, Des:, etc.)
+    // ============================================
+    else if (!parsedDate && !hasAmount && descCell && lastTransaction) {
+      // Append to previous transaction description (multiline support)
+      lastTransaction.description = (lastTransaction.description + " " + descCell).trim();
+    }
+    // ============================================
+    // CASE 4: Row with DATE but NO amount → Update current date for carry-forward
+    // ============================================
+    else if (parsedDate && !hasAmount) {
+      currentDate = parsedDate;
+    }
+  }
+  
+  // Flush the last pending transaction
+  flushTransaction();
+  
+  console.log(`[parseUniversalExcelRows] Extracted ${transactions.length} transactions`);
+  
+  // ============================================
+  // STEP 4: Sort by date ascending, preserve sourceRowIndex order for same dates
+  // ============================================
+  transactions.sort((a, b) => {
+    const dateCompare = a.date.localeCompare(b.date);
+    if (dateCompare !== 0) return dateCompare;
+    const aIdx = (a.raw_data as { sourceRowIndex?: number })?.sourceRowIndex ?? 0;
+    const bIdx = (b.raw_data as { sourceRowIndex?: number })?.sourceRowIndex ?? 0;
+    return aIdx - bIdx;
+  });
+  
+  return transactions;
+}
+
 function parseXLSRows(rows: string[][], bank: DetectedBank): ParsedTransaction[] {
   if (rows.length === 0) return [];
   
+  // First, try the universal parser with column heuristics
+  const universalResult = parseUniversalExcelRows(rows);
+  
+  if (universalResult.length > 0) {
+    console.log(`[parseXLSRows] Universal parser succeeded with ${universalResult.length} transactions`);
+    return universalResult;
+  }
+  
+  console.log(`[parseXLSRows] Universal parser found nothing, falling back to bank-specific parser: ${bank}`);
+  
+  // Fallback to bank-specific parsers
   switch (bank) {
     case "bradesco":
       return parseBradescoXLSRows(rows);
