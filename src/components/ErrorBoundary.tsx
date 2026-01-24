@@ -1,4 +1,5 @@
 import React from "react";
+import { reportError } from "@/hooks/useSupportModule";
 
 type Props = {
   children: React.ReactNode;
@@ -7,6 +8,8 @@ type Props = {
   onReload?: () => void;
   /** Safe context for logs (no PII / no transaction contents). */
   logContext?: Record<string, string | number | boolean | null | undefined>;
+  /** Module name for error tracking */
+  module?: string;
 };
 
 type State = { hasError: boolean; error?: Error };
@@ -20,11 +23,25 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // ⚠️ Nunca logar dados sensíveis.
-    console.error("[OIK Import][RenderError]", {
+    console.error("[OIK][RenderError]", {
       message: error.message,
       stack: error.stack,
       componentStack: errorInfo.componentStack,
       context: this.props.logContext,
+    });
+
+    // Report to support_errors table
+    reportError({
+      errorMessage: error.message,
+      errorStack: error.stack,
+      errorType: 'ui',
+      module: this.props.module || 'unknown',
+      screen: window.location.pathname,
+      userAction: 'component_render',
+      metadata: {
+        componentStack: errorInfo.componentStack?.substring(0, 2000),
+        ...this.props.logContext,
+      },
     });
   }
 
@@ -41,11 +58,11 @@ export class ErrorBoundary extends React.Component<Props, State> {
         <main className="container px-4 py-10">
           <div className="max-w-lg mx-auto rounded-2xl border border-border bg-card p-5">
             <h1 className="text-lg font-semibold text-foreground">
-              {this.props.title ?? "Ops, algo deu errado ao exibir a revisão."}
+              {this.props.title ?? "Ops, algo deu errado."}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               {this.props.description ??
-                "Tente recarregar a página. Se persistir, fale com o suporte e informe o ID da importação."}
+                "Tente recarregar a página. Se persistir, o erro já foi registrado automaticamente para nossa equipe de suporte."}
             </p>
             <div className="mt-4">
               <button
@@ -61,4 +78,51 @@ export class ErrorBoundary extends React.Component<Props, State> {
       </div>
     );
   }
+}
+
+// =====================================================
+// Global Error Handlers Setup
+// =====================================================
+
+let globalHandlersInitialized = false;
+
+export function initGlobalErrorHandlers() {
+  if (globalHandlersInitialized) return;
+  globalHandlersInitialized = true;
+
+  // Unhandled JS errors
+  window.addEventListener('error', (event) => {
+    // Ignore script loading errors from extensions
+    if (event.filename?.includes('extension://')) return;
+    
+    reportError({
+      errorMessage: event.message || 'Unknown error',
+      errorStack: event.error?.stack,
+      errorType: 'runtime',
+      screen: window.location.pathname,
+      userAction: 'global_error',
+      metadata: {
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+      },
+    });
+  });
+
+  // Unhandled promise rejections
+  window.addEventListener('unhandledrejection', (event) => {
+    const error = event.reason;
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+
+    reportError({
+      errorMessage: message,
+      errorStack: stack,
+      errorType: 'promise',
+      screen: window.location.pathname,
+      userAction: 'unhandled_rejection',
+    });
+  });
+
+  console.log('[OIK] Global error handlers initialized');
 }
