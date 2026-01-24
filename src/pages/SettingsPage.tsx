@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { EditFamilyProfileSheet } from "@/components/profile/EditFamilyProfileSheet";
 import { EducationPreferences } from "@/components/onboarding";
 
 interface SettingsPageProps {
@@ -14,7 +13,6 @@ interface SettingsPageProps {
 
 export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
   const { family, familyMember, signOut } = useAuth();
-  const [showFamilySheet, setShowFamilySheet] = useState(false);
   const [showEducationPrefs, setShowEducationPrefs] = useState(false);
 
   const handleAction = (id: string) => {
@@ -32,7 +30,7 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
         onNavigate?.("profile");
         break;
       case "family":
-        setShowFamilySheet(true);
+        onNavigate?.("family");
         break;
       case "education":
         setShowEducationPrefs(!showEducationPrefs);
@@ -55,7 +53,7 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
       title: "Conta",
       items: [
         { id: "profile", label: "Meus Dados", icon: User, action: "navigate" },
-        { id: "family", label: "Perfil da Família", icon: Users, action: "navigate" },
+        { id: "family", label: "Minha Família", icon: Users, action: "navigate" },
         { id: "banks", label: "Bancos e Cartões", icon: Building2, action: "navigate" },
         { id: "openfinance", label: "Open Finance", icon: Wifi, action: "navigate" },
         { id: "notifications", label: "Notificações", icon: Bell, action: "toggle", enabled: true },
@@ -167,11 +165,9 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
 
         {/* Version */}
         <p className="text-center text-xs text-muted-foreground">
-          Finanças em Família v1.0.0
+          OIK Finanças em Família v1.0.0
         </p>
       </main>
-
-      <EditFamilyProfileSheet open={showFamilySheet} onOpenChange={setShowFamilySheet} />
     </div>
   );
 }

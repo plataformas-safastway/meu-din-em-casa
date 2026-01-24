@@ -1146,6 +1146,54 @@ export type Database = {
         }
         Relationships: []
       }
+      family_activities: {
+        Row: {
+          action_type: string
+          actor_member_id: string
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string
+          family_id: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          action_type: string
+          actor_member_id: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type: string
+          family_id: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          action_type?: string
+          actor_member_id?: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          family_id?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_activities_actor_member_id_fkey"
+            columns: ["actor_member_id"]
+            isOneToOne: false
+            referencedRelation: "family_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_activities_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       family_members: {
         Row: {
           avatar_url: string | null
@@ -1797,6 +1845,117 @@ export type Database = {
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "subscription_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_notification_preferences: {
+        Row: {
+          created_at: string | null
+          family_id: string
+          id: string
+          member_id: string
+          push_budget_alerts: boolean | null
+          push_location_context: boolean | null
+          push_subscription: Json | null
+          push_transactions: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          family_id: string
+          id?: string
+          member_id: string
+          push_budget_alerts?: boolean | null
+          push_location_context?: boolean | null
+          push_subscription?: Json | null
+          push_transactions?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          family_id?: string
+          id?: string
+          member_id?: string
+          push_budget_alerts?: boolean | null
+          push_location_context?: boolean | null
+          push_subscription?: Json | null
+          push_transactions?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_notification_preferences_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_notification_preferences_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "family_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_permissions: {
+        Row: {
+          can_delete_transactions: boolean | null
+          can_edit_all: boolean | null
+          can_insert_transactions: boolean | null
+          can_manage_family: boolean | null
+          can_view_all: boolean | null
+          can_view_budget: boolean | null
+          can_view_projection: boolean | null
+          created_at: string | null
+          family_id: string
+          id: string
+          member_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          can_delete_transactions?: boolean | null
+          can_edit_all?: boolean | null
+          can_insert_transactions?: boolean | null
+          can_manage_family?: boolean | null
+          can_view_all?: boolean | null
+          can_view_budget?: boolean | null
+          can_view_projection?: boolean | null
+          created_at?: string | null
+          family_id: string
+          id?: string
+          member_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          can_delete_transactions?: boolean | null
+          can_edit_all?: boolean | null
+          can_insert_transactions?: boolean | null
+          can_manage_family?: boolean | null
+          can_view_all?: boolean | null
+          can_view_budget?: boolean | null
+          can_view_projection?: boolean | null
+          created_at?: string | null
+          family_id?: string
+          id?: string
+          member_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_permissions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_permissions_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "family_members"
             referencedColumns: ["id"]
           },
         ]
@@ -3262,6 +3421,10 @@ export type Database = {
         }
         Returns: number
       }
+      check_member_permission: {
+        Args: { _family_id: string; _permission: string; _user_id: string }
+        Returns: boolean
+      }
       expire_old_imports: { Args: never; Returns: undefined }
       get_engagement_metrics_report: { Args: never; Returns: Json }
       get_executive_metrics: {
@@ -3269,6 +3432,10 @@ export type Database = {
         Returns: Json
       }
       get_growth_metrics: { Args: { _months?: number }; Returns: Json }
+      get_member_permissions: {
+        Args: { _family_id: string; _user_id: string }
+        Returns: Json
+      }
       get_product_stability_metrics: { Args: never; Returns: Json }
       get_revenue_metrics: { Args: { _months?: number }; Returns: Json }
       get_user_family_id: { Args: never; Returns: string }
