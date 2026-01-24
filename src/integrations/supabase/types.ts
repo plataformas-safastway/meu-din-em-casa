@@ -1759,7 +1759,13 @@ export type Database = {
       is_family_owner: { Args: { f_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "user" | "admin" | "cs"
+      app_role:
+        | "user"
+        | "admin"
+        | "cs"
+        | "admin_master"
+        | "financeiro"
+        | "tecnologia"
       bank_account_type: "checking" | "savings" | "digital" | "salary"
       card_brand: "visa" | "mastercard" | "elo" | "amex" | "hipercard"
       card_type: "credit" | "debit" | "both"
@@ -1908,7 +1914,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["user", "admin", "cs"],
+      app_role: [
+        "user",
+        "admin",
+        "cs",
+        "admin_master",
+        "financeiro",
+        "tecnologia",
+      ],
       bank_account_type: ["checking", "savings", "digital", "salary"],
       card_brand: ["visa", "mastercard", "elo", "amex", "hipercard"],
       card_type: ["credit", "debit", "both"],
