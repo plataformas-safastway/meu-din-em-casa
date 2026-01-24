@@ -45,6 +45,7 @@ const Index = () => {
             onLearnMore={handleLearnMore}
             onBanksClick={() => setActiveTab("banks")}
             onCategoriesClick={() => setActiveTab("categories")}
+            onTransactionsClick={() => setActiveTab("transactions")}
           />
         );
       case "transactions":

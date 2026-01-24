@@ -62,16 +62,20 @@ interface TransactionListProps {
   transactions: Transaction[];
   limit?: number;
   onTransactionClick?: (transaction: Transaction) => void;
+  onViewAll?: () => void;
 }
 
-export function TransactionList({ transactions, limit = 5, onTransactionClick }: TransactionListProps) {
+export function TransactionList({ transactions, limit = 5, onTransactionClick, onViewAll }: TransactionListProps) {
   const displayTransactions = transactions.slice(0, limit);
 
   return (
     <div className="space-y-3 animate-fade-in">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-foreground">Últimos Lançamentos</h3>
-        <button className="text-sm text-primary hover:text-primary/80 font-medium transition-colors">
+        <button 
+          onClick={onViewAll}
+          className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+        >
           Ver extrato
         </button>
       </div>
