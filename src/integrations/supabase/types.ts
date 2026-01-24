@@ -657,6 +657,83 @@ export type Database = {
         }
         Relationships: []
       }
+      education_content: {
+        Row: {
+          content: string
+          created_at: string
+          display_order: number
+          icon: string | null
+          id: string
+          is_active: boolean
+          module: string
+          tip_key: string
+          title: string
+          trigger_condition: string | null
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          module: string
+          tip_key: string
+          title: string
+          trigger_condition?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          module?: string
+          tip_key?: string
+          title?: string
+          trigger_condition?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      education_tips_shown: {
+        Row: {
+          dismissed_at: string | null
+          family_id: string
+          id: string
+          shown_at: string
+          tip_key: string
+          user_id: string
+        }
+        Insert: {
+          dismissed_at?: string | null
+          family_id: string
+          id?: string
+          shown_at?: string
+          tip_key: string
+          user_id: string
+        }
+        Update: {
+          dismissed_at?: string | null
+          family_id?: string
+          id?: string
+          shown_at?: string
+          tip_key?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "education_tips_shown_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       families: {
         Row: {
           created_at: string
@@ -2645,6 +2722,71 @@ export type Database = {
           },
         ]
       }
+      user_onboarding: {
+        Row: {
+          contextual_hints_enabled: boolean
+          created_at: string
+          education_tips_enabled: boolean
+          family_id: string
+          has_seen_welcome: boolean
+          id: string
+          progress_percent: number
+          step_account_created_at: string | null
+          step_bank_account_at: string | null
+          step_budget_at: string | null
+          step_family_invite_at: string | null
+          step_goal_at: string | null
+          step_import_at: string | null
+          updated_at: string
+          user_id: string
+          welcome_seen_at: string | null
+        }
+        Insert: {
+          contextual_hints_enabled?: boolean
+          created_at?: string
+          education_tips_enabled?: boolean
+          family_id: string
+          has_seen_welcome?: boolean
+          id?: string
+          progress_percent?: number
+          step_account_created_at?: string | null
+          step_bank_account_at?: string | null
+          step_budget_at?: string | null
+          step_family_invite_at?: string | null
+          step_goal_at?: string | null
+          step_import_at?: string | null
+          updated_at?: string
+          user_id: string
+          welcome_seen_at?: string | null
+        }
+        Update: {
+          contextual_hints_enabled?: boolean
+          created_at?: string
+          education_tips_enabled?: boolean
+          family_id?: string
+          has_seen_welcome?: boolean
+          id?: string
+          progress_percent?: number
+          step_account_created_at?: string | null
+          step_bank_account_at?: string | null
+          step_budget_at?: string | null
+          step_family_invite_at?: string | null
+          step_goal_at?: string | null
+          step_import_at?: string | null
+          updated_at?: string
+          user_id?: string
+          welcome_seen_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_onboarding_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -2740,6 +2882,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_onboarding_progress: {
+        Args: {
+          onboarding_row: Database["public"]["Tables"]["user_onboarding"]["Row"]
+        }
+        Returns: number
+      }
       expire_old_imports: { Args: never; Returns: undefined }
       get_user_family_id: { Args: never; Returns: string }
       get_user_role: {
