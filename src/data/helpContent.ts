@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 23/01/2026
-export const HELP_CENTER_VERSION = "23/01/2026";
+// Última atualização: 24/01/2026
+export const HELP_CENTER_VERSION = "24/01/2026";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -103,6 +103,44 @@ export const helpArticles: HelpArticle[] = [
       },
     ],
     keywords: ["home", "início", "saldo", "dashboard", "cartão", "fatura", "mês", "timeline", "notificações", "configurações"],
+    deepLink: "dashboard",
+  },
+
+  // ===== NAVEGAÇÃO =====
+  {
+    id: "navigation-guide",
+    title: "Navegação no Aplicativo",
+    category: "home",
+    icon: "🧭",
+    summary: "Guia completo de navegação entre telas do Oik",
+    steps: [
+      {
+        title: "Barra de Navegação Inferior",
+        description: "A barra fixa na parte inferior tem 5 ícones: Casa (Home), Extrato, Categorias, Metas e Educação. Toque para navegar.",
+        tip: "O ícone ativo fica destacado em verde.",
+      },
+      {
+        title: "Atalhos da Home",
+        description: "Na tela inicial, os atalhos rápidos (Extrato, Categorias, Metas, Importar) levam diretamente à funcionalidade.",
+      },
+      {
+        title: "Card de Saldo → Detalhes",
+        description: "Toque no card de saldo para ver detalhes da composição (receitas x despesas do mês).",
+      },
+      {
+        title: "Card de Fatura → Faturas",
+        description: "Toque no card de fatura do cartão para ver a fatura completa e detalhes.",
+      },
+      {
+        title: "'Ver extrato' na Timeline",
+        description: "Abaixo da lista de últimos lançamentos, o botão 'Ver extrato' navega diretamente para o Extrato completo.",
+      },
+      {
+        title: "Botão Voltar",
+        description: "Em telas internas (Ajuda, Detalhes, etc.), use a seta no canto superior esquerdo para voltar.",
+      },
+    ],
+    keywords: ["navegação", "navegar", "menu", "barra", "inferior", "atalho", "voltar", "tela", "aba"],
     deepLink: "dashboard",
   },
 
@@ -687,11 +725,109 @@ export const faqItems: FAQItem[] = [
     category: "import",
     keywords: ["erro", "importação", "falhou", "retry", "suporte"],
   },
+
+  // ===== NAVEGAÇÃO =====
+  {
+    id: "faq-nav-1",
+    question: "Como navegar entre as telas do Oik?",
+    answer: "Use a barra de navegação inferior com 5 ícones: Casa, Extrato, Categorias, Metas e Educação. Na tela inicial, atalhos rápidos também levam diretamente às funcionalidades principais.",
+    category: "navigation",
+    keywords: ["navegar", "navegação", "menu", "tela", "aba", "inferior"],
+  },
+  {
+    id: "faq-nav-2",
+    question: "Por que o botão 'Ver extrato' não funciona?",
+    answer: "O botão deve navegar para a aba de Extrato. Se não funcionar, atualize o aplicativo. O bug foi corrigido na versão mais recente. Tente também usar o ícone de Extrato na barra inferior.",
+    category: "navigation",
+    keywords: ["ver extrato", "botão", "não funciona", "bug"],
+  },
+  {
+    id: "faq-nav-3",
+    question: "Como voltar para a tela anterior?",
+    answer: "Use a seta no canto superior esquerdo ou toque no ícone Casa na barra inferior para voltar à Home. Em sheets (painéis deslizantes), deslize para baixo ou toque fora do painel.",
+    category: "navigation",
+    keywords: ["voltar", "anterior", "seta", "fechar", "sheet"],
+  },
+
+  // ===== CLASSIFICAÇÃO =====
+  {
+    id: "faq-class-1",
+    question: "Qual a diferença entre 'Crédito' e 'Receita'?",
+    answer: "Crédito é a DIREÇÃO do valor (dinheiro entrando). Receita é a CLASSIFICAÇÃO (como você quer que o sistema trate). Um crédito pode ser classificado como Receita (salário), Reembolso (devolução de despesa) ou Transferência (movimentação entre contas). A classificação correta afeta os relatórios.",
+    category: "transactions",
+    keywords: ["crédito", "receita", "diferença", "classificação", "direção"],
+  },
+  {
+    id: "faq-class-2",
+    question: "O que são as classificações de lançamento?",
+    answer: "Existem 5 classificações: Receita (dinheiro que entra como ganho), Despesa (dinheiro que sai como gasto), Transferência (movimentação entre suas contas), Reembolso (devolução de despesa feita anteriormente), Ajuste (correção ou acerto contábil). Cada uma afeta os relatórios de forma diferente.",
+    category: "transactions",
+    keywords: ["classificação", "receita", "despesa", "transferência", "reembolso", "ajuste"],
+  },
+  {
+    id: "faq-class-3",
+    question: "Por que meu reembolso aparece como despesa negativa?",
+    answer: "Reembolsos são creditados na mesma categoria da despesa original, reduzindo o total gasto. Por exemplo: se você gastou R$500 em Alimentação e recebeu R$50 de reembolso, o relatório mostra R$450 líquidos. Isso reflete o custo real.",
+    category: "transactions",
+    keywords: ["reembolso", "despesa", "negativa", "categoria", "redução"],
+  },
+  {
+    id: "faq-class-4",
+    question: "Como classificar um PIX de reembolso?",
+    answer: "Na revisão de importação ou ao editar o lançamento, escolha 'Reembolso' no seletor de classificação. Depois, selecione a categoria da despesa original (ex: Alimentação). O valor será subtraído dos gastos dessa categoria.",
+    category: "transactions",
+    keywords: ["pix", "reembolso", "classificar", "como", "categoria"],
+  },
+  {
+    id: "faq-class-5",
+    question: "Transferência entre minhas contas conta como despesa?",
+    answer: "Não! Ao classificar como 'Transferência', o lançamento não entra no cálculo de despesas nem receitas. É apenas uma movimentação interna. Ideal para: PIX entre contas próprias, TED para investimentos, resgate de aplicação.",
+    category: "transactions",
+    keywords: ["transferência", "contas", "próprias", "não conta", "despesa", "interna"],
+  },
+
+  // ===== IMPORTAÇÃO AVANÇADA =====
+  {
+    id: "faq-import-adv-1",
+    question: "Por que minha importação mostra 48 itens?",
+    answer: "O Oik extrai TODAS as transações do arquivo, sem limite. Se seu extrato Bradesco tem 48 linhas de lançamento, todas aparecem na revisão. Linhas de saldo, cabeçalho e rodapé são filtradas automaticamente.",
+    category: "import",
+    keywords: ["48", "itens", "limite", "todas", "transações"],
+  },
+  {
+    id: "faq-import-adv-2",
+    question: "Posso alterar a classificação na revisão de importação?",
+    answer: "Sim! Na tela de revisão, cada lançamento tem um seletor de classificação (Receita, Despesa, Transferência, Reembolso, Ajuste). Toque para alterar. A alteração é aplicada ao confirmar a importação.",
+    category: "import",
+    keywords: ["classificação", "revisão", "alterar", "importação", "seletor"],
+  },
+  {
+    id: "faq-import-adv-3",
+    question: "Como corrigir uma descrição antes de importar?",
+    answer: "Na revisão, toque no nome/descrição do lançamento. O campo se torna editável. Digite a nova descrição e toque em Salvar (ícone de check). A descrição corrigida é mantida ao confirmar.",
+    category: "import",
+    keywords: ["descrição", "corrigir", "editar", "nome", "antes", "importar"],
+  },
+  {
+    id: "faq-import-adv-4",
+    question: "Subcategoria sumiu ao trocar a categoria. É bug?",
+    answer: "Não! As subcategorias são dependentes da categoria. Ao trocar a categoria, a subcategoria reseta porque as opções mudam. Selecione a nova subcategoria desejada após escolher a categoria.",
+    category: "import",
+    keywords: ["subcategoria", "sumiu", "dependente", "categoria", "reset"],
+  },
+  {
+    id: "faq-import-adv-5",
+    question: "Qual a ordem dos lançamentos na revisão?",
+    answer: "Cronológica crescente (do mais antigo para o mais recente). Isso facilita conferir com o extrato original do banco, que geralmente segue a mesma ordem. O primeiro item é o mais antigo do período.",
+    category: "import",
+    keywords: ["ordem", "cronológica", "crescente", "primeiro", "antigo"],
+  },
 ];
 
 export const categoryLabels: Record<string, string> = {
   "getting-started": "Primeiros Passos",
   "home": "Tela Inicial",
+  "navigation": "Navegação",
   "transactions": "Lançamentos",
   "categories": "Categorias",
   "goals": "Metas",
