@@ -2182,6 +2182,336 @@ export type Database = {
           },
         ]
       }
+      tech_api_keys: {
+        Row: {
+          created_at: string
+          created_by: string
+          environment: string
+          expires_at: string | null
+          id: string
+          key_prefix: string
+          key_suffix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          revoked_by: string | null
+          service: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          environment?: string
+          expires_at?: string | null
+          id?: string
+          key_prefix: string
+          key_suffix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          service: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          environment?: string
+          expires_at?: string | null
+          id?: string
+          key_prefix?: string
+          key_suffix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          service?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tech_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          new_value: Json | null
+          old_value: Json | null
+          resource_id: string | null
+          resource_type: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          resource_id?: string | null
+          resource_type: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          resource_id?: string | null
+          resource_type?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tech_feature_flags: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          display_name: string
+          environment: string
+          id: string
+          is_enabled: boolean | null
+          name: string
+          rollout_percentage: number | null
+          target_families: string[] | null
+          target_roles: string[] | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          display_name: string
+          environment?: string
+          id?: string
+          is_enabled?: boolean | null
+          name: string
+          rollout_percentage?: number | null
+          target_families?: string[] | null
+          target_roles?: string[] | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          display_name?: string
+          environment?: string
+          id?: string
+          is_enabled?: boolean | null
+          name?: string
+          rollout_percentage?: number | null
+          target_families?: string[] | null
+          target_roles?: string[] | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      tech_integrations: {
+        Row: {
+          config: Json | null
+          created_at: string
+          description: string | null
+          display_name: string
+          environment: string
+          failed_calls: number | null
+          id: string
+          is_critical: boolean | null
+          last_failure_at: string | null
+          last_success_at: string | null
+          name: string
+          status: string
+          success_rate: number | null
+          total_calls: number | null
+          updated_at: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string
+          description?: string | null
+          display_name: string
+          environment?: string
+          failed_calls?: number | null
+          id?: string
+          is_critical?: boolean | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          name: string
+          status?: string
+          success_rate?: number | null
+          total_calls?: number | null
+          updated_at?: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          environment?: string
+          failed_calls?: number | null
+          id?: string
+          is_critical?: boolean | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          name?: string
+          status?: string
+          success_rate?: number | null
+          total_calls?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tech_logs: {
+        Row: {
+          context: Json | null
+          correlation_id: string | null
+          created_at: string
+          environment: string
+          family_id_masked: string | null
+          id: string
+          level: string
+          message: string
+          module: string | null
+          origin: string
+          request_id: string | null
+          route: string | null
+          service: string
+          stack_trace: string | null
+          user_id_masked: string | null
+        }
+        Insert: {
+          context?: Json | null
+          correlation_id?: string | null
+          created_at?: string
+          environment?: string
+          family_id_masked?: string | null
+          id?: string
+          level: string
+          message: string
+          module?: string | null
+          origin: string
+          request_id?: string | null
+          route?: string | null
+          service: string
+          stack_trace?: string | null
+          user_id_masked?: string | null
+        }
+        Update: {
+          context?: Json | null
+          correlation_id?: string | null
+          created_at?: string
+          environment?: string
+          family_id_masked?: string | null
+          id?: string
+          level?: string
+          message?: string
+          module?: string | null
+          origin?: string
+          request_id?: string | null
+          route?: string | null
+          service?: string
+          stack_trace?: string | null
+          user_id_masked?: string | null
+        }
+        Relationships: []
+      }
+      tech_performance_metrics: {
+        Row: {
+          avg_duration_ms: number | null
+          call_count: number | null
+          created_at: string
+          environment: string
+          error_count: number | null
+          id: string
+          metric_type: string
+          name: string
+          p95_duration_ms: number | null
+          p99_duration_ms: number | null
+          period_end: string
+          period_start: string
+        }
+        Insert: {
+          avg_duration_ms?: number | null
+          call_count?: number | null
+          created_at?: string
+          environment?: string
+          error_count?: number | null
+          id?: string
+          metric_type: string
+          name: string
+          p95_duration_ms?: number | null
+          p99_duration_ms?: number | null
+          period_end: string
+          period_start: string
+        }
+        Update: {
+          avg_duration_ms?: number | null
+          call_count?: number | null
+          created_at?: string
+          environment?: string
+          error_count?: number | null
+          id?: string
+          metric_type?: string
+          name?: string
+          p95_duration_ms?: number | null
+          p99_duration_ms?: number | null
+          period_end?: string
+          period_start?: string
+        }
+        Relationships: []
+      }
+      tech_system_health: {
+        Row: {
+          avg_response_ms: number | null
+          checked_at: string
+          created_at: string
+          errors_last_24h: number | null
+          errors_last_hour: number | null
+          id: string
+          last_incident_at: string | null
+          message: string | null
+          status: string
+          uptime_percentage: number | null
+        }
+        Insert: {
+          avg_response_ms?: number | null
+          checked_at?: string
+          created_at?: string
+          errors_last_24h?: number | null
+          errors_last_hour?: number | null
+          id?: string
+          last_incident_at?: string | null
+          message?: string | null
+          status?: string
+          uptime_percentage?: number | null
+        }
+        Update: {
+          avg_response_ms?: number | null
+          checked_at?: string
+          created_at?: string
+          errors_last_24h?: number | null
+          errors_last_hour?: number | null
+          id?: string
+          last_incident_at?: string | null
+          message?: string | null
+          status?: string
+          uptime_percentage?: number | null
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number

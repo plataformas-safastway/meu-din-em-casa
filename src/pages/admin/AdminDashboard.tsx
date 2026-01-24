@@ -20,6 +20,11 @@ import {
   AlertTriangle,
   Headphones,
   Heart,
+  Cpu,
+  Server,
+  Key,
+  Flag,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +33,7 @@ import { useIsAdmin } from "@/hooks/useUserRole";
 import { useFinancialAccess } from "@/hooks/useFinancialAccess";
 import { useSupportAccess } from "@/hooks/useSupportAccess";
 import { useCSAccess } from "@/hooks/useCSAccess";
+import { useTechAccess } from "@/hooks/useTechAccess";
 import { AdminUsersPage } from "./AdminUsersPage";
 import { AdminEbooksPage } from "./AdminEbooksPage";
 import { AdminMetricsPage } from "./AdminMetricsPage";
@@ -50,11 +56,20 @@ import {
   CSUsersListPage,
   CSAuditPage,
 } from "./cs";
+import {
+  TechHealthPage,
+  TechLogsPage,
+  TechIntegrationsPage,
+  TechApiKeysPage,
+  TechFeatureFlagsPage,
+  TechAuditPage,
+} from "./tech";
 
 type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings" 
   | "fin-overview" | "fin-users" | "fin-payments" | "fin-invoices" | "fin-reports" | "fin-audit"
   | "sup-errors" | "sup-users" | "sup-audit"
-  | "cs-overview" | "cs-users" | "cs-audit";
+  | "cs-overview" | "cs-users" | "cs-audit"
+  | "tech-health" | "tech-logs" | "tech-integrations" | "tech-keys" | "tech-flags" | "tech-audit";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -65,6 +80,7 @@ export function AdminDashboard() {
   const { data: hasFinancialAccess } = useFinancialAccess();
   const { data: hasSupportAccess } = useSupportAccess();
   const { data: hasCSAccess } = useCSAccess();
+  const { data: hasTechAccess } = useTechAccess();
   const handleSignOut = async () => {
     await signOut();
     navigate("/login");
@@ -103,6 +119,16 @@ export function AdminDashboard() {
     { id: "cs-audit" as AdminTab, label: "Auditoria CS", icon: ClipboardList },
   ] : [];
 
+  // Tech module menu - only for users with tech access
+  const techMenuItems = hasTechAccess ? [
+    { id: "tech-health" as AdminTab, label: "Saúde do Sistema", icon: Activity },
+    { id: "tech-logs" as AdminTab, label: "Logs", icon: FileText },
+    { id: "tech-integrations" as AdminTab, label: "Integrações", icon: Server },
+    { id: "tech-keys" as AdminTab, label: "Chaves API", icon: Key },
+    { id: "tech-flags" as AdminTab, label: "Feature Flags", icon: Flag },
+    { id: "tech-audit" as AdminTab, label: "Auditoria Tech", icon: ClipboardList },
+  ] : [];
+
   const renderContent = () => {
     // Check financial access for financial tabs
     if (activeTab.startsWith('fin-') && !hasFinancialAccess) {
@@ -117,6 +143,11 @@ export function AdminDashboard() {
     // Check CS access for CS tabs
     if (activeTab.startsWith('cs-') && !hasCSAccess) {
       return <AccessDenied message="Este módulo requer perfil ADMIN_MASTER ou CUSTOMER_SUCCESS" />;
+    }
+
+    // Check Tech access for Tech tabs
+    if (activeTab.startsWith('tech-') && !hasTechAccess) {
+      return <AccessDenied message="Este módulo requer perfil ADMIN_MASTER ou TECNOLOGIA" />;
     }
 
     switch (activeTab) {
@@ -154,8 +185,20 @@ export function AdminDashboard() {
         return <CSUsersListPage />;
       case "cs-audit":
         return <CSAuditPage />;
+      case "tech-health":
+        return <TechHealthPage />;
+      case "tech-logs":
+        return <TechLogsPage />;
+      case "tech-integrations":
+        return <TechIntegrationsPage />;
+      case "tech-keys":
+        return <TechApiKeysPage />;
+      case "tech-flags":
+        return <TechFeatureFlagsPage />;
+      case "tech-audit":
+        return <TechAuditPage />;
       default:
-        return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} hasSupportAccess={!!hasSupportAccess} hasCSAccess={!!hasCSAccess} />;
+        return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} hasSupportAccess={!!hasSupportAccess} hasCSAccess={!!hasCSAccess} hasTechAccess={!!hasTechAccess} />;
     }
   };
 
@@ -263,6 +306,30 @@ export function AdminDashboard() {
               })}
             </>
           )}
+          {techMenuItems.length > 0 && (
+            <>
+              <div className="pt-4 pb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Tecnologia</p>
+              </div>
+              {techMenuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      activeTab === item.id
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
@@ -301,7 +368,7 @@ export function AdminDashboard() {
   );
 }
 
-function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCSAccess }: { onNavigate: (tab: AdminTab) => void; hasFinancialAccess: boolean; hasSupportAccess: boolean; hasCSAccess: boolean }) {
+function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCSAccess, hasTechAccess }: { onNavigate: (tab: AdminTab) => void; hasFinancialAccess: boolean; hasSupportAccess: boolean; hasCSAccess: boolean; hasTechAccess: boolean }) {
   const stats = [
     { label: "Total de Usuários", value: "—", icon: Users, color: "text-blue-500" },
     { label: "Famílias Ativas", value: "—", icon: Home, color: "text-green-500" },
@@ -322,6 +389,9 @@ function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCS
     ] : []),
     ...(hasCSAccess ? [
       { label: "Customer Success", icon: Heart, action: () => onNavigate("cs-overview") },
+    ] : []),
+    ...(hasTechAccess ? [
+      { label: "Tecnologia", icon: Cpu, action: () => onNavigate("tech-health") },
     ] : []),
   ];
 
