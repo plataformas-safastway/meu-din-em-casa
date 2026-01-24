@@ -453,6 +453,168 @@ export type Database = {
           },
         ]
       }
+      cs_actions: {
+        Row: {
+          action_details: Json | null
+          action_type: string
+          created_at: string
+          family_id: string
+          id: string
+          notes: string | null
+          performed_by: string
+        }
+        Insert: {
+          action_details?: Json | null
+          action_type: string
+          created_at?: string
+          family_id: string
+          id?: string
+          notes?: string | null
+          performed_by: string
+        }
+        Update: {
+          action_details?: Json | null
+          action_type?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          notes?: string | null
+          performed_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_actions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cs_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          target_family_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_family_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_family_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cs_engagement_metrics: {
+        Row: {
+          calculated_at: string
+          family_id: string
+          has_budget: boolean | null
+          has_goals: boolean | null
+          has_import: boolean | null
+          has_manual_transactions: boolean | null
+          id: string
+          last_login_at: string | null
+          score: number
+          score_breakdown: Json | null
+          total_logins_30d: number | null
+        }
+        Insert: {
+          calculated_at?: string
+          family_id: string
+          has_budget?: boolean | null
+          has_goals?: boolean | null
+          has_import?: boolean | null
+          has_manual_transactions?: boolean | null
+          id?: string
+          last_login_at?: string | null
+          score?: number
+          score_breakdown?: Json | null
+          total_logins_30d?: number | null
+        }
+        Update: {
+          calculated_at?: string
+          family_id?: string
+          has_budget?: boolean | null
+          has_goals?: boolean | null
+          has_import?: boolean | null
+          has_manual_transactions?: boolean | null
+          id?: string
+          last_login_at?: string | null
+          score?: number
+          score_breakdown?: Json | null
+          total_logins_30d?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_engagement_metrics_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: true
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cs_user_status: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          family_id: string
+          id: string
+          notes: string | null
+          risk_level: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          family_id: string
+          id?: string
+          notes?: string | null
+          risk_level?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          family_id?: string
+          id?: string
+          notes?: string | null
+          risk_level?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_user_status_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: true
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ebook_ctas: {
         Row: {
           cover_url: string | null
@@ -2255,6 +2417,7 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_role"]
       }
       has_any_admin: { Args: never; Returns: boolean }
+      has_cs_access: { Args: { _user_id: string }; Returns: boolean }
       has_financial_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
