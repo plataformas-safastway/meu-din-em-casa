@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { OnboardingCategoriesPage } from "./OnboardingCategoriesPage";
 import { OnboardingImportStep } from "@/components/OnboardingImportStep";
+import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
+import { validatePassword } from "@/lib/passwordValidation";
 import oikMarca from "@/assets/oik-marca.png";
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -101,8 +103,9 @@ export function SignupPage() {
             return;
           }
 
-          if (password.length < 6) {
-            toast.error("A senha deve ter pelo menos 6 caracteres");
+          const passwordError = validatePassword(password);
+          if (passwordError) {
+            toast.error(passwordError);
             setLoading(false);
             return;
           }
@@ -163,8 +166,9 @@ export function SignupPage() {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres");
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      toast.error(passwordError);
       return;
     }
 
@@ -405,7 +409,7 @@ export function SignupPage() {
                         <Input
                           id="password"
                           type={showPassword ? "text" : "password"}
-                          placeholder="Mínimo 6 caracteres"
+                          placeholder="Mínimo 8 caracteres"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           className="h-12 pr-10 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
@@ -420,6 +424,7 @@ export function SignupPage() {
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
+                      <PasswordStrengthIndicator password={password} />
                     </div>
                   </>
                 )}
