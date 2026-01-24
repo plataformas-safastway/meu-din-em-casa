@@ -30,6 +30,7 @@ interface DashboardProps {
   onLearnMore?: (tab?: "accounts" | "cards") => void;
   onBanksClick?: () => void;
   onCategoriesClick?: () => void;
+  onTransactionsClick?: () => void;
 }
 
 export function Dashboard({ 
@@ -38,6 +39,7 @@ export function Dashboard({
   onLearnMore,
   onBanksClick,
   onCategoriesClick,
+  onTransactionsClick,
 }: DashboardProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
@@ -276,6 +278,7 @@ export function Dashboard({
           transactions={displayTransactions} 
           limit={5} 
           onTransactionClick={handleTransactionClick}
+          onViewAll={onTransactionsClick}
         />
       </main>
 
