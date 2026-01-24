@@ -14,6 +14,8 @@ import { EditTransactionSheet } from "@/components/EditTransactionSheet";
 import { FabButton } from "@/components/QuickActions";
 import { SkeletonHome } from "@/components/ui/money-loader";
 import { WelcomeModal, OnboardingChecklist } from "@/components/onboarding";
+import { BudgetAlertsWidget } from "@/components/budget";
+import { ProjectionPreviewWidget } from "@/components/projection";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions, useFinanceSummary, useCreateTransaction, useTransactionsLast6Months } from "@/hooks/useTransactions";
 import { useInsights } from "@/hooks/useInsights";
@@ -33,6 +35,8 @@ interface DashboardProps {
   onBanksClick?: () => void;
   onCategoriesClick?: () => void;
   onTransactionsClick?: () => void;
+  onBudgetsClick?: () => void;
+  onProjectionClick?: () => void;
 }
 
 export function Dashboard({ 
@@ -42,6 +46,8 @@ export function Dashboard({
   onBanksClick,
   onCategoriesClick,
   onTransactionsClick,
+  onBudgetsClick,
+  onProjectionClick,
 }: DashboardProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
@@ -274,6 +280,17 @@ export function Dashboard({
 
         {/* Goals Widget */}
         <GoalsWidget onViewAll={onGoalsClick} />
+
+        {/* Budget & Projection Widgets */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <BudgetAlertsWidget 
+            month={selectedMonth} 
+            year={selectedYear} 
+            onViewAll={onBudgetsClick}
+            limit={3}
+          />
+          <ProjectionPreviewWidget onViewAll={onProjectionClick} />
+        </div>
 
         {/* Charts Grid */}
         {categoryExpenses.length > 0 && (

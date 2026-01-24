@@ -9,18 +9,22 @@ import {
   AlertTriangle,
   ChevronRight,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  HelpCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MoneyLoader } from "@/components/ui/money-loader";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useProjection, MonthProjection } from "@/hooks/useProjection";
 import { useDebouncedLoading } from "@/hooks/useLoading";
 import { getCategoryById } from "@/data/categories";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { EducationalInsight } from "@/components/projection";
+import { ContextualTip } from "@/components/onboarding/ContextualTip";
 
 interface ProjectionPageProps {
   onBack: () => void;
@@ -73,8 +77,20 @@ function ProjectionDetail({ projection }: { projection: MonthProjection }) {
     ? (projection.expenseProjected / projection.incomeProjected) * 100 
     : 100;
 
+  // Separate installments from other drivers
+  const installmentDrivers = projection.drivers.filter(d => d.type === "INSTALLMENT");
+  const otherDrivers = projection.drivers.filter(d => d.type !== "INSTALLMENT");
+
   return (
     <div className="space-y-4">
+      {/* Educational Tip - only on first visit */}
+      <EducationalInsight
+        title="O que é Projeção?"
+        content="A projeção mostra o impacto futuro das suas decisões atuais. Use para enxergar antes de sentir — sem editar nada, apenas observe e planeje."
+        variant="info"
+        storageKey="projection_intro"
+      />
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3">
         <Card className="bg-success/10 border-success/30">
@@ -112,24 +128,70 @@ function ProjectionDetail({ projection }: { projection: MonthProjection }) {
         </Card>
       </div>
 
-      {/* Credit Card Installments */}
+      {/* Credit Card Installments - Enhanced */}
       {projection.creditCardInstallments > 0 && (
         <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="font-medium">Parcelas do Cartão</p>
-                  <p className="text-xs text-muted-foreground">
-                    Compromisso fixo do mês
-                  </p>
-                </div>
+                <CreditCard className="w-4 h-4 text-primary" />
+                Parcelas do Cartão
               </div>
-              <p className="text-lg font-bold">
+              <Tooltip>
+                <TooltipTrigger>
+                  <HelpCircle className="w-4 h-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p className="text-xs">
+                    Parcelar espalha o impacto no tempo — pode ser bom para grandes 
+                    compras planejadas, mas requer atenção ao total comprometido.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Total em parcelas</span>
+              <span className="text-lg font-bold">
                 {formatCurrency(projection.creditCardInstallments)}
-              </p>
+              </span>
             </div>
+            
+            {/* Installment breakdown */}
+            {installmentDrivers.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-border/50">
+                {installmentDrivers.map((driver, idx) => {
+                  const category = driver.category ? getCategoryById(driver.category) : null;
+                  return (
+                    <div 
+                      key={idx}
+                      className="flex items-center justify-between text-xs py-1.5 px-2 rounded-lg bg-muted/30"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span>{category?.icon || "💳"}</span>
+                        <span className="truncate">{driver.label}</span>
+                      </div>
+                      <span className="font-medium ml-2">
+                        {formatCurrency(driver.amount)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Educational hint for high installment ratio */}
+            {projection.incomeProjected > 0 && 
+             (projection.creditCardInstallments / projection.incomeProjected) > 0.3 && (
+              <div className="flex items-start gap-2 p-2 bg-warning/10 rounded-lg border border-warning/20">
+                <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  Suas parcelas representam mais de 30% da receita projetada. 
+                  Acompanhe para evitar aperto no orçamento.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -155,11 +217,16 @@ function ProjectionDetail({ projection }: { projection: MonthProjection }) {
               incomeRatio > 80 && incomeRatio <= 100 && "[&>div]:bg-warning"
             )}
           />
+          {incomeRatio <= 80 && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Excelente! Vocês estão com folga no orçamento projetado.
+            </p>
+          )}
         </CardContent>
       </Card>
 
-      {/* Drivers */}
-      {projection.drivers.length > 0 && (
+      {/* Other Drivers */}
+      {otherDrivers.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
@@ -168,7 +235,7 @@ function ProjectionDetail({ projection }: { projection: MonthProjection }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {projection.drivers.map((driver, idx) => {
+            {otherDrivers.map((driver, idx) => {
               const category = driver.category ? getCategoryById(driver.category) : null;
               return (
                 <div 
@@ -180,8 +247,7 @@ function ProjectionDetail({ projection }: { projection: MonthProjection }) {
                     <div>
                       <p className="text-sm font-medium">{driver.label}</p>
                       <p className="text-xs text-muted-foreground">
-                        {driver.type === "INSTALLMENT" ? "Parcela" : 
-                         driver.type === "RECURRING" ? "Recorrente" : "Média"}
+                        {driver.type === "RECURRING" ? "Recorrente" : "Média histórica"}
                       </p>
                     </div>
                   </div>
