@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.accounts-cards-insights]
 verify_jwt = false
+
+[functions.cs-ai-analyze]
+verify_jwt = false
