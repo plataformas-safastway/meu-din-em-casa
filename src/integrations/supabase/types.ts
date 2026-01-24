@@ -2071,6 +2071,7 @@ export type Database = {
         | "admin_master"
         | "financeiro"
         | "tecnologia"
+        | "suporte"
       bank_account_type: "checking" | "savings" | "digital" | "salary"
       card_brand: "visa" | "mastercard" | "elo" | "amex" | "hipercard"
       card_type: "credit" | "debit" | "both"
@@ -2226,6 +2227,7 @@ export const Constants = {
         "admin_master",
         "financeiro",
         "tecnologia",
+        "suporte",
       ],
       bank_account_type: ["checking", "savings", "digital", "salary"],
       card_brand: ["visa", "mastercard", "elo", "amex", "hipercard"],
