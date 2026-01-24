@@ -3221,6 +3221,8 @@ export type Database = {
         | "tecnologia"
         | "suporte"
         | "customer_success"
+        | "diretoria"
+        | "gestao_estrategica"
       bank_account_type: "checking" | "savings" | "digital" | "salary"
       card_brand: "visa" | "mastercard" | "elo" | "amex" | "hipercard"
       card_type: "credit" | "debit" | "both"
@@ -3378,6 +3380,8 @@ export const Constants = {
         "tecnologia",
         "suporte",
         "customer_success",
+        "diretoria",
+        "gestao_estrategica",
       ],
       bank_account_type: ["checking", "savings", "digital", "salary"],
       card_brand: ["visa", "mastercard", "elo", "amex", "hipercard"],
