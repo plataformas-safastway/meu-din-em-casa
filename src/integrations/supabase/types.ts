@@ -1816,6 +1816,210 @@ export type Database = {
         }
         Relationships: []
       }
+      support_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          target_error_id: string | null
+          target_family_id: string | null
+          target_session_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_error_id?: string | null
+          target_family_id?: string | null
+          target_session_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          target_error_id?: string | null
+          target_family_id?: string | null
+          target_session_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      support_errors: {
+        Row: {
+          browser: string | null
+          created_at: string
+          device_type: string | null
+          error_code: string | null
+          error_message: string
+          error_stack: string | null
+          error_type: string
+          family_id: string | null
+          id: string
+          internal_notes: string | null
+          metadata: Json | null
+          module: string | null
+          os: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          screen: string | null
+          status: string
+          user_action: string | null
+          user_id: string | null
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string
+          device_type?: string | null
+          error_code?: string | null
+          error_message: string
+          error_stack?: string | null
+          error_type: string
+          family_id?: string | null
+          id?: string
+          internal_notes?: string | null
+          metadata?: Json | null
+          module?: string | null
+          os?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          screen?: string | null
+          status?: string
+          user_action?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string
+          device_type?: string | null
+          error_code?: string | null
+          error_message?: string
+          error_stack?: string | null
+          error_type?: string
+          family_id?: string | null
+          id?: string
+          internal_notes?: string | null
+          metadata?: Json | null
+          module?: string | null
+          os?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          screen?: string | null
+          status?: string
+          user_action?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_errors_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_notes: {
+        Row: {
+          created_at: string
+          created_by: string
+          family_id: string
+          id: string
+          is_pinned: boolean | null
+          note: string
+          note_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          family_id: string
+          id?: string
+          is_pinned?: boolean | null
+          note: string
+          note_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          family_id?: string
+          id?: string
+          is_pinned?: boolean | null
+          note?: string
+          note_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_notes_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_sessions: {
+        Row: {
+          actions_performed: Json | null
+          approved_at: string | null
+          approved_by: string | null
+          ended_at: string | null
+          id: string
+          reason: string
+          screens_visited: string[] | null
+          session_type: string
+          started_at: string
+          support_user_id: string
+          target_family_id: string
+          target_user_id: string | null
+        }
+        Insert: {
+          actions_performed?: Json | null
+          approved_at?: string | null
+          approved_by?: string | null
+          ended_at?: string | null
+          id?: string
+          reason: string
+          screens_visited?: string[] | null
+          session_type?: string
+          started_at?: string
+          support_user_id: string
+          target_family_id: string
+          target_user_id?: string | null
+        }
+        Update: {
+          actions_performed?: Json | null
+          approved_at?: string | null
+          approved_by?: string | null
+          ended_at?: string | null
+          id?: string
+          reason?: string
+          screens_visited?: string[] | null
+          session_type?: string
+          started_at?: string
+          support_user_id?: string
+          target_family_id?: string
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_sessions_target_family_id_fkey"
+            columns: ["target_family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
@@ -2059,6 +2263,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_support_access: { Args: { _user_id: string }; Returns: boolean }
       has_tech_access: { Args: { _user_id: string }; Returns: boolean }
       is_family_member: { Args: { f_id: string }; Returns: boolean }
       is_family_owner: { Args: { f_id: string }; Returns: boolean }

@@ -16,13 +16,16 @@ import {
   Receipt,
   FileSpreadsheet,
   ClipboardList,
-  Lock
+  Lock,
+  AlertTriangle,
+  Headphones,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { useFinancialAccess } from "@/hooks/useFinancialAccess";
+import { useSupportAccess } from "@/hooks/useSupportAccess";
 import { AdminUsersPage } from "./AdminUsersPage";
 import { AdminEbooksPage } from "./AdminEbooksPage";
 import { AdminMetricsPage } from "./AdminMetricsPage";
@@ -35,9 +38,15 @@ import {
   FinancialReportsPage,
   FinancialAuditPage
 } from "./finance";
+import {
+  SupportErrorsPage,
+  SupportUsersPage,
+  SupportAuditPage,
+} from "./support";
 
 type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings" 
-  | "fin-overview" | "fin-users" | "fin-payments" | "fin-invoices" | "fin-reports" | "fin-audit";
+  | "fin-overview" | "fin-users" | "fin-payments" | "fin-invoices" | "fin-reports" | "fin-audit"
+  | "sup-errors" | "sup-users" | "sup-audit";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -46,7 +55,7 @@ export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
 
   const { data: hasFinancialAccess } = useFinancialAccess();
-
+  const { data: hasSupportAccess } = useSupportAccess();
   const handleSignOut = async () => {
     await signOut();
     navigate("/login");
@@ -71,10 +80,22 @@ export function AdminDashboard() {
     { id: "fin-audit" as AdminTab, label: "Auditoria", icon: ClipboardList },
   ] : [];
 
+  // Support module menu - only for users with support access
+  const supportMenuItems = hasSupportAccess ? [
+    { id: "sup-errors" as AdminTab, label: "Painel de Erros", icon: AlertTriangle },
+    { id: "sup-users" as AdminTab, label: "Usuários", icon: Headphones },
+    { id: "sup-audit" as AdminTab, label: "Auditoria Suporte", icon: ClipboardList },
+  ] : [];
+
   const renderContent = () => {
     // Check financial access for financial tabs
     if (activeTab.startsWith('fin-') && !hasFinancialAccess) {
-      return <AccessDenied />;
+      return <AccessDenied message="Este módulo requer perfil ADMIN_MASTER ou FINANCEIRO" />;
+    }
+
+    // Check support access for support tabs
+    if (activeTab.startsWith('sup-') && !hasSupportAccess) {
+      return <AccessDenied message="Este módulo requer perfil ADMIN_MASTER ou SUPORTE" />;
     }
 
     switch (activeTab) {
@@ -100,8 +121,14 @@ export function AdminDashboard() {
         return <FinancialReportsPage />;
       case "fin-audit":
         return <FinancialAuditPage />;
+      case "sup-errors":
+        return <SupportErrorsPage />;
+      case "sup-users":
+        return <SupportUsersPage />;
+      case "sup-audit":
+        return <SupportAuditPage />;
       default:
-        return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} />;
+        return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} hasSupportAccess={!!hasSupportAccess} />;
     }
   };
 
@@ -137,7 +164,54 @@ export function AdminDashboard() {
               </button>
             );
           })}
-        </nav>
+          {financialMenuItems.length > 0 && (
+            <>
+              <div className="pt-4 pb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Financeiro</p>
+              </div>
+              {financialMenuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      activeTab === item.id
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </>
+          )}
+          {supportMenuItems.length > 0 && (
+            <>
+              <div className="pt-4 pb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Suporte</p>
+              </div>
+              {supportMenuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      activeTab === item.id
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </>
+          )}
 
         <div className="p-4 border-t border-border space-y-2">
           <div className="px-3 py-2">
