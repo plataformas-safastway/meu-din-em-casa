@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowUpCircle, ArrowDownCircle, Check, ChevronRight, Building2, CreditCard, Calendar, FileText } from "lucide-react";
+import { Check, ChevronRight, Building2, CreditCard, Calendar, FileText } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,16 +7,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { defaultCategories, expensePaymentMethods, incomePaymentMethods, getCategoryById } from "@/data/categories";
+import { defaultCategories, getCategoryById } from "@/data/categories";
 import { useBankAccounts, useCreditCards } from "@/hooks/useBankData";
-import { TransactionType, ExpenseType, PaymentMethod } from "@/types/finance";
+import { TransactionType, TransactionClassification, ExpenseType, PaymentMethod } from "@/types/finance";
 import { cn } from "@/lib/utils";
+import {
+  TransactionTypeSelector,
+  PaymentMethodSelector,
+  AmountInput,
+} from "@/components/transaction";
 
 interface AddTransactionSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (transaction: {
     type: TransactionType;
+    classification?: TransactionClassification;
     expenseType?: ExpenseType;
     amount: number;
     category: string;
@@ -37,7 +43,9 @@ export function AddTransactionSheet({
   onSubmit,
   defaultType = "expense",
 }: AddTransactionSheetProps) {
-  const [type, setType] = useState<TransactionType>(defaultType);
+  const [classification, setClassification] = useState<TransactionClassification>(
+    defaultType === "income" ? "income" : "expense"
+  );
   const [expenseType, setExpenseType] = useState<ExpenseType>("variable");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
@@ -56,11 +64,11 @@ export function AddTransactionSheet({
   const { data: bankAccounts = [] } = useBankAccounts();
   const { data: creditCards = [] } = useCreditCards();
 
+  // Derive transaction type from classification
+  const type: TransactionType = classification === "income" ? "income" : "expense";
+  
   const filteredCategories = defaultCategories.filter((cat) => cat.type === type);
   const selectedCategory = getCategoryById(category);
-
-  // Get payment methods based on transaction type
-  const availablePaymentMethods = type === "income" ? incomePaymentMethods : expensePaymentMethods;
 
   // Auto-focus amount input when sheet opens
   useEffect(() => {
@@ -79,17 +87,28 @@ export function AddTransactionSheet({
     }
   }, [category]);
 
-  // Reset category and payment method when type changes
+  // Reset category and payment method when classification changes
   useEffect(() => {
     setCategory("");
     setSubcategory("");
     setShowSubcategories(false);
     setCheckNumber("");
     // Reset to valid payment method for new type
-    if (type === "income" && (paymentMethod === "credit" || paymentMethod === "debit")) {
+    if (classification === "income" && (paymentMethod === "credit" || paymentMethod === "debit")) {
       setPaymentMethod("pix");
     }
-  }, [type]);
+    // For transfers, default to transfer payment method
+    if (classification === "transfer") {
+      setPaymentMethod("transfer");
+    }
+  }, [classification]);
+
+  // Set classification based on defaultType when sheet opens
+  useEffect(() => {
+    if (open) {
+      setClassification(defaultType === "income" ? "income" : "expense");
+    }
+  }, [open, defaultType]);
 
   // Reset bank/card selection and check number when payment method changes
   useEffect(() => {
@@ -127,6 +146,7 @@ export function AddTransactionSheet({
     try {
       await onSubmit({
         type,
+        classification,
         expenseType: type === "expense" ? expenseType : undefined,
         amount: parseFloat(amount.replace(",", ".")),
         category,
@@ -155,11 +175,6 @@ export function AddTransactionSheet({
     }
   };
 
-  const formatAmount = (value: string) => {
-    const cleaned = value.replace(/[^\d,]/g, "");
-    setAmount(cleaned);
-  };
-
   const needsBankAccount = ["debit", "pix", "transfer"].includes(paymentMethod);
   const needsCreditCard = paymentMethod === "credit";
   const needsCheckNumber = paymentMethod === "cheque";
@@ -186,25 +201,50 @@ export function AddTransactionSheet({
     return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
   };
 
+  // Get title based on classification
+  const getTitle = () => {
+    if (showSubcategories && selectedCategory) {
+      return (
+        <button
+          onClick={() => setShowSubcategories(false)}
+          className="flex items-center gap-2 mx-auto text-muted-foreground hover:text-foreground min-h-[44px]"
+        >
+          <ChevronRight className="w-5 h-5 rotate-180" />
+          <span className="text-lg font-semibold text-foreground">
+            {selectedCategory.icon} {selectedCategory.name}
+          </span>
+        </button>
+      );
+    }
+    
+    const titles: Record<TransactionClassification, string> = {
+      income: 'Nova Receita',
+      expense: 'Nova Despesa',
+      transfer: 'Nova Transferência',
+      reimbursement: 'Novo Reembolso',
+      adjustment: 'Novo Ajuste',
+    };
+    
+    return <span className="text-xl font-bold">{titles[classification]}</span>;
+  };
+
+  // Get submit button text based on classification
+  const getSubmitLabel = () => {
+    const labels: Record<TransactionClassification, string> = {
+      income: 'Registrar Receita',
+      expense: 'Registrar Despesa',
+      transfer: 'Registrar Transferência',
+      reimbursement: 'Registrar Reembolso',
+      adjustment: 'Registrar Ajuste',
+    };
+    return labels[classification];
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[92vh] rounded-t-3xl">
         <SheetHeader className="pb-3">
-          <SheetTitle className="text-center">
-            {showSubcategories && selectedCategory ? (
-              <button
-                onClick={() => setShowSubcategories(false)}
-                className="flex items-center gap-2 mx-auto text-muted-foreground hover:text-foreground min-h-[44px]"
-              >
-                <ChevronRight className="w-5 h-5 rotate-180" />
-                <span className="text-lg font-semibold text-foreground">
-                  {selectedCategory.icon} {selectedCategory.name}
-                </span>
-              </button>
-            ) : (
-              <span className="text-xl font-bold">Novo Lançamento</span>
-            )}
-          </SheetTitle>
+          <SheetTitle className="text-center">{getTitle()}</SheetTitle>
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col h-[calc(100%-50px)]">
@@ -212,7 +252,7 @@ export function AddTransactionSheet({
             <div className="space-y-5 pb-6">
               {/* Subcategory Selection View */}
               {showSubcategories && selectedCategory ? (
-                <div className="space-y-4">
+                <div className="space-y-4 animate-fade-in">
                   <Label className="text-base">Subcategoria</Label>
                   <div className="grid gap-2">
                     {selectedCategory.subcategories.map((sub) => (
@@ -224,10 +264,10 @@ export function AddTransactionSheet({
                           setShowSubcategories(false);
                         }}
                         className={cn(
-                          "flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left min-h-[52px]",
+                          "flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left min-h-[52px] active:scale-[0.98]",
                           subcategory === sub.id
                             ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50 active:scale-[0.98]"
+                            : "border-border hover:border-primary/50"
                         )}
                       >
                         <span className="font-medium text-base">{sub.name}</span>
@@ -238,71 +278,34 @@ export function AddTransactionSheet({
                 </div>
               ) : (
                 <>
-                  {/* Type Toggle - BIGGER and CLEARER */}
-                  <div className="grid grid-cols-2 gap-3 p-1.5 bg-muted/50 rounded-2xl">
-                    <button
-                      type="button"
-                      onClick={() => setType("income")}
-                      className={cn(
-                        "flex items-center justify-center gap-2 py-4 rounded-xl font-semibold transition-all min-h-[56px] text-base",
-                        type === "income"
-                          ? "bg-success text-success-foreground shadow-md"
-                          : "text-muted-foreground hover:text-foreground active:bg-muted/80"
-                      )}
-                    >
-                      <ArrowUpCircle className="w-6 h-6" />
-                      Receita
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setType("expense")}
-                      className={cn(
-                        "flex items-center justify-center gap-2 py-4 rounded-xl font-semibold transition-all min-h-[56px] text-base",
-                        type === "expense"
-                          ? "bg-destructive text-destructive-foreground shadow-md"
-                          : "text-muted-foreground hover:text-foreground active:bg-muted/80"
-                      )}
-                    >
-                      <ArrowDownCircle className="w-6 h-6" />
-                      Despesa
-                    </button>
-                  </div>
+                  {/* Type Toggle - With classifications */}
+                  <TransactionTypeSelector
+                    value={classification}
+                    onChange={setClassification}
+                    showAdvanced={true}
+                  />
 
                   {/* Amount - FIRST FIELD, BIGGER, AUTO-FOCUS */}
-                  <div className="space-y-2">
-                    <Label htmlFor="amount" className="text-base font-medium">Valor</Label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-muted-foreground font-semibold">
-                        R$
-                      </span>
-                      <Input
-                        ref={amountInputRef}
-                        id="amount"
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="0,00"
-                        value={amount}
-                        onChange={(e) => formatAmount(e.target.value)}
-                        className="pl-14 text-3xl font-bold h-16 text-center rounded-xl border-2 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary"
-                        required
-                        autoComplete="off"
-                      />
-                    </div>
-                  </div>
+                  <AmountInput
+                    ref={amountInputRef}
+                    value={amount}
+                    onChange={setAmount}
+                    classification={classification}
+                  />
 
                   {/* Expense Type (only for expenses) */}
-                  {type === "expense" && (
-                    <div className="space-y-2">
+                  {type === "expense" && classification === "expense" && (
+                    <div className="space-y-2 animate-fade-in">
                       <Label className="text-base">Tipo de Despesa</Label>
                       <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
                           onClick={() => setExpenseType("fixed")}
                           className={cn(
-                            "py-3.5 px-4 rounded-xl border-2 font-medium transition-all min-h-[48px] text-base",
+                            "py-3.5 px-4 rounded-xl border-2 font-medium transition-all min-h-[48px] text-base active:scale-[0.98]",
                             expenseType === "fixed"
                               ? "border-primary bg-primary/5 text-primary"
-                              : "border-border text-muted-foreground hover:border-primary/50 active:scale-[0.98]"
+                              : "border-border text-muted-foreground hover:border-primary/50"
                           )}
                         >
                           🔒 Fixa
@@ -311,10 +314,10 @@ export function AddTransactionSheet({
                           type="button"
                           onClick={() => setExpenseType("variable")}
                           className={cn(
-                            "py-3.5 px-4 rounded-xl border-2 font-medium transition-all min-h-[48px] text-base",
+                            "py-3.5 px-4 rounded-xl border-2 font-medium transition-all min-h-[48px] text-base active:scale-[0.98]",
                             expenseType === "variable"
                               ? "border-primary bg-primary/5 text-primary"
-                              : "border-border text-muted-foreground hover:border-primary/50 active:scale-[0.98]"
+                              : "border-border text-muted-foreground hover:border-primary/50"
                           )}
                         >
                           🔄 Variável
@@ -360,7 +363,7 @@ export function AddTransactionSheet({
 
                   {/* Selected Subcategory Display */}
                   {subcategory && selectedCategory && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 animate-fade-in">
                       <Label className="text-base">Subcategoria</Label>
                       <button
                         type="button"
@@ -375,32 +378,16 @@ export function AddTransactionSheet({
                     </div>
                   )}
 
-                  {/* Payment Method - Horizontal scroll with better touch targets */}
-                  <div className="space-y-2">
-                    <Label className="text-base">{type === "income" ? "Como recebeu?" : "Como pagou?"}</Label>
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-                      {availablePaymentMethods.map((method) => (
-                        <button
-                          key={method.id}
-                          type="button"
-                          onClick={() => setPaymentMethod(method.id as PaymentMethod)}
-                          className={cn(
-                            "flex items-center gap-2 py-3 px-4 rounded-full border-2 whitespace-nowrap transition-all min-h-[48px] active:scale-[0.97]",
-                            paymentMethod === method.id
-                              ? "border-primary bg-primary/5 text-primary"
-                              : "border-border text-muted-foreground hover:border-primary/50"
-                          )}
-                        >
-                          <span className="text-lg">{method.icon}</span>
-                          <span className="text-sm font-medium">{method.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  {/* Payment Method */}
+                  <PaymentMethodSelector
+                    value={paymentMethod}
+                    onChange={setPaymentMethod}
+                    classification={classification}
+                  />
 
                   {/* Check Number (for cheque payment) */}
                   {needsCheckNumber && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 animate-fade-in">
                       <Label htmlFor="checkNumber" className="text-base flex items-center gap-2">
                         <FileText className="w-4 h-4" />
                         Número do Cheque *
@@ -417,9 +404,9 @@ export function AddTransactionSheet({
                     </div>
                   )}
 
-                  {/* Bank Account Selection - Better display */}
+                  {/* Bank Account Selection */}
                   {needsBankAccount && bankAccounts.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 animate-fade-in">
                       <Label className="flex items-center gap-2 text-base">
                         <Building2 className="w-4 h-4" />
                         Conta bancária
@@ -443,9 +430,9 @@ export function AddTransactionSheet({
                     </div>
                   )}
 
-                  {/* Credit Card Selection - Better display */}
+                  {/* Credit Card Selection */}
                   {needsCreditCard && creditCards.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 animate-fade-in">
                       <Label className="flex items-center gap-2 text-base">
                         <CreditCard className="w-4 h-4" />
                         Cartão de crédito
@@ -469,7 +456,7 @@ export function AddTransactionSheet({
                     </div>
                   )}
 
-                  {/* Date - Compact with today indicator */}
+                  {/* Date */}
                   <div className="space-y-2">
                     <Label htmlFor="date" className="flex items-center gap-2 text-base">
                       <Calendar className="w-4 h-4" />
@@ -487,10 +474,10 @@ export function AddTransactionSheet({
                     />
                   </div>
 
-                  {/* Description - Clear optional label */}
+                  {/* Description */}
                   <div className="space-y-2">
                     <Label htmlFor="description" className="text-base text-muted-foreground">
-                      Observações <span className="text-xs">(opcional)</span>
+                      Descrição <span className="text-xs">(opcional)</span>
                     </Label>
                     <Textarea
                       id="description"
@@ -506,7 +493,7 @@ export function AddTransactionSheet({
             </div>
           </ScrollArea>
 
-          {/* Submit Button - Fixed at bottom with better feedback */}
+          {/* Submit Button */}
           {!showSubcategories && (
             <div className="pt-4 border-t border-border space-y-3">
               <Button
@@ -526,11 +513,11 @@ export function AddTransactionSheet({
                     Salvando...
                   </span>
                 ) : (
-                  "Salvar Lançamento"
+                  getSubmitLabel()
                 )}
               </Button>
               
-              {/* Emotional microcopy */}
+              {/* Microcopy */}
               <p className="text-center text-xs text-muted-foreground/70">
                 Lançar em menos de 10 segundos 🚀
               </p>

@@ -1,5 +1,13 @@
 export type TransactionType = 'income' | 'expense';
 
+// Classification for better accounting control (Sprint 2)
+export type TransactionClassification = 
+  | 'income'        // Receita - entrada real de dinheiro
+  | 'expense'       // Despesa - saída real de dinheiro
+  | 'transfer'      // Transferência - movimentação entre contas (não entra no orçamento)
+  | 'reimbursement' // Reembolso - redução de despesa em categoria
+  | 'adjustment';   // Ajuste - correção contábil
+
 export type ExpenseType = 'fixed' | 'variable';
 
 export type PaymentMethod = 'debit' | 'credit' | 'pix' | 'cash' | 'transfer' | 'cheque';
@@ -24,6 +32,7 @@ export interface Category {
 export interface Transaction {
   id: string;
   type: TransactionType;
+  classification?: TransactionClassification;
   expenseType?: ExpenseType;
   amount: number;
   category: string;
@@ -35,6 +44,7 @@ export interface Transaction {
   createdAt: string;
   checkNumber?: string;
   goalId?: string;
+  goalTitle?: string;
 }
 
 export interface MonthlyBalance {
@@ -71,3 +81,32 @@ export interface FamilyFinanceSummary {
   topCategories: CategoryExpense[];
   insights: Insight[];
 }
+
+// Classification labels for UI
+export const classificationLabels: Record<TransactionClassification, { label: string; icon: string; description: string }> = {
+  income: {
+    label: 'Receita',
+    icon: '💰',
+    description: 'Entrada real de dinheiro',
+  },
+  expense: {
+    label: 'Despesa',
+    icon: '💸',
+    description: 'Saída real de dinheiro',
+  },
+  transfer: {
+    label: 'Transferência',
+    icon: '🔄',
+    description: 'Movimentação entre contas (não afeta orçamento)',
+  },
+  reimbursement: {
+    label: 'Reembolso',
+    icon: '↩️',
+    description: 'Redução de despesa em categoria',
+  },
+  adjustment: {
+    label: 'Ajuste',
+    icon: '⚙️',
+    description: 'Correção contábil',
+  },
+};

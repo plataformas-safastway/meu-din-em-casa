@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 24/01/2026 - Sprint 1 Import Fix
-export const HELP_CENTER_VERSION = "24/01/2026 v2";
+// Última atualização: 24/01/2026 - Sprint 2 UX Core & Daily Usage
+export const HELP_CENTER_VERSION = "24/01/2026 v3";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
