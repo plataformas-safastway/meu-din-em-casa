@@ -31,7 +31,7 @@ async function verifyPluggySignature(
     const isValid = await crypto.subtle.verify(
       "HMAC",
       key,
-      signatureBytes.buffer,
+      new Uint8Array(signatureBytes) as unknown as ArrayBuffer,
       encoder.encode(payload)
     );
 
