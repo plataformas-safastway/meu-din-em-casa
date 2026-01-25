@@ -17,6 +17,7 @@ import { WelcomeModal, OnboardingChecklist } from "@/components/onboarding";
 import { BudgetAlertsWidget } from "@/components/budget";
 import { ProjectionPreviewWidget } from "@/components/projection";
 import { UpcomingDuesCard } from "@/components/alerts";
+import { ReceiptCaptureSheet, ReceiptReviewSheet } from "@/components/receipt";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions, useFinanceSummary, useCreateTransaction, useTransactionsLast6Months } from "@/hooks/useTransactions";
 import { useInsights } from "@/hooks/useInsights";
@@ -25,6 +26,7 @@ import { useDebouncedLoading } from "@/hooks/useLoading";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { getCategoryById } from "@/data/categories";
 import { Transaction, TransactionType } from "@/types/finance";
+import { OcrExtractedData } from "@/hooks/useReceiptCapture";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -66,6 +68,13 @@ export const Dashboard = memo(function Dashboard({
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [hasMarkedRender, setHasMarkedRender] = useState(false);
+  
+  // Receipt capture state
+  const [receiptCaptureOpen, setReceiptCaptureOpen] = useState(false);
+  const [receiptReviewOpen, setReceiptReviewOpen] = useState(false);
+  const [extractedReceiptData, setExtractedReceiptData] = useState<OcrExtractedData | null>(null);
+  const [receiptImageFile, setReceiptImageFile] = useState<File | Blob | null>(null);
+  const [receiptImagePreview, setReceiptImagePreview] = useState<string | null>(null);
 
   const selectedMonth = selectedDate.getMonth();
   const selectedYear = selectedDate.getFullYear();
@@ -136,8 +145,19 @@ export const Dashboard = memo(function Dashboard({
     onGoalsClick?.();
   }, [onGoalsClick]);
 
-  const handleViewReceipts = useCallback(() => {
-    toast.info("Em breve! Vocês poderão anexar recibos aos lançamentos.");
+  const handlePhotoCapture = useCallback(() => {
+    setReceiptCaptureOpen(true);
+  }, []);
+
+  const handleReceiptDataExtracted = useCallback((
+    data: OcrExtractedData, 
+    imageFile: File | Blob, 
+    imagePreview: string
+  ) => {
+    setExtractedReceiptData(data);
+    setReceiptImageFile(imageFile);
+    setReceiptImagePreview(imagePreview);
+    setReceiptReviewOpen(true);
   }, []);
 
   const handleTransactionClick = useCallback((transaction: Transaction) => {
@@ -324,6 +344,7 @@ export const Dashboard = memo(function Dashboard({
           onAddIncome={handleAddIncome}
           onAddExpense={handleAddExpense}
           onAddGoal={handleAddGoal}
+          onPhotoCapture={handlePhotoCapture}
         />
 
         {/* Insights */}
@@ -379,6 +400,22 @@ export const Dashboard = memo(function Dashboard({
         open={editSheetOpen}
         onOpenChange={handleCloseEditSheet}
         transaction={transactionToEdit}
+      />
+
+      {/* Receipt Capture Sheet */}
+      <ReceiptCaptureSheet
+        open={receiptCaptureOpen}
+        onOpenChange={setReceiptCaptureOpen}
+        onDataExtracted={handleReceiptDataExtracted}
+      />
+
+      {/* Receipt Review Sheet */}
+      <ReceiptReviewSheet
+        open={receiptReviewOpen}
+        onOpenChange={setReceiptReviewOpen}
+        extractedData={extractedReceiptData}
+        imageFile={receiptImageFile}
+        imagePreview={receiptImagePreview}
       />
     </div>
   );

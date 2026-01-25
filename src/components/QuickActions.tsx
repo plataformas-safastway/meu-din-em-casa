@@ -1,4 +1,4 @@
-import { Plus, ArrowUpCircle, ArrowDownCircle, Target, Upload, Lock } from "lucide-react";
+import { Plus, ArrowUpCircle, ArrowDownCircle, Target, Upload, Lock, Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -9,9 +9,10 @@ interface QuickActionsProps {
   onAddIncome: () => void;
   onAddExpense: () => void;
   onAddGoal?: () => void;
+  onPhotoCapture?: () => void;
 }
 
-export function QuickActions({ onAddIncome, onAddExpense, onAddGoal }: QuickActionsProps) {
+export function QuickActions({ onAddIncome, onAddExpense, onAddGoal, onPhotoCapture }: QuickActionsProps) {
   const navigate = useNavigate();
   const { hasPermission: canInsert } = useHasPermission("can_insert_transactions");
 
@@ -57,13 +58,15 @@ export function QuickActions({ onAddIncome, onAddExpense, onAddGoal }: QuickActi
       disabled: !canInsert,
     },
     {
-      id: "goal",
-      label: "Meta",
-      icon: Target,
-      onClick: handleGoalClick,
-      className: "bg-info/10 text-info hover:bg-info/20 active:bg-info/30",
-      iconBg: "bg-info/20",
-      disabled: false,
+      id: "photo",
+      label: "Foto",
+      icon: Camera,
+      onClick: canInsert && onPhotoCapture ? onPhotoCapture : handleBlockedAction,
+      className: canInsert
+        ? "bg-primary/10 text-primary hover:bg-primary/20 active:bg-primary/30"
+        : "bg-muted/50 text-muted-foreground cursor-not-allowed",
+      iconBg: canInsert ? "bg-primary/20" : "bg-muted",
+      disabled: !canInsert || !onPhotoCapture,
     },
     {
       id: "import",
