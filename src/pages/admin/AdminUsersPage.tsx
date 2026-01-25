@@ -6,7 +6,12 @@ import {
   Eye, 
   Loader2,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Ban,
+  UserX,
+  Shield,
+  History,
+  MoreHorizontal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,9 +39,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAssignRole, useRemoveRole, AppRole } from "@/hooks/useUserRole";
 import { AdminUserProfileView } from "@/components/admin/AdminUserProfileView";
+import { UserStatusBadge } from "@/components/admin/UserStatusBadge";
+import { ChangeUserStatusDialog } from "@/components/admin/ChangeUserStatusDialog";
+import { UserStatusAuditSheet } from "@/components/admin/UserStatusAuditSheet";
+import { useUsersWithStatus, useUserStatusCounts, UserAccountStatus } from "@/hooks/useUserAccountStatus";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -52,6 +68,7 @@ interface FamilyWithMembers {
     display_name: string;
     role: string;
     cpf: string | null;
+    status: string;
   }[];
 }
 
@@ -60,6 +77,25 @@ export function AdminUsersPage() {
   const [selectedFamily, setSelectedFamily] = useState<FamilyWithMembers | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<{ userId: string; memberId: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<"active" | "blocked">("active");
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [auditSheetOpen, setAuditSheetOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<{
+    userId: string;
+    userName: string;
+    status: UserAccountStatus;
+  } | null>(null);
+
+  // User status data
+  const { data: statusCounts } = useUserStatusCounts();
+  const { data: usersWithStatus, isLoading: usersLoading } = useUsersWithStatus(
+    activeTab === "active" ? "ACTIVE" : "ALL"
+  );
+
+  // Filter users for blocked/disabled tab
+  const blockedUsers = usersWithStatus?.filter(
+    (u) => u.account_status === "BLOCKED" || u.account_status === "DISABLED"
+  );
 
   const { data: families, isLoading } = useQuery({
     queryKey: ['admin-families'],
@@ -76,7 +112,8 @@ export function AdminUsersPage() {
             user_id,
             display_name,
             role,
-            cpf
+            cpf,
+            status
           )
         `)
         .order('created_at', { ascending: false });
@@ -93,6 +130,12 @@ export function AdminUsersPage() {
     )
   );
 
+  const filteredUsers = (activeTab === "active" ? usersWithStatus : blockedUsers)?.filter(
+    (u) =>
+      u.display_name.toLowerCase().includes(search.toLowerCase()) ||
+      u.families?.some((f: any) => f.name.toLowerCase().includes(search.toLowerCase()))
+  );
+
   const handleViewDetails = (family: FamilyWithMembers) => {
     setSelectedFamily(family);
     setDetailsOpen(true);
@@ -101,6 +144,16 @@ export function AdminUsersPage() {
   const handleViewMemberProfile = (userId: string, memberId: string) => {
     setSelectedMember({ userId, memberId });
     setDetailsOpen(false);
+  };
+
+  const handleOpenStatusDialog = (userId: string, userName: string, status: UserAccountStatus) => {
+    setSelectedUser({ userId, userName, status });
+    setStatusDialogOpen(true);
+  };
+
+  const handleOpenAuditSheet = (userId: string, userName: string, status: UserAccountStatus) => {
+    setSelectedUser({ userId, userName, status });
+    setAuditSheetOpen(true);
   };
 
   // If viewing a member profile
@@ -136,6 +189,54 @@ export function AdminUsersPage() {
         <p className="text-muted-foreground">Gerencie usuários e famílias do sistema</p>
       </div>
 
+      {/* Status Summary Cards */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Users className="w-8 h-8 text-primary" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold">{statusCounts?.total || 0}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Shield className="w-8 h-8 text-primary" />
+              <div>
+                <p className="text-sm text-muted-foreground">Ativos</p>
+                <p className="text-2xl font-bold">{statusCounts?.active || 0}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <UserX className="w-8 h-8 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Desativados</p>
+                <p className="text-2xl font-bold">{statusCounts?.disabled || 0}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Ban className="w-8 h-8 text-destructive" />
+              <div>
+                <p className="text-sm text-muted-foreground">Bloqueados</p>
+                <p className="text-2xl font-bold">{statusCounts?.blocked || 0}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Search */}
       <div className="flex gap-4">
         <div className="relative flex-1 max-w-md">
@@ -149,7 +250,209 @@ export function AdminUsersPage() {
         </div>
       </div>
 
-      {/* Users Table */}
+      {/* Tabs for Active / Blocked users */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "blocked")}>
+        <TabsList>
+          <TabsTrigger value="active" className="gap-2">
+            <Shield className="w-4 h-4" />
+            Usuários Ativos
+          </TabsTrigger>
+          <TabsTrigger value="blocked" className="gap-2">
+            <Ban className="w-4 h-4" />
+            Bloqueados / Desativados
+            {(statusCounts?.blocked || 0) + (statusCounts?.disabled || 0) > 0 && (
+              <Badge variant="destructive" className="ml-1">
+                {(statusCounts?.blocked || 0) + (statusCounts?.disabled || 0)}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Active Users Tab */}
+        <TabsContent value="active" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Usuários Ativos
+              </CardTitle>
+              <CardDescription>
+                {filteredUsers?.length || 0} usuários ativos no sistema
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {usersLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Famílias</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Criado em</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers?.map((user: any) => (
+                      <TableRow key={user.user_id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{user.display_name}</p>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {user.role === 'owner' ? 'Dono' : 'Membro'}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {user.families?.slice(0, 2).map((f: any, i: number) => (
+                              <Badge key={i} variant="secondary" className="text-xs">
+                                {f.name}
+                              </Badge>
+                            ))}
+                            {user.families?.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{user.families.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <UserStatusBadge status={user.account_status} />
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(user.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewMemberProfile(user.user_id, user.id)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Ver perfil
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenStatusDialog(user.user_id, user.display_name, user.account_status)}>
+                                <UserX className="w-4 h-4 mr-2" />
+                                Alterar status
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenAuditSheet(user.user_id, user.display_name, user.account_status)}>
+                                <History className="w-4 h-4 mr-2" />
+                                Histórico de status
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filteredUsers?.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          Nenhum usuário encontrado
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Blocked/Disabled Users Tab */}
+        <TabsContent value="blocked" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Ban className="w-5 h-5" />
+                Usuários Bloqueados / Desativados
+              </CardTitle>
+              <CardDescription>
+                Usuários com acesso restrito à plataforma
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {usersLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                </div>
+              ) : blockedUsers?.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Nenhum usuário bloqueado ou desativado</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Motivo</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {blockedUsers?.map((user: any) => (
+                      <TableRow key={user.user_id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{user.display_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {user.families?.[0]?.name || "—"}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <UserStatusBadge status={user.account_status} />
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">
+                            {user.account_status_reason || "—"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {user.account_status_changed_at
+                            ? format(new Date(user.account_status_changed_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
+                            : "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleOpenStatusDialog(user.user_id, user.display_name, user.account_status)}>
+                                <Shield className="w-4 h-4 mr-2" />
+                                Reativar usuário
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenAuditSheet(user.user_id, user.display_name, user.account_status)}>
+                                <History className="w-4 h-4 mr-2" />
+                                Histórico de status
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Families Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -251,14 +554,45 @@ export function AdminUsersPage() {
                 </div>
               </div>
 
-              {/* Members */}
-              <div className="space-y-2">
-                <h4 className="font-medium">Membros</h4>
+              {/* Members by Status */}
+              <div className="space-y-4">
+                <h4 className="font-medium">Membros Ativos</h4>
                 <div className="space-y-2">
-                  {selectedFamily.family_members.map((member) => (
-                    <MemberCard key={member.id} member={member} />
-                  ))}
+                  {selectedFamily.family_members
+                    .filter((m) => m.status === "ACTIVE")
+                    .map((member) => (
+                      <MemberCard key={member.id} member={member} />
+                    ))}
+                  {selectedFamily.family_members.filter((m) => m.status === "ACTIVE").length === 0 && (
+                    <p className="text-sm text-muted-foreground">Nenhum membro ativo</p>
+                  )}
                 </div>
+
+                {selectedFamily.family_members.some((m) => m.status === "INVITED") && (
+                  <>
+                    <h4 className="font-medium">Convidados</h4>
+                    <div className="space-y-2">
+                      {selectedFamily.family_members
+                        .filter((m) => m.status === "INVITED")
+                        .map((member) => (
+                          <MemberCard key={member.id} member={member} />
+                        ))}
+                    </div>
+                  </>
+                )}
+
+                {selectedFamily.family_members.some((m) => ["REMOVED", "DISABLED", "BLOCKED"].includes(m.status)) && (
+                  <>
+                    <h4 className="font-medium text-muted-foreground">Removidos / Inativos</h4>
+                    <div className="space-y-2">
+                      {selectedFamily.family_members
+                        .filter((m) => ["REMOVED", "DISABLED", "BLOCKED"].includes(m.status))
+                        .map((member) => (
+                          <MemberCard key={member.id} member={member} showStatus />
+                        ))}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Actions */}
@@ -275,11 +609,30 @@ export function AdminUsersPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Change Status Dialog */}
+      {selectedUser && (
+        <>
+          <ChangeUserStatusDialog
+            open={statusDialogOpen}
+            onOpenChange={setStatusDialogOpen}
+            userId={selectedUser.userId}
+            userName={selectedUser.userName}
+            currentStatus={selectedUser.status}
+          />
+          <UserStatusAuditSheet
+            open={auditSheetOpen}
+            onOpenChange={setAuditSheetOpen}
+            userId={selectedUser.userId}
+            userName={selectedUser.userName}
+          />
+        </>
+      )}
     </div>
   );
 }
 
-function MemberCard({ member }: { member: FamilyWithMembers['family_members'][0] }) {
+function MemberCard({ member, showStatus }: { member: FamilyWithMembers['family_members'][0]; showStatus?: boolean }) {
   const assignRole = useAssignRole();
   const removeRole = useRemoveRole();
   const [currentRole, setCurrentRole] = useState<AppRole | null>(null);
@@ -319,13 +672,18 @@ function MemberCard({ member }: { member: FamilyWithMembers['family_members'][0]
   const primaryRole = userRoles?.[0] || 'user';
 
   return (
-    <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+    <div className={`bg-muted/50 rounded-lg p-4 space-y-3 ${showStatus && member.status !== "ACTIVE" ? "opacity-70" : ""}`}>
       <div className="flex items-center justify-between">
-        <div>
-          <p className="font-medium">{member.display_name}</p>
-          <p className="text-xs text-muted-foreground capitalize">
-            {member.role === 'owner' ? 'Dono' : 'Membro'} da família
-          </p>
+        <div className="flex items-center gap-2">
+          <div>
+            <p className="font-medium">{member.display_name}</p>
+            <p className="text-xs text-muted-foreground capitalize">
+              {member.role === 'owner' ? 'Dono' : 'Membro'} da família
+            </p>
+          </div>
+          {showStatus && member.status !== "ACTIVE" && (
+            <UserStatusBadge status={member.status as any} size="sm" />
+          )}
         </div>
         <Badge variant={primaryRole === 'admin' ? 'default' : primaryRole === 'cs' ? 'secondary' : 'outline'}>
           {primaryRole.toUpperCase()}

@@ -1200,6 +1200,9 @@ export type Database = {
           added_by_user_id: string | null
           avatar_url: string | null
           birth_date: string | null
+          blocked_at: string | null
+          blocked_by_user_id: string | null
+          blocked_reason: string | null
           cpf: string | null
           created_at: string
           display_name: string
@@ -1222,6 +1225,9 @@ export type Database = {
           added_by_user_id?: string | null
           avatar_url?: string | null
           birth_date?: string | null
+          blocked_at?: string | null
+          blocked_by_user_id?: string | null
+          blocked_reason?: string | null
           cpf?: string | null
           created_at?: string
           display_name: string
@@ -1244,6 +1250,9 @@ export type Database = {
           added_by_user_id?: string | null
           avatar_url?: string | null
           birth_date?: string | null
+          blocked_at?: string | null
+          blocked_by_user_id?: string | null
+          blocked_reason?: string | null
           cpf?: string | null
           created_at?: string
           display_name?: string
@@ -3603,6 +3612,42 @@ export type Database = {
           },
         ]
       }
+      user_account_status_log: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          reason: string | null
+          status: Database["public"]["Enums"]["user_account_status"]
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          status?: Database["public"]["Enums"]["user_account_status"]
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          status?: Database["public"]["Enums"]["user_account_status"]
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_onboarding: {
         Row: {
           contextual_hints_enabled: boolean
@@ -3689,6 +3734,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_status_audit: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          id: string
+          ip_address: string | null
+          new_status: Database["public"]["Enums"]["user_account_status"]
+          old_status: Database["public"]["Enums"]["user_account_status"] | null
+          reason: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          id?: string
+          ip_address?: string | null
+          new_status: Database["public"]["Enums"]["user_account_status"]
+          old_status?: Database["public"]["Enums"]["user_account_status"] | null
+          reason?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          id?: string
+          ip_address?: string | null
+          new_status?: Database["public"]["Enums"]["user_account_status"]
+          old_status?: Database["public"]["Enums"]["user_account_status"] | null
+          reason?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_subscriptions: {
         Row: {
           cancellation_reason: string | null
@@ -3771,6 +3852,14 @@ export type Database = {
         }
         Returns: number
       }
+      change_user_account_status: {
+        Args: {
+          _new_status: Database["public"]["Enums"]["user_account_status"]
+          _reason?: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       check_member_permission: {
         Args: { _family_id: string; _permission: string; _user_id: string }
         Returns: boolean
@@ -3788,6 +3877,10 @@ export type Database = {
       }
       get_product_stability_metrics: { Args: never; Returns: Json }
       get_revenue_metrics: { Args: { _months?: number }; Returns: Json }
+      get_user_account_status: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["user_account_status"]
+      }
       get_user_families: {
         Args: { _user_id: string }
         Returns: {
@@ -3823,6 +3916,7 @@ export type Database = {
         Args: { _transaction_id: string; _user_id: string }
         Returns: boolean
       }
+      is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
       restore_family_member: {
         Args: { _member_id: string; _restored_by: string }
         Returns: boolean
@@ -3862,7 +3956,7 @@ export type Database = {
       family_role: "owner" | "member"
       import_file_type: "ofx" | "xls" | "xlsx" | "pdf"
       import_status: "pending" | "processing" | "completed" | "failed"
-      member_status: "INVITED" | "ACTIVE" | "REMOVED" | "DISABLED"
+      member_status: "INVITED" | "ACTIVE" | "REMOVED" | "DISABLED" | "BLOCKED"
       payment_method:
         | "cash"
         | "debit"
@@ -3878,6 +3972,7 @@ export type Database = {
         | "adjustment"
       transaction_direction: "credit" | "debit"
       transaction_type: "income" | "expense"
+      user_account_status: "ACTIVE" | "DISABLED" | "BLOCKED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4023,7 +4118,7 @@ export const Constants = {
       family_role: ["owner", "member"],
       import_file_type: ["ofx", "xls", "xlsx", "pdf"],
       import_status: ["pending", "processing", "completed", "failed"],
-      member_status: ["INVITED", "ACTIVE", "REMOVED", "DISABLED"],
+      member_status: ["INVITED", "ACTIVE", "REMOVED", "DISABLED", "BLOCKED"],
       payment_method: ["cash", "debit", "credit", "pix", "transfer", "cheque"],
       transaction_classification: [
         "income",
@@ -4034,6 +4129,7 @@ export const Constants = {
       ],
       transaction_direction: ["credit", "debit"],
       transaction_type: ["income", "expense"],
+      user_account_status: ["ACTIVE", "DISABLED", "BLOCKED"],
     },
   },
 } as const

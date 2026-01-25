@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-export type MemberStatus = "INVITED" | "ACTIVE" | "REMOVED" | "DISABLED";
+export type MemberStatus = "INVITED" | "ACTIVE" | "REMOVED" | "DISABLED" | "BLOCKED";
 
 export interface FamilyMemberWithAudit {
   id: string;
