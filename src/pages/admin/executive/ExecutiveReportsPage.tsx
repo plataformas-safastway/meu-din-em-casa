@@ -33,6 +33,8 @@ import { EngagementReport } from '@/components/executive/EngagementReport';
 import { ProductReport } from '@/components/executive/ProductReport';
 import { InvestorReport } from '@/components/executive/InvestorReport';
 import { ReportAuditLog } from '@/components/executive/ReportAuditLog';
+import { TechReport } from '@/components/executive/TechReport';
+import { CSReport } from '@/components/executive/CSReport';
 
 export default function ExecutiveReportsPage() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -136,7 +138,7 @@ export default function ExecutiveReportsPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* Primary KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
@@ -251,9 +253,80 @@ export default function ExecutiveReportsPage() {
         </Card>
       </div>
 
+      {/* Secondary KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4">
+        <Card className="bg-muted/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              ARR
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {metricsLoading ? (
+              <Skeleton className="h-6 w-20" />
+            ) : (
+              <div className="text-lg font-semibold">
+                {formatCurrency((metrics?.revenue?.mrr ?? 0) * 12)}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-muted/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Ticket Médio
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {metricsLoading ? (
+              <Skeleton className="h-6 w-20" />
+            ) : (
+              <div className="text-lg font-semibold">
+                {formatCurrency(metrics?.revenue?.average_ticket ?? (metrics?.users?.active ? (metrics?.revenue?.mrr ?? 0) / metrics.users.active : 0))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-muted/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Taxa Ativação
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {metricsLoading ? (
+              <Skeleton className="h-6 w-20" />
+            ) : (
+              <div className="text-lg font-semibold">
+                {(metrics?.engagement?.activation_rate ?? 0).toFixed(0)}%
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-muted/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Taxa Retenção
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {metricsLoading ? (
+              <Skeleton className="h-6 w-20" />
+            ) : (
+              <div className="text-lg font-semibold">
+                {(100 - (metrics?.engagement?.churn_rate ?? 0)).toFixed(1)}%
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Tabs for different reports */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="print:hidden">
-        <TabsList className="grid grid-cols-3 md:grid-cols-7 gap-1">
+        <TabsList className="grid grid-cols-4 md:grid-cols-9 gap-1">
           <TabsTrigger value="overview" className="text-xs">
             <BarChart3 className="h-3 w-3 mr-1" />
             Visão Geral
@@ -266,12 +339,20 @@ export default function ExecutiveReportsPage() {
             <DollarSign className="h-3 w-3 mr-1" />
             Receita
           </TabsTrigger>
-          <TabsTrigger value="engagement" className="text-xs">
+          <TabsTrigger value="cs" className="text-xs">
             <Activity className="h-3 w-3 mr-1" />
+            CS
+          </TabsTrigger>
+          <TabsTrigger value="engagement" className="text-xs">
+            <Users className="h-3 w-3 mr-1" />
             Engajamento
           </TabsTrigger>
-          <TabsTrigger value="product" className="text-xs">
+          <TabsTrigger value="tech" className="text-xs">
             <Shield className="h-3 w-3 mr-1" />
+            Tecnologia
+          </TabsTrigger>
+          <TabsTrigger value="product" className="text-xs">
+            <FileText className="h-3 w-3 mr-1" />
             Produto
           </TabsTrigger>
           <TabsTrigger value="investor" className="text-xs">
@@ -300,8 +381,16 @@ export default function ExecutiveReportsPage() {
           <RevenueReport months={parseInt(periodMonths) * 2} />
         </TabsContent>
 
+        <TabsContent value="cs" className="mt-6">
+          <CSReport />
+        </TabsContent>
+
         <TabsContent value="engagement" className="mt-6">
           <EngagementReport />
+        </TabsContent>
+
+        <TabsContent value="tech" className="mt-6">
+          <TechReport months={parseInt(periodMonths) * 2} />
         </TabsContent>
 
         <TabsContent value="product" className="mt-6">
