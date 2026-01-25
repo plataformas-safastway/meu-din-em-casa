@@ -3835,6 +3835,14 @@ export type Database = {
         Args: { _to_family_id: string; _user_id: string }
         Returns: boolean
       }
+      user_belongs_to_family: {
+        Args: { _family_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_is_family_admin: {
+        Args: { _family_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
