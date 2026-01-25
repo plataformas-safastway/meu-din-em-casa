@@ -16,6 +16,7 @@ import { SkeletonHome } from "@/components/ui/money-loader";
 import { WelcomeModal, OnboardingChecklist } from "@/components/onboarding";
 import { BudgetAlertsWidget } from "@/components/budget";
 import { ProjectionPreviewWidget } from "@/components/projection";
+import { UpcomingDuesCard } from "@/components/alerts";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions, useFinanceSummary, useCreateTransaction, useTransactionsLast6Months } from "@/hooks/useTransactions";
 import { useInsights } from "@/hooks/useInsights";
@@ -47,6 +48,7 @@ const MemoizedBudgetAlertsWidget = memo(BudgetAlertsWidget);
 const MemoizedProjectionPreviewWidget = memo(ProjectionPreviewWidget);
 const MemoizedMonthlyChart = memo(MonthlyChart);
 const MemoizedCategoryChart = memo(CategoryChart);
+const MemoizedUpcomingDuesCard = memo(UpcomingDuesCard);
 
 export const Dashboard = memo(function Dashboard({ 
   onSettingsClick, 
@@ -329,6 +331,9 @@ export const Dashboard = memo(function Dashboard({
 
         {/* Goals Widget */}
         <MemoizedGoalsWidget onViewAll={onGoalsClick} />
+
+        {/* Upcoming Dues Card */}
+        <MemoizedUpcomingDuesCard maxItems={3} />
 
         {/* Budget & Projection Widgets */}
         <div className="grid gap-4 md:grid-cols-2">
