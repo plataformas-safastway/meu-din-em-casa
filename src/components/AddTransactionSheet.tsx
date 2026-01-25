@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Check, ChevronRight, Building2, CreditCard, Calendar, FileText } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Check, ChevronRight, Building2, CreditCard, Calendar, FileText, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,12 +9,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { defaultCategories, getCategoryById } from "@/data/categories";
 import { useBankAccounts, useCreditCards } from "@/hooks/useBankData";
+import { useDebouncedSuggestion, useRecentCategories } from "@/hooks/useCategorySuggestion";
 import { TransactionType, TransactionClassification, ExpenseType, PaymentMethod } from "@/types/finance";
 import { cn } from "@/lib/utils";
 import {
   TransactionTypeSelector,
   PaymentMethodSelector,
   AmountInput,
+  SuggestionBadge,
 } from "@/components/transaction";
 
 interface AddTransactionSheetProps {
@@ -58,11 +60,15 @@ export function AddTransactionSheet({
   const [checkNumber, setCheckNumber] = useState("");
   const [showSubcategories, setShowSubcategories] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [suggestionApplied, setSuggestionApplied] = useState(false);
+  const [suggestionSource, setSuggestionSource] = useState<'history' | 'descriptor' | 'none'>('none');
 
   const amountInputRef = useRef<HTMLInputElement>(null);
 
   const { data: bankAccounts = [] } = useBankAccounts();
   const { data: creditCards = [] } = useCreditCards();
+  const { data: recentCategories = [] } = useRecentCategories();
+  const { suggestion, updateDescription, clearSuggestion } = useDebouncedSuggestion();
 
   // Derive transaction type from classification
   const type: TransactionType = classification === "income" ? "income" : "expense";
@@ -123,6 +129,34 @@ export function AddTransactionSheet({
     }
   }, [paymentMethod]);
 
+  // Apply category suggestion when available and user hasn't selected manually
+  useEffect(() => {
+    if (suggestion && suggestion.confidence > 0.5 && !category && !suggestionApplied) {
+      // Only apply if the suggested category matches current transaction type
+      const suggestedCat = getCategoryById(suggestion.categoryId);
+      if (suggestedCat && suggestedCat.type === type) {
+        setCategory(suggestion.categoryId);
+        if (suggestion.subcategoryId) {
+          setSubcategory(suggestion.subcategoryId);
+        }
+        setSuggestionApplied(true);
+        setSuggestionSource(suggestion.source);
+      }
+    }
+  }, [suggestion, category, type, suggestionApplied]);
+
+  // Handle description change with suggestion engine
+  const handleDescriptionChange = useCallback((newDescription: string) => {
+    setDescription(newDescription);
+    updateDescription(newDescription);
+    // Reset suggestion state when description changes significantly
+    if (!newDescription || newDescription.length < 3) {
+      setSuggestionApplied(false);
+      setSuggestionSource('none');
+      clearSuggestion();
+    }
+  }, [updateDescription, clearSuggestion]);
+
   const handleCategorySelect = (catId: string) => {
     setCategory(catId);
     const cat = getCategoryById(catId);
@@ -169,6 +203,9 @@ export function AddTransactionSheet({
       setCreditCardId("");
       setCheckNumber("");
       setShowSubcategories(false);
+      setSuggestionApplied(false);
+      setSuggestionSource('none');
+      clearSuggestion();
       onOpenChange(false);
     } finally {
       setIsSaving(false);
@@ -483,10 +520,32 @@ export function AddTransactionSheet({
                       id="description"
                       placeholder="Ex: Supermercado, farmácia..."
                       value={description}
-                      onChange={(e) => setDescription(e.target.value)}
+                      onChange={(e) => handleDescriptionChange(e.target.value)}
                       className="resize-none rounded-xl border-2 text-base focus-visible:ring-2 focus-visible:ring-primary/30"
                       rows={2}
                     />
+                    {/* Suggestion Badge */}
+                    {suggestionApplied && suggestionSource !== 'none' && category && (
+                      <div className="flex items-center gap-2">
+                        <SuggestionBadge 
+                          source={suggestionSource} 
+                          confidence={suggestion?.confidence || 0.7}
+                          matchCount={suggestion?.matchCount}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCategory("");
+                            setSubcategory("");
+                            setSuggestionApplied(false);
+                            setSuggestionSource('none');
+                          }}
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Alterar
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
