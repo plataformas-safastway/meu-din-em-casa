@@ -57,11 +57,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchFamilyData = async (userId: string) => {
     try {
-      // Get family member record - use .limit(1) to handle potential duplicates
+      // Get family member record - order by last_active_at to get the most recent active family
       const { data: memberData, error: memberError } = await supabase
         .from('family_members')
         .select('*')
         .eq('user_id', userId)
+        .order('last_active_at', { ascending: false, nullsFirst: false })
         .limit(1)
         .maybeSingle();
 
@@ -89,6 +90,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         setFamily(familyData as Family);
+        
+        // Update last_active_at for this family (silently)
+        supabase
+          .from('family_members')
+          .update({ last_active_at: new Date().toISOString() })
+          .eq('id', memberData.id)
+          .then(() => {});
       } else {
         setFamilyMember(null);
         setFamily(null);
