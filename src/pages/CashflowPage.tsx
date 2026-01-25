@@ -239,10 +239,10 @@ export function CashflowPage({ onBack }: CashflowPageProps) {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{inst.description}</p>
                         <p className="text-xs text-muted-foreground">
-                          {inst.current_installment}/{inst.total_installments} parcelas • {formatCurrency(inst.installment_amount)}/mês
+                          {inst.installments_total} parcelas • {formatCurrency(inst.installment_value)}/mês
                         </p>
                       </div>
-                      <span className="text-sm font-medium">{formatCurrency(inst.installment_amount)}</span>
+                      <span className="text-sm font-medium">{formatCurrency(inst.installment_value)}</span>
                     </div>
                   );
                 })}

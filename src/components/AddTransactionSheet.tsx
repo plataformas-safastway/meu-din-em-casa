@@ -10,6 +10,7 @@ import { defaultCategories, getCategoryById, requiresBankAccount, requiresCredit
 import { useBankAccounts, useCreditCards } from "@/hooks/useBankData";
 import { useDebouncedSuggestion, useRecentCategories } from "@/hooks/useCategorySuggestion";
 import { useActiveGoals } from "@/hooks/useGoals";
+import { useCreateInstallmentGroup } from "@/hooks/useInstallments";
 import { TransactionType, TransactionClassification, ExpenseType, PaymentMethod } from "@/types/finance";
 import { cn } from "@/lib/utils";
 import {
@@ -20,8 +21,10 @@ import {
   InstrumentSelector,
   QuickBankAccountSheet,
   QuickCreditCardSheet,
+  InstallmentInput,
 } from "@/components/transaction";
 import { GoalSelector } from "@/components/goals";
+import { ChargeType } from "@/components/transaction/InstallmentInput";
 
 interface AddTransactionSheetProps {
   open: boolean;
@@ -40,6 +43,9 @@ interface AddTransactionSheetProps {
     description?: string;
     checkNumber?: string;
     goalId?: string;
+    // Installment fields
+    cardChargeType?: ChargeType;
+    installmentsTotal?: number;
   }) => void;
   defaultType?: TransactionType;
 }
@@ -69,6 +75,10 @@ export function AddTransactionSheet({
   const [suggestionSource, setSuggestionSource] = useState<'history' | 'descriptor' | 'none'>('none');
   const [linkedGoalId, setLinkedGoalId] = useState("");
   
+  // Installment state
+  const [cardChargeType, setCardChargeType] = useState<ChargeType>("ONE_SHOT");
+  const [installmentsTotal, setInstallmentsTotal] = useState(1);
+  
   // Quick registration modals
   const [showQuickAccount, setShowQuickAccount] = useState(false);
   const [showQuickCard, setShowQuickCard] = useState(false);
@@ -80,6 +90,8 @@ export function AddTransactionSheet({
   const { data: recentCategories = [] } = useRecentCategories();
   const { suggestion, updateDescription, clearSuggestion } = useDebouncedSuggestion();
   const { data: activeGoals = [] } = useActiveGoals();
+  const createInstallmentGroup = useCreateInstallmentGroup();
+  
   // Derive transaction type from classification
   const type: TransactionType = classification === "income" ? "income" : "expense";
   
@@ -157,6 +169,9 @@ export function AddTransactionSheet({
   useEffect(() => {
     if (!needsCard) {
       setCreditCardId("");
+      // Reset installment options when not credit card
+      setCardChargeType("ONE_SHOT");
+      setInstallmentsTotal(1);
     }
     if (!needsAccount) {
       setBankAccountId("");
@@ -247,11 +262,13 @@ export function AddTransactionSheet({
     setIsSaving(true);
 
     try {
+      const parsedAmount = parseFloat(amount.replace(",", "."));
+      
       await onSubmit({
         type,
         classification,
         expenseType: type === "expense" ? expenseType : undefined,
-        amount: parseFloat(amount.replace(",", ".")),
+        amount: parsedAmount,
         category,
         subcategory: subcategory || undefined,
         date,
@@ -261,6 +278,9 @@ export function AddTransactionSheet({
         description: description || undefined,
         checkNumber: paymentMethod === "cheque" ? checkNumber.trim() : undefined,
         goalId: linkedGoalId && linkedGoalId !== "_none" ? linkedGoalId : undefined,
+        // Include installment info if credit card payment
+        cardChargeType: needsCard ? cardChargeType : undefined,
+        installmentsTotal: needsCard && cardChargeType === "INSTALLMENT" ? installmentsTotal : undefined,
       });
 
       // Reset form
@@ -276,6 +296,8 @@ export function AddTransactionSheet({
       setSuggestionApplied(false);
       setSuggestionSource('none');
       setLinkedGoalId("");
+      setCardChargeType("ONE_SHOT");
+      setInstallmentsTotal(1);
       clearSuggestion();
       onOpenChange(false);
     } finally {
@@ -534,6 +556,17 @@ export function AddTransactionSheet({
                       onAddCard={() => setShowQuickCard(true)}
                       required={true}
                     />
+
+                    {/* Installment Options (only for credit card) */}
+                    {needsCard && creditCardId && (
+                      <InstallmentInput
+                        chargeType={cardChargeType}
+                        onChargeTypeChange={setCardChargeType}
+                        installmentsTotal={installmentsTotal}
+                        onInstallmentsTotalChange={setInstallmentsTotal}
+                        totalAmount={parseFloat(amount.replace(",", ".")) || 0}
+                      />
+                    )}
 
                     {/* Date */}
                     <div className="space-y-2">
