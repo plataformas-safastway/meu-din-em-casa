@@ -3239,6 +3239,66 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction_privacy: {
+        Row: {
+          created_at: string | null
+          created_by_user_id: string
+          family_id: string
+          id: string
+          is_private: boolean
+          max_privacy_days: number
+          reason: string | null
+          reveal_at: string | null
+          revealed_at: string | null
+          source: string
+          transaction_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by_user_id: string
+          family_id: string
+          id?: string
+          is_private?: boolean
+          max_privacy_days?: number
+          reason?: string | null
+          reveal_at?: string | null
+          revealed_at?: string | null
+          source?: string
+          transaction_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by_user_id?: string
+          family_id?: string
+          id?: string
+          is_private?: boolean
+          max_privacy_days?: number
+          reason?: string | null
+          reveal_at?: string | null
+          revealed_at?: string | null
+          source?: string
+          transaction_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_privacy_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_privacy_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: true
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
@@ -3257,6 +3317,7 @@ export type Database = {
           goal_id: string | null
           id: string
           import_id: string | null
+          import_source: string | null
           is_auto_generated: boolean
           is_recurring: boolean
           notes: string | null
@@ -3289,6 +3350,7 @@ export type Database = {
           goal_id?: string | null
           id?: string
           import_id?: string | null
+          import_source?: string | null
           is_auto_generated?: boolean
           is_recurring?: boolean
           notes?: string | null
@@ -3321,6 +3383,7 @@ export type Database = {
           goal_id?: string | null
           id?: string
           import_id?: string | null
+          import_source?: string | null
           is_auto_generated?: boolean
           is_recurring?: boolean
           notes?: string | null
@@ -3532,6 +3595,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_reveal_expired_privacy: { Args: never; Returns: undefined }
       calculate_cs_signals: { Args: { _family_id: string }; Returns: Json }
       calculate_onboarding_progress: {
         Args: {
@@ -3587,6 +3651,10 @@ export type Database = {
       has_tech_access: { Args: { _user_id: string }; Returns: boolean }
       is_family_member: { Args: { f_id: string }; Returns: boolean }
       is_family_owner: { Args: { f_id: string }; Returns: boolean }
+      is_transaction_private_for_user: {
+        Args: { _transaction_id: string; _user_id: string }
+        Returns: boolean
+      }
       switch_active_family: {
         Args: { _to_family_id: string; _user_id: string }
         Returns: boolean
