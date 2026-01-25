@@ -21,6 +21,7 @@ interface ParsedTransaction {
   type: "income" | "expense";
   direction?: "credit" | "debit";
   classification?: "income" | "expense" | "transfer" | "reimbursement" | "adjustment";
+  paymentMethod?: "pix" | "boleto" | "debit" | "credit" | "cheque" | "cash" | "transfer" | "other";
   fitid?: string;
   raw_data?: Record<string, unknown>;
 }
@@ -371,13 +372,58 @@ function normalizeDescription(desc: string): string {
 }
 
 /**
- * Adds direction and classification to parsed transactions based on the original amount sign
+ * Detect payment method from transaction description
+ */
+function detectPaymentMethod(description: string): ParsedTransaction["paymentMethod"] {
+  const desc = description.toLowerCase();
+  
+  // PIX patterns
+  if (/\bpix\b/i.test(desc) || /pix\s*(enviado|recebido|transferencia|transf)/i.test(desc)) {
+    return "pix";
+  }
+  
+  // Boleto patterns
+  if (/\bboleto\b/i.test(desc) || /\bblt\b/i.test(desc) || /pagto?\s*cobranca/i.test(desc)) {
+    return "boleto";
+  }
+  
+  // Cheque patterns
+  if (/\bcheque\b/i.test(desc) || /\bchq\b/i.test(desc) || /\bch\s*\d/i.test(desc)) {
+    return "cheque";
+  }
+  
+  // TED/DOC transfer patterns
+  if (/\b(ted|doc)\b/i.test(desc) || /transf(erencia)?\s*(enviada|recebida)?/i.test(desc)) {
+    return "transfer";
+  }
+  
+  // Debit card patterns
+  if (/\bdebito\b/i.test(desc) || /\bdb\b/i.test(desc) || /cartao\s*debito/i.test(desc)) {
+    return "debit";
+  }
+  
+  // Credit card patterns (in bank statements, credit card purchases)
+  if (/\bcredito\b/i.test(desc) || /\bcd\b/i.test(desc) || /cartao\s*credito/i.test(desc)) {
+    return "credit";
+  }
+  
+  // Cash/ATM patterns
+  if (/\bsaque\b/i.test(desc) || /\bdinheiro\b/i.test(desc) || /\bcaixa\s*eletronico/i.test(desc)) {
+    return "cash";
+  }
+  
+  return "other";
+}
+
+/**
+ * Adds direction, classification, and payment method to parsed transactions
  */
 function enrichTransactions(transactions: ParsedTransaction[]): ParsedTransaction[] {
   return transactions.map(tx => ({
     ...tx,
     direction: tx.type === "income" ? "credit" as const : "debit" as const,
     classification: tx.type === "income" ? "income" as const : "expense" as const,
+    paymentMethod: tx.paymentMethod || detectPaymentMethod(tx.description),
   }));
 }
 
