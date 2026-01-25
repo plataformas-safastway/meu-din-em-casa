@@ -3372,6 +3372,8 @@ export type Database = {
             | Database["public"]["Enums"]["transaction_classification"]
             | null
           created_at: string
+          created_by_name: string | null
+          created_by_user_id: string | null
           credit_card_id: string | null
           date: string
           description: string | null
@@ -3383,12 +3385,14 @@ export type Database = {
           import_source: string | null
           is_auto_generated: boolean
           is_recurring: boolean
+          last_edited_at: string | null
+          last_edited_by_user_id: string | null
           notes: string | null
           original_date: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           recurring_transaction_id: string | null
           review_status: string | null
-          source: string | null
+          source: string
           source_ref_id: string | null
           subcategory_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -3403,6 +3407,8 @@ export type Database = {
             | Database["public"]["Enums"]["transaction_classification"]
             | null
           created_at?: string
+          created_by_name?: string | null
+          created_by_user_id?: string | null
           credit_card_id?: string | null
           date: string
           description?: string | null
@@ -3416,12 +3422,14 @@ export type Database = {
           import_source?: string | null
           is_auto_generated?: boolean
           is_recurring?: boolean
+          last_edited_at?: string | null
+          last_edited_by_user_id?: string | null
           notes?: string | null
           original_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           recurring_transaction_id?: string | null
           review_status?: string | null
-          source?: string | null
+          source?: string
           source_ref_id?: string | null
           subcategory_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -3436,6 +3444,8 @@ export type Database = {
             | Database["public"]["Enums"]["transaction_classification"]
             | null
           created_at?: string
+          created_by_name?: string | null
+          created_by_user_id?: string | null
           credit_card_id?: string | null
           date?: string
           description?: string | null
@@ -3449,12 +3459,14 @@ export type Database = {
           import_source?: string | null
           is_auto_generated?: boolean
           is_recurring?: boolean
+          last_edited_at?: string | null
+          last_edited_by_user_id?: string | null
           notes?: string | null
           original_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           recurring_transaction_id?: string | null
           review_status?: string | null
-          source?: string | null
+          source?: string
           source_ref_id?: string | null
           subcategory_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]

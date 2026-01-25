@@ -150,7 +150,7 @@ export function ReceiptReviewSheet({
     setIsSaving(true);
 
     try {
-      // 1. Create the transaction
+      // 1. Create the transaction with OCR source
       const transaction = await createTransaction.mutateAsync({
         type: "expense",
         amount,
@@ -159,6 +159,7 @@ export function ReceiptReviewSheet({
         description: description || null,
         date,
         payment_method: paymentMethod as "cash" | "credit" | "debit" | "pix" | "transfer",
+        source: "OCR", // Mark as captured via photo
       });
 
       // 2. Upload the image if available
