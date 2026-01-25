@@ -203,12 +203,12 @@ export function BudgetsPage({ onBack }: BudgetsPageProps) {
                   {selectedCategory && selectedCategory.subcategories.length > 0 && (
                     <div className="space-y-2">
                       <Label>Subcategoria (opcional)</Label>
-                      <Select value={subcategoryId} onValueChange={setSubcategoryId}>
+                      <Select value={subcategoryId || "_none"} onValueChange={(v) => setSubcategoryId(v === "_none" ? "" : v)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Todas as subcategorias" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Todas</SelectItem>
+                          <SelectItem value="_none">Todas</SelectItem>
                           {selectedCategory.subcategories.map((sub) => (
                             <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
                           ))}
