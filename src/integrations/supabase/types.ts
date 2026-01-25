@@ -3239,6 +3239,69 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction_attachments: {
+        Row: {
+          created_at: string | null
+          family_id: string
+          file_name: string | null
+          file_size: number | null
+          file_url: string
+          id: string
+          mime_type: string | null
+          ocr_extracted_data: Json | null
+          transaction_id: string | null
+          type: string
+          updated_at: string | null
+          uploaded_by: string
+          visibility: string
+        }
+        Insert: {
+          created_at?: string | null
+          family_id: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url: string
+          id?: string
+          mime_type?: string | null
+          ocr_extracted_data?: Json | null
+          transaction_id?: string | null
+          type?: string
+          updated_at?: string | null
+          uploaded_by: string
+          visibility?: string
+        }
+        Update: {
+          created_at?: string | null
+          family_id?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          mime_type?: string | null
+          ocr_extracted_data?: Json | null
+          transaction_id?: string | null
+          type?: string
+          updated_at?: string | null
+          uploaded_by?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_attachments_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_attachments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transaction_privacy: {
         Row: {
           created_at: string | null
