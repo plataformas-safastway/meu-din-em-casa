@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload, FileSpreadsheet, File, AlertCircle, Check, Loader2, CreditCard, Building2, Calendar, X } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { ArrowLeft, Upload, FileSpreadsheet, File, AlertCircle, Check, Loader2, CreditCard, Building2, Calendar, X, TableIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -399,6 +399,24 @@ export function ImportUploadPage() {
           <p className="text-center text-xs text-muted-foreground">
             Seus arquivos são privados e vinculados apenas à sua família
           </p>
+
+          {/* Spreadsheet Import CTA */}
+          <Link
+            to="/app/import/spreadsheet"
+            className="block p-4 rounded-xl bg-info/10 border border-info/20 hover:bg-info/15 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-info/20 flex items-center justify-center shrink-0">
+                <TableIcon className="w-5 h-5 text-info" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-foreground">Já usa planilha?</p>
+                <p className="text-sm text-muted-foreground">
+                  Traga para o OIK. Nós identificamos as colunas.
+                </p>
+              </div>
+            </div>
+          </Link>
         </div>
       </main>
     </div>

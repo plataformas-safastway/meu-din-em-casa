@@ -17,6 +17,7 @@ import { QAReportPage } from "./pages/QAReportPage";
 import { AdminDashboard, AdminSetupPage } from "./pages/admin";
 import { ImportUploadPage } from "./pages/import/ImportUploadPage";
 import { ImportReviewPage } from "./pages/import/ImportReviewPage";
+import { SpreadsheetImportPage } from "./pages/import/SpreadsheetImportPage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -135,6 +136,7 @@ function AppRoutes() {
       {/* User app routes */}
       <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/app/import" element={<ProtectedRoute><ImportUploadPage /></ProtectedRoute>} />
+      <Route path="/app/import/spreadsheet" element={<ProtectedRoute><SpreadsheetImportPage /></ProtectedRoute>} />
       <Route
         path="/app/import/:importId/review"
         element={
