@@ -11,8 +11,8 @@ export interface TransactionInput {
   type: "income" | "expense";
   amount: number;
   category_id: string;
-  subcategory_id?: string;
-  description?: string;
+  subcategory_id?: string | null;
+  description?: string | null;
   date: string;
   payment_method: "cash" | "debit" | "credit" | "pix" | "transfer";
   bank_account_id?: string;
@@ -21,6 +21,9 @@ export interface TransactionInput {
   notes?: string;
   // Audit metadata - set automatically when not provided
   source?: TransactionSource;
+  // OCR specific
+  ocr_confidence?: number;
+  original_description?: string;
 }
 
 export function useTransactions(month?: number, year?: number, options?: { enabled?: boolean }) {
@@ -161,6 +164,9 @@ export function useCreateTransaction() {
         source: data.source || 'MANUAL',
         created_by_user_id: user?.id,
         created_by_name: familyMember?.display_name || user?.email?.split('@')[0] || 'Usuário',
+        // OCR specific
+        ocr_confidence: data.ocr_confidence,
+        original_description: data.original_description || data.description,
       }).select("id").single();
 
       if (error) throw error;

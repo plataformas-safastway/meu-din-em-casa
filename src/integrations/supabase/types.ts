@@ -3388,7 +3388,11 @@ export type Database = {
           last_edited_at: string | null
           last_edited_by_user_id: string | null
           notes: string | null
+          ocr_confidence: number | null
+          original_category_id: string | null
           original_date: string | null
+          original_description: string | null
+          original_subcategory_id: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           recurring_transaction_id: string | null
           review_status: string | null
@@ -3397,6 +3401,7 @@ export type Database = {
           subcategory_id: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
+          user_description: string | null
         }
         Insert: {
           amount: number
@@ -3425,7 +3430,11 @@ export type Database = {
           last_edited_at?: string | null
           last_edited_by_user_id?: string | null
           notes?: string | null
+          ocr_confidence?: number | null
+          original_category_id?: string | null
           original_date?: string | null
+          original_description?: string | null
+          original_subcategory_id?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           recurring_transaction_id?: string | null
           review_status?: string | null
@@ -3434,6 +3443,7 @@ export type Database = {
           subcategory_id?: string | null
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
+          user_description?: string | null
         }
         Update: {
           amount?: number
@@ -3462,7 +3472,11 @@ export type Database = {
           last_edited_at?: string | null
           last_edited_by_user_id?: string | null
           notes?: string | null
+          ocr_confidence?: number | null
+          original_category_id?: string | null
           original_date?: string | null
+          original_description?: string | null
+          original_subcategory_id?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           recurring_transaction_id?: string | null
           review_status?: string | null
@@ -3471,6 +3485,7 @@ export type Database = {
           subcategory_id?: string | null
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
+          user_description?: string | null
         }
         Relationships: [
           {
