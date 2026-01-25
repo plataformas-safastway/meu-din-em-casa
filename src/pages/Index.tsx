@@ -62,6 +62,7 @@ const Index = () => {
           onTransactionsClick={() => setActiveTab("transactions")}
           onBudgetsClick={() => setActiveTab("goals")}
           onProjectionClick={() => setActiveTab("projection")}
+          onNavigate={setActiveTab}
         />
       );
     }

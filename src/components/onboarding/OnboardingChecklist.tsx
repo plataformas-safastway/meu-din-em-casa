@@ -6,10 +6,12 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useOnboarding, OnboardingStep } from "@/hooks/useOnboarding";
-import { useNavigate } from "react-router-dom";
 
-export function OnboardingChecklist() {
-  const navigate = useNavigate();
+interface OnboardingChecklistProps {
+  onNavigate?: (tab: string) => void;
+}
+
+export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
   const { state, isLoading } = useOnboarding();
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -20,23 +22,25 @@ export function OnboardingChecklist() {
   const completedSteps = state.steps.filter((s) => s.completed).length;
   const totalSteps = state.steps.length;
 
-  // Action handlers for each step
+  // Action handlers for each step - map to internal tab names
   const handleStepAction = (step: OnboardingStep) => {
+    if (!onNavigate) return;
+    
     switch (step.id) {
       case "bank_account":
-        navigate("/app/banks");
+        onNavigate("banks");
         break;
       case "import":
-        navigate("/app/import");
+        onNavigate("import");
         break;
       case "budget":
-        navigate("/app/budgets");
+        onNavigate("goals"); // budgets page uses "goals" tab internally
         break;
       case "goal":
-        navigate("/app/goals");
+        onNavigate("objectives"); // goals page uses "objectives" tab internally
         break;
       case "family_invite":
-        navigate("/app/settings");
+        onNavigate("family");
         break;
     }
   };

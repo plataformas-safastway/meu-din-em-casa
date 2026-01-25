@@ -42,6 +42,7 @@ interface DashboardProps {
   onTransactionsClick?: () => void;
   onBudgetsClick?: () => void;
   onProjectionClick?: () => void;
+  onNavigate?: (tab: string) => void;
 }
 
 // Memoized sub-components to prevent re-renders
@@ -62,6 +63,7 @@ export const Dashboard = memo(function Dashboard({
   onTransactionsClick,
   onBudgetsClick,
   onProjectionClick,
+  onNavigate,
 }: DashboardProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
@@ -330,7 +332,7 @@ export const Dashboard = memo(function Dashboard({
 
         {/* Onboarding Checklist - show if not complete */}
         {onboardingState.progressPercent < 100 && (
-          <OnboardingChecklist />
+          <OnboardingChecklist onNavigate={onNavigate} />
         )}
 
         {/* Global Balance Card with Accounts Preview */}
