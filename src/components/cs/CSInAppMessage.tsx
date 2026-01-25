@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, 
@@ -12,9 +12,15 @@ import {
   Heart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { AuthContext } from "@/contexts/AuthContext";
+import type { User } from "@supabase/supabase-js";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+
+interface AuthFamily {
+  id: string;
+  name: string;
+}
 
 /**
  * In-App Message System for CS Automation
@@ -83,8 +89,30 @@ interface CSInAppMessageProps {
   className?: string;
 }
 
+/**
+ * Wrapper component that safely checks for AuthProvider before rendering
+ */
 export function CSInAppMessage({ className }: CSInAppMessageProps) {
-  const { family, user } = useAuth();
+  const authContext = useContext(AuthContext);
+  
+  // If no auth context, silently return null - component is outside AuthProvider
+  if (!authContext) {
+    return null;
+  }
+  
+  return <CSInAppMessageInner className={className} family={authContext.family} user={authContext.user} />;
+}
+
+interface CSInAppMessageInnerProps {
+  className?: string;
+  family: AuthFamily | null;
+  user: User | null;
+}
+
+/**
+ * Inner component with all hooks - only rendered when AuthContext is available
+ */
+function CSInAppMessageInner({ className, family, user }: CSInAppMessageInnerProps) {
   const queryClient = useQueryClient();
   const [currentMessage, setCurrentMessage] = useState<CSMessage | null>(null);
   const [isVisible, setIsVisible] = useState(false);
