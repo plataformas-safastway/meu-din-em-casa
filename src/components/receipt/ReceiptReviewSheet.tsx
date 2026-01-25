@@ -160,6 +160,8 @@ export function ReceiptReviewSheet({
         date,
         payment_method: paymentMethod as "cash" | "credit" | "debit" | "pix" | "transfer",
         source: "OCR", // Mark as captured via photo
+        ocr_confidence: extractedData?.confidence || undefined,
+        original_description: extractedData?.description || extractedData?.establishment || undefined,
       });
 
       // 2. Upload the image if available

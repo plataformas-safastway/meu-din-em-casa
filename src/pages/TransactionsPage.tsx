@@ -229,6 +229,7 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
           subcategory: transactionToEdit.subcategory,
           date: transactionToEdit.date,
           description: transactionToEdit.description,
+          source: transactionToEdit.source,
         } : null}
       />
     </div>
