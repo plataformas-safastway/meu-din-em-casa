@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { addMonths, format } from "date-fns";
 
 export interface CashflowDay {
   date: string;
@@ -15,6 +16,7 @@ export interface CashflowDay {
     description: string;
     amount: number;
     category?: string;
+    source?: string;  // To distinguish between legacy and planned installments
   }>;
 }
 
@@ -38,14 +40,33 @@ export function useCashflowForecast(days: number = 90) {
 
       if (recError) throw recError;
 
-      // Get active installments
-      const { data: installments, error: instError } = await supabase
+      // Get legacy installments table (for backwards compatibility)
+      const { data: legacyInstallments, error: legacyError } = await supabase
         .from("installments")
         .select("*")
         .eq("family_id", family.id)
         .eq("is_active", true);
 
-      if (instError) throw instError;
+      if (legacyError) throw legacyError;
+
+      // Get new planned installments
+      const endDate = addMonths(today, Math.ceil(days / 30));
+      const { data: plannedInstallments, error: plannedError } = await supabase
+        .from("planned_installments")
+        .select(`
+          *,
+          installment_group:installment_groups(
+            description,
+            category_id,
+            installments_total
+          )
+        `)
+        .eq("family_id", family.id)
+        .eq("status", "PLANNED")
+        .gte("due_date", format(today, "yyyy-MM-dd"))
+        .lte("due_date", format(endDate, "yyyy-MM-dd"));
+
+      if (plannedError) throw plannedError;
 
       // Generate daily projections
       const forecast: CashflowDay[] = [];
@@ -93,8 +114,8 @@ export function useCashflowForecast(days: number = 90) {
           }
         });
 
-        // Check installments for this day (assuming they're due on day 10 for credit cards)
-        installments?.forEach((inst: any) => {
+        // Check legacy installments for this day (assuming they're due on day 10 for credit cards)
+        legacyInstallments?.forEach((inst: any) => {
           const startDate = new Date(inst.start_date);
           const startMonth = startDate.getMonth();
           const startYear = startDate.getFullYear();
@@ -115,6 +136,22 @@ export function useCashflowForecast(days: number = 90) {
               description: `${inst.description} (${installmentNumber}/${inst.total_installments})`,
               amount: Number(inst.installment_amount),
               category: inst.category_id,
+              source: 'LEGACY',
+            });
+          }
+        });
+
+        // Check new planned installments for this exact date
+        plannedInstallments?.forEach((planned: any) => {
+          if (planned.due_date === dateStr) {
+            const group = planned.installment_group;
+            projectedInstallments += Number(planned.amount);
+            events.push({
+              type: "installment",
+              description: `${group?.description || 'Parcela'} (${planned.installment_index}/${group?.installments_total || '?'})`,
+              amount: Number(planned.amount),
+              category: group?.category_id,
+              source: 'PLANNED',
             });
           }
         });

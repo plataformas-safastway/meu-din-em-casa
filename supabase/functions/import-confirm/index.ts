@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.90.1";
+import { addMonths, format } from "https://esm.sh/date-fns@3.6.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,64 @@ interface ConfirmRequest {
   import_id: string;
   transaction_ids: string[];
   learn_categories?: boolean;
+}
+
+// ============================================
+// Installment Detection Patterns
+// ============================================
+
+const INSTALLMENT_PATTERNS = [
+  { regex: /(\d{1,2})\s*[\/\\-]\s*(\d{1,2})(?!\d)/i, extractCurrent: 1, extractTotal: 2 },
+  { regex: /PARC(?:ELA?)?\s*(\d{1,2})\s*[\/\\-]?\s*(\d{1,2})?/i, extractCurrent: 1, extractTotal: 2 },
+  { regex: /PARCELA\s*(\d{1,2})/i, extractCurrent: 1, extractTotal: null },
+  { regex: /(\d{1,2})\s*[xX]\s*(?:R?\$?\s*[\d,\.]+)?/i, extractCurrent: null, extractTotal: 1 },
+];
+
+interface InstallmentDetection {
+  isInstallment: boolean;
+  currentInstallment: number | null;
+  totalInstallments: number | null;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  baseDescription: string;
+}
+
+function detectInstallment(description: string): InstallmentDetection {
+  if (!description) {
+    return { isInstallment: false, currentInstallment: null, totalInstallments: null, confidence: 'LOW', baseDescription: description };
+  }
+
+  const normalizedDesc = description.toUpperCase().trim();
+  
+  for (const pattern of INSTALLMENT_PATTERNS) {
+    const match = normalizedDesc.match(pattern.regex);
+    if (match) {
+      const current = pattern.extractCurrent ? parseInt(match[pattern.extractCurrent]) : null;
+      const total = pattern.extractTotal ? parseInt(match[pattern.extractTotal]) : null;
+      
+      // Remove the installment pattern from description to get base
+      const baseDescription = description.replace(pattern.regex, '').trim();
+      
+      if (current !== null && total !== null && current >= 1 && current <= total && total <= 48) {
+        return {
+          isInstallment: true,
+          currentInstallment: current,
+          totalInstallments: total,
+          confidence: 'HIGH',
+          baseDescription,
+        };
+      } else if (current !== null) {
+        return {
+          isInstallment: true,
+          currentInstallment: current,
+          totalInstallments: null,
+          confidence: 'MEDIUM',
+          baseDescription,
+        };
+      }
+    }
+  }
+
+  return { isInstallment: false, currentInstallment: null, totalInstallments: null, confidence: 'LOW', baseDescription: description };
 }
 
 serve(async (req) => {
@@ -143,9 +202,10 @@ serve(async (req) => {
       original_date: tx.original_date,
     }));
 
-    const { error: insertError } = await adminClient
+    const { error: insertError, data: insertedTx } = await adminClient
       .from("transactions")
-      .insert(transactionsToInsert);
+      .insert(transactionsToInsert)
+      .select("id, description, amount, category_id, subcategory_id, credit_card_id, date");
 
     if (insertError) {
       console.error("Error inserting transactions:", insertError);
@@ -154,6 +214,120 @@ serve(async (req) => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
+
+    // ============================================
+    // Installment Detection & Projection
+    // ============================================
+    
+    // Group transactions by base description + amount to detect installment series
+    const installmentGroups = new Map<string, Array<{ 
+      tx: typeof insertedTx[0], 
+      detection: InstallmentDetection,
+      pending: typeof pendingTx[0]
+    }>>();
+
+    for (let i = 0; i < (insertedTx || []).length; i++) {
+      const tx = insertedTx[i];
+      const pending = pendingTx[i];
+      const detection = detectInstallment(tx.description || '');
+      
+      if (detection.isInstallment && detection.confidence !== 'LOW') {
+        const groupKey = `${detection.baseDescription}_${tx.amount.toFixed(2)}`;
+        
+        if (!installmentGroups.has(groupKey)) {
+          installmentGroups.set(groupKey, []);
+        }
+        installmentGroups.get(groupKey)!.push({ tx, detection, pending });
+      }
+    }
+
+    // Create installment groups and planned installments for detected series
+    let installmentGroupsCreated = 0;
+    let plannedInstallmentsCreated = 0;
+
+    for (const [groupKey, items] of installmentGroups) {
+      // Sort by current installment number
+      items.sort((a, b) => (a.detection.currentInstallment || 0) - (b.detection.currentInstallment || 0));
+      
+      const firstItem = items[0];
+      const totalInstallments = firstItem.detection.totalInstallments;
+      
+      // Only create projections if we have high confidence and know total
+      if (totalInstallments && firstItem.detection.confidence === 'HIGH') {
+        const currentMax = Math.max(...items.map(i => i.detection.currentInstallment || 0));
+        const remainingCount = totalInstallments - currentMax;
+        
+        if (remainingCount > 0) {
+          // Create installment group
+          const totalAmount = firstItem.tx.amount * totalInstallments;
+          
+          // Calculate first due date for remaining installments (next month after last imported)
+          const lastDate = new Date(items[items.length - 1].tx.date);
+          const firstDueDate = addMonths(lastDate, 1);
+          
+          const { data: group, error: groupError } = await adminClient
+            .from("installment_groups")
+            .insert({
+              family_id: familyId,
+              credit_card_id: firstItem.tx.credit_card_id || null,
+              total_amount: totalAmount,
+              installments_total: totalInstallments,
+              installment_value: firstItem.tx.amount,
+              first_due_date: format(firstDueDate, 'yyyy-MM-dd'),
+              description: firstItem.detection.baseDescription || 'Compra parcelada importada',
+              category_id: firstItem.tx.category_id,
+              subcategory_id: firstItem.tx.subcategory_id,
+              source: 'IMPORT',
+              parent_transaction_id: firstItem.tx.id,
+              confidence_level: 'HIGH',
+              needs_user_confirmation: false,
+            })
+            .select()
+            .single();
+
+          if (!groupError && group) {
+            installmentGroupsCreated++;
+            
+            // Create planned installments for remaining months
+            const plannedToInsert = [];
+            for (let i = 1; i <= remainingCount; i++) {
+              const installmentIndex = currentMax + i;
+              const dueDate = addMonths(lastDate, i);
+              
+              plannedToInsert.push({
+                family_id: familyId,
+                installment_group_id: group.id,
+                installment_index: installmentIndex,
+                amount: firstItem.tx.amount,
+                due_date: format(dueDate, 'yyyy-MM-dd'),
+                status: 'PLANNED',
+              });
+            }
+            
+            const { error: plannedError } = await adminClient
+              .from("planned_installments")
+              .insert(plannedToInsert);
+              
+            if (!plannedError) {
+              plannedInstallmentsCreated += plannedToInsert.length;
+            }
+            
+            // Log audit
+            await adminClient.from("installment_audit_log").insert({
+              installment_group_id: group.id,
+              action: 'CREATED',
+              details: { 
+                source: 'IMPORT',
+                detected_pattern: firstItem.detection.currentInstallment + '/' + totalInstallments,
+                remaining_installments: remainingCount,
+              },
+            });
+          }
+        }
+      }
+    }
+
+    console.log(`Installment detection: ${installmentGroupsCreated} groups, ${plannedInstallmentsCreated} planned installments created`);
 
     // Learn category rules if enabled
     if (learn_categories) {
@@ -244,6 +418,8 @@ serve(async (req) => {
       success: true,
       imported_count: pendingTx.length,
       remaining_count: remainingCount || 0,
+      installment_groups_created: installmentGroupsCreated,
+      planned_installments_created: plannedInstallmentsCreated,
     }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },

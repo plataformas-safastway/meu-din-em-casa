@@ -19,7 +19,8 @@ import { ProjectionPreviewWidget } from "@/components/projection";
 import { UpcomingDuesCard } from "@/components/alerts";
 import { ReceiptCaptureSheet, ReceiptReviewSheet } from "@/components/receipt";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTransactions, useFinanceSummary, useCreateTransaction, useTransactionsLast6Months } from "@/hooks/useTransactions";
+import { useTransactions, useFinanceSummary, useTransactionsLast6Months } from "@/hooks/useTransactions";
+import { useCreateTransactionWithInstallments } from "@/hooks/useTransactionWithInstallments";
 import { useInsights } from "@/hooks/useInsights";
 import { useHomeSummary } from "@/hooks/useHomeSummary";
 import { useDebouncedLoading } from "@/hooks/useLoading";
@@ -108,7 +109,7 @@ export const Dashboard = memo(function Dashboard({
   // Insights are not critical for first load
   const { insights } = useInsights();
   
-  const createTransaction = useCreateTransaction();
+  const createTransactionWithInstallments = useCreateTransactionWithInstallments();
   const syncGoalFromTransaction = useSyncGoalFromTransaction();
   const { state: onboardingState } = useOnboarding();
 
@@ -179,7 +180,7 @@ export const Dashboard = memo(function Dashboard({
         transactionDate = format(selectedDate, "yyyy-MM-01");
       }
 
-      await createTransaction.mutateAsync({
+      await createTransactionWithInstallments.mutateAsync({
         type: transaction.type,
         amount: transaction.amount,
         category_id: transaction.category,
@@ -189,8 +190,10 @@ export const Dashboard = memo(function Dashboard({
         payment_method: transaction.paymentMethod,
         bank_account_id: transaction.bankAccountId,
         credit_card_id: transaction.creditCardId,
-        // Goal linking - store goal_id directly on transaction
         goal_id: transaction.goalId,
+        // Installment fields
+        cardChargeType: transaction.cardChargeType,
+        installmentsTotal: transaction.installmentsTotal,
       });
 
       // If this transaction is linked to a goal, sync the goal's current_amount
@@ -200,10 +203,15 @@ export const Dashboard = memo(function Dashboard({
 
       const isIncome = transaction.type === "income";
       const isGoalContribution = transaction.goalId;
+      const isInstallment = transaction.cardChargeType === "INSTALLMENT" && transaction.installmentsTotal > 1;
       
       if (isGoalContribution) {
         toast.success("Aporte registrado! 🎯", {
           description: "O valor foi adicionado ao seu objetivo.",
+        });
+      } else if (isInstallment) {
+        toast.success("Compra parcelada registrada! 💳", {
+          description: `As ${transaction.installmentsTotal} parcelas foram projetadas nos próximos meses.`,
         });
       } else {
         toast.success(isIncome ? "Receita registrada! 💰" : "Despesa registrada com sucesso.", {
@@ -215,7 +223,7 @@ export const Dashboard = memo(function Dashboard({
     } catch (error) {
       toast.error("Erro ao salvar lançamento");
     }
-  }, [selectedMonth, selectedYear, selectedDate, createTransaction, syncGoalFromTransaction]);
+  }, [selectedMonth, selectedYear, selectedDate, createTransactionWithInstallments, syncGoalFromTransaction]);
 
   // Transform transactions for display - memoized
   const displayTransactions = useMemo(() => 
