@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.cs-ai-analyze]
 verify_jwt = false
+
+[functions.spreadsheet-import]
+verify_jwt = false
