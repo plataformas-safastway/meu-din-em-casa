@@ -3,3 +3,4 @@ export { PaymentMethodSelector } from './PaymentMethodSelector';
 export { AmountInput } from './AmountInput';
 export { CategorySelector, SubcategorySelector } from './CategorySelector';
 export { SuggestionBadge, SuggestionIndicator } from './SuggestionBadge';
+export { TransactionChangeHistory } from './TransactionChangeHistory';

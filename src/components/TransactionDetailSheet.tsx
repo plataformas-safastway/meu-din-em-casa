@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { useDeleteTransaction } from "@/hooks/useTransactions";
 import { useMyPermissions } from "@/hooks/useFamilyPermissions";
+import { TransactionChangeHistory } from "@/components/transaction/TransactionChangeHistory";
 import { toast } from "sonner";
 import type { TransactionSource } from "@/hooks/useTransactions";
 
@@ -215,6 +216,9 @@ export function TransactionDetailSheet({
                 </div>
               )}
             </div>
+
+            {/* Change History */}
+            <TransactionChangeHistory transactionId={transaction.id} />
 
             <Separator />
 

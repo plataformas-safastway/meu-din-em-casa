@@ -3302,6 +3302,63 @@ export type Database = {
           },
         ]
       }
+      transaction_change_logs: {
+        Row: {
+          batch_id: string | null
+          changed_at: string
+          changed_by_user_id: string
+          changed_by_user_name: string
+          family_id: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          source: string
+          transaction_id: string
+        }
+        Insert: {
+          batch_id?: string | null
+          changed_at?: string
+          changed_by_user_id: string
+          changed_by_user_name: string
+          family_id: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          source?: string
+          transaction_id: string
+        }
+        Update: {
+          batch_id?: string | null
+          changed_at?: string
+          changed_by_user_id?: string
+          changed_by_user_name?: string
+          family_id?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          source?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_change_logs_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_change_logs_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transaction_privacy: {
         Row: {
           created_at: string | null

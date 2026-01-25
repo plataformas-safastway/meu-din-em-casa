@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Save, Loader2, Trash2, Lock, AlertTriangle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useUpdateTransaction, useDeleteTransaction, TransactionSource } from "@/hooks/useTransactions";
 import { useMyPermissions } from "@/hooks/useFamilyPermissions";
+import { useLogTransactionChanges, detectChanges } from "@/hooks/useTransactionChangeLogs";
 
 interface Transaction {
   id: string;
@@ -72,10 +73,14 @@ export function EditTransactionSheet({ open, onOpenChange, transaction }: EditTr
   const [date, setDate] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [ocrConfirmed, setOcrConfirmed] = useState(false);
+  
+  // Store original values for change detection
+  const originalValuesRef = useRef<Record<string, any>>({});
 
   const { data: myPermissions } = useMyPermissions();
   const updateTransaction = useUpdateTransaction();
   const deleteTransaction = useDeleteTransaction();
+  const logChanges = useLogTransactionChanges();
 
   const canEdit = myPermissions?.can_edit_all ?? false;
   const canDelete = myPermissions?.can_delete_transactions ?? false;
@@ -93,6 +98,14 @@ export function EditTransactionSheet({ open, onOpenChange, transaction }: EditTr
       setAmount(transaction.amount.toFixed(2).replace('.', ','));
       setDate(transaction.date);
       setOcrConfirmed(false);
+      
+      // Store original values for change detection
+      originalValuesRef.current = {
+        category_id: transaction.category,
+        description: transaction.description || null,
+        amount: transaction.amount,
+        date: transaction.date,
+      };
     }
   }, [transaction]);
 
@@ -155,6 +168,27 @@ export function EditTransactionSheet({ open, onOpenChange, transaction }: EditTr
         id: transaction.id,
         data: updateData as any,
       });
+      
+      // Detect and log changes asynchronously (non-blocking)
+      const newValues: Record<string, any> = {
+        category_id: categoryId,
+        description: description.trim() || null,
+        amount: editableFields.amount ? parsedAmount : originalValuesRef.current.amount,
+        date: editableFields.date ? date : originalValuesRef.current.date,
+      };
+      
+      const changes = detectChanges(
+        transaction.id,
+        originalValuesRef.current,
+        newValues,
+        source
+      );
+      
+      if (changes.length > 0) {
+        // Fire and forget - don't await
+        logChanges.mutate(changes);
+      }
+      
       toast.success("Transação atualizada");
       onOpenChange(false);
     } catch (error: any) {
