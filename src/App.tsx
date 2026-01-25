@@ -19,7 +19,6 @@ import { ImportUploadPage } from "./pages/import/ImportUploadPage";
 import { ImportReviewPage } from "./pages/import/ImportReviewPage";
 import { SpreadsheetImportPage } from "./pages/import/SpreadsheetImportPage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { RoleSelectorPage } from "./pages/RoleSelectorPage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -107,9 +106,9 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   if (loading || roleLoading || checkingAdmin) return <LoadingSpinner />;
   
   if (user && family) {
-    // If user has admin/CS role AND a family, show role selector
+    // If admin/CS, redirect to admin dashboard
     if (role === 'admin' || role === 'cs') {
-      return <Navigate to="/select-role" replace />;
+      return <Navigate to="/admin" replace />;
     }
     return <Navigate to="/app" replace />;
   }
@@ -123,25 +122,6 @@ function AppLifecycleHandler({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function RoleSelectorRoute({ children }: { children: React.ReactNode }) {
-  const { user, family, loading } = useAuth();
-  const { data: role, isLoading: roleLoading } = useUserRole();
-  const location = useLocation();
-
-  const next = encodeURIComponent(`${location.pathname}${location.search ?? ""}`);
-
-  if (loading || roleLoading) return <LoadingSpinner />;
-  if (!user) return <Navigate to={`/login?next=${next}`} replace />;
-  if (!family) return <Navigate to="/signup" replace />;
-  
-  // Only users with admin/cs role can see this page
-  if (role !== 'admin' && role !== 'cs') {
-    return <Navigate to="/app" replace />;
-  }
-
-  return <>{children}</>;
-}
-
 function AppRoutes() {
   return (
     <Routes>
@@ -151,9 +131,6 @@ function AppRoutes() {
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/termos" element={<TermosPage />} />
       <Route path="/privacidade" element={<PrivacidadePage />} />
-      
-      {/* Role selector for dual-access users */}
-      <Route path="/select-role" element={<RoleSelectorRoute><RoleSelectorPage /></RoleSelectorRoute>} />
       <Route path="/qa-report" element={<QAReportPage />} />
       
       {/* User app routes */}
