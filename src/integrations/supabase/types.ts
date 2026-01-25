@@ -2442,8 +2442,55 @@ export type Database = {
         }
         Relationships: []
       }
+      recurring_alerts_sent: {
+        Row: {
+          alert_date: string
+          channel: string
+          days_before: number
+          family_id: string
+          id: string
+          recurring_transaction_id: string
+          sent_at: string
+        }
+        Insert: {
+          alert_date: string
+          channel?: string
+          days_before: number
+          family_id: string
+          id?: string
+          recurring_transaction_id: string
+          sent_at?: string
+        }
+        Update: {
+          alert_date?: string
+          channel?: string
+          days_before?: number
+          family_id?: string
+          id?: string
+          recurring_transaction_id?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_alerts_sent_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_alerts_sent_recurring_transaction_id_fkey"
+            columns: ["recurring_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recurring_transactions: {
         Row: {
+          alert_channels: string[] | null
+          alerts_enabled: boolean | null
           amount: number
           bank_account_id: string | null
           category_id: string
@@ -2452,11 +2499,14 @@ export type Database = {
           day_of_month: number | null
           description: string
           end_date: string | null
+          expense_type: string | null
           family_id: string
           frequency: string
           id: string
           is_active: boolean
           last_generated_at: string | null
+          notify_days_before: number[] | null
+          notify_member_id: string | null
           payment_method: string
           start_date: string
           subcategory_id: string | null
@@ -2464,6 +2514,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          alert_channels?: string[] | null
+          alerts_enabled?: boolean | null
           amount: number
           bank_account_id?: string | null
           category_id: string
@@ -2472,11 +2524,14 @@ export type Database = {
           day_of_month?: number | null
           description: string
           end_date?: string | null
+          expense_type?: string | null
           family_id: string
           frequency?: string
           id?: string
           is_active?: boolean
           last_generated_at?: string | null
+          notify_days_before?: number[] | null
+          notify_member_id?: string | null
           payment_method?: string
           start_date: string
           subcategory_id?: string | null
@@ -2484,6 +2539,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          alert_channels?: string[] | null
+          alerts_enabled?: boolean | null
           amount?: number
           bank_account_id?: string | null
           category_id?: string
@@ -2492,11 +2549,14 @@ export type Database = {
           day_of_month?: number | null
           description?: string
           end_date?: string | null
+          expense_type?: string | null
           family_id?: string
           frequency?: string
           id?: string
           is_active?: boolean
           last_generated_at?: string | null
+          notify_days_before?: number[] | null
+          notify_member_id?: string | null
           payment_method?: string
           start_date?: string
           subcategory_id?: string | null
@@ -2523,6 +2583,13 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_notify_member_id_fkey"
+            columns: ["notify_member_id"]
+            isOneToOne: false
+            referencedRelation: "family_members"
             referencedColumns: ["id"]
           },
         ]
