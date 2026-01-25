@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, Wifi, BookOpen } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, Wifi, BookOpen, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import { toast } from "sonner";
 import { EducationPreferences } from "@/components/onboarding";
 
@@ -12,7 +14,9 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
+  const navigate = useNavigate();
   const { family, familyMember, signOut } = useAuth();
+  const { data: userAccess } = useUserAccess();
   const [showEducationPrefs, setShowEducationPrefs] = useState(false);
 
   const handleAction = (id: string) => {
@@ -152,6 +156,18 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
             )}
           </div>
         ))}
+
+        {/* Access Dashboard (if user has permission) */}
+        {userAccess?.hasDashboardAccess && (
+          <Button 
+            variant="outline" 
+            className="w-full gap-2"
+            onClick={() => navigate("/admin")}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            Acessar Dashboard
+          </Button>
+        )}
 
         {/* Logout */}
         <Button 

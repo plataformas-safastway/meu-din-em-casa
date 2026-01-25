@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import { useFinancialAccess } from "@/hooks/useFinancialAccess";
 import { useSupportAccess } from "@/hooks/useSupportAccess";
 import { useCSAccess } from "@/hooks/useCSAccess";
@@ -87,6 +88,7 @@ export function AdminDashboard() {
   const { data: hasCSAccess } = useCSAccess();
   const { data: hasTechAccess } = useTechAccess();
   const { data: hasExecutiveAccess } = useExecutiveAccess();
+  const { data: userAccess } = useUserAccess();
 
   const handleSignOut = async () => {
     await signOut();
@@ -387,14 +389,16 @@ export function AdminDashboard() {
             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
           
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start gap-2"
-            onClick={() => navigate("/app")}
-          >
-            <Home className="w-4 h-4" />
-            Ir para App
-          </Button>
+          {userAccess?.hasAppAccess && (
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start gap-2"
+              onClick={() => navigate("/app")}
+            >
+              <Home className="w-4 h-4" />
+              Ir para App
+            </Button>
+          )}
           
           <Button 
             variant="ghost" 
