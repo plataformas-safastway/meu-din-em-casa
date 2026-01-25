@@ -4,6 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { STALE_TIMES, invalidateQueryGroup } from "@/lib/queryConfig";
 import { useLogActivity } from "@/hooks/useFamilyActivity";
 
+// Valid transaction sources
+export type TransactionSource = 'MANUAL' | 'UPLOAD' | 'IMPORT' | 'OCR' | 'OPEN_FINANCE' | 'GOAL_CONTRIBUTION';
+
 export interface TransactionInput {
   type: "income" | "expense";
   amount: number;
@@ -16,6 +19,8 @@ export interface TransactionInput {
   credit_card_id?: string;
   is_recurring?: boolean;
   notes?: string;
+  // Audit metadata - set automatically when not provided
+  source?: TransactionSource;
 }
 
 export function useTransactions(month?: number, year?: number, options?: { enabled?: boolean }) {
@@ -132,7 +137,7 @@ export function useTransactionsCurrentYear() {
 
 export function useCreateTransaction() {
   const queryClient = useQueryClient();
-  const { family } = useAuth();
+  const { family, user, familyMember } = useAuth();
   const logActivity = useLogActivity();
 
   return useMutation({
@@ -152,6 +157,10 @@ export function useCreateTransaction() {
         credit_card_id: data.credit_card_id,
         is_recurring: data.is_recurring || false,
         notes: data.notes,
+        // Audit metadata
+        source: data.source || 'MANUAL',
+        created_by_user_id: user?.id,
+        created_by_name: familyMember?.display_name || user?.email?.split('@')[0] || 'Usuário',
       }).select("id").single();
 
       if (error) throw error;
@@ -167,6 +176,7 @@ export function useCreateTransaction() {
           type: result.type,
           amount: result.amount,
           category_id: result.category_id,
+          source: result.source || 'MANUAL',
         },
       });
       // Invalidate all transaction-related queries for multi-device sync
@@ -185,13 +195,18 @@ export interface TransactionUpdate {
 
 export function useUpdateTransaction() {
   const queryClient = useQueryClient();
+  const { user, familyMember } = useAuth();
   const logActivity = useLogActivity();
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: TransactionUpdate }) => {
       const { error } = await supabase
         .from("transactions")
-        .update(data)
+        .update({
+          ...data,
+          // Track who edited (last_edited_at is set by trigger)
+          last_edited_by_user_id: user?.id,
+        })
         .eq("id", id);
       if (error) throw error;
       return { id, ...data };
@@ -201,7 +216,11 @@ export function useUpdateTransaction() {
         action_type: "transaction_updated",
         entity_type: "transaction",
         entity_id: result.id,
-        metadata: { amount: result.amount, category_id: result.category_id },
+        metadata: { 
+          amount: result.amount, 
+          category_id: result.category_id,
+          edited_by: familyMember?.display_name,
+        },
       });
       invalidateQueryGroup(queryClient, 'transactionMutation');
     },

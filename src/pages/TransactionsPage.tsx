@@ -2,13 +2,13 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { ArrowLeft, Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Transaction } from "@/types/finance";
 import { getCategoryById } from "@/data/categories";
 import { cn } from "@/lib/utils";
 import { useDeleteTransaction } from "@/hooks/useTransactions";
 import { useTransactionsPaginated, flattenPaginatedTransactions } from "@/hooks/useTransactionsPaginated";
 import { VirtualizedTransactionList } from "@/components/VirtualizedTransactionList";
 import { EditTransactionSheet } from "@/components/EditTransactionSheet";
+import { TransactionDetailSheet, TransactionDetail } from "@/components/TransactionDetailSheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,8 +30,10 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionDetail | null>(null);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
-  const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
+  const [transactionToEdit, setTransactionToEdit] = useState<TransactionDetail | null>(null);
   
   // Use paginated query with cursor-based pagination
   const { 
@@ -53,7 +55,7 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   }, [searchQuery]);
 
   // Transform and filter transactions (memoized)
-  const transactions: Transaction[] = useMemo(() => {
+  const transactions = useMemo(() => {
     const rawTransactions = flattenPaginatedTransactions(paginatedData?.pages);
     
     return rawTransactions
@@ -66,7 +68,17 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
         date: t.date,
         paymentMethod: t.payment_method as any,
         description: t.description || undefined,
-        createdAt: t.created_at,
+        createdAt: t.created_at, // For Transaction type compatibility
+        created_at: t.created_at,
+        // Audit fields
+        source: t.source as TransactionDetail['source'],
+        created_by_user_id: t.created_by_user_id || undefined,
+        created_by_name: t.created_by_name || undefined,
+        last_edited_by_user_id: t.last_edited_by_user_id || undefined,
+        last_edited_at: t.last_edited_at || undefined,
+        // Goal
+        goalId: t.goal_id || undefined,
+        goalTitle: (t as any).goals?.title || undefined,
       }))
       .filter(t => {
         if (!debouncedSearch) return true;
@@ -77,13 +89,19 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
       });
   }, [paginatedData?.pages, debouncedSearch]);
 
+  // Click on transaction opens detail sheet
+  const handleTransactionClick = useCallback((transaction: any) => {
+    setSelectedTransaction(transaction as TransactionDetail);
+    setDetailSheetOpen(true);
+  }, []);
+
   const handleDeleteClick = useCallback((id: string) => {
     setTransactionToDelete(id);
     setDeleteDialogOpen(true);
   }, []);
 
-  const handleEditClick = useCallback((transaction: Transaction) => {
-    setTransactionToEdit(transaction);
+  const handleEditFromDetail = useCallback((transaction: any) => {
+    setTransactionToEdit(transaction as TransactionDetail);
     setEditSheetOpen(true);
   }, []);
 
@@ -160,8 +178,8 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
       <main className="container px-4 py-4">
         <VirtualizedTransactionList
           transactions={transactions}
-          onTransactionClick={handleEditClick}
-          onEdit={handleEditClick}
+          onTransactionClick={handleTransactionClick}
+          onEdit={handleEditFromDetail}
           onDelete={handleDeleteClick}
           showActions
           hasMore={!!hasNextPage && !debouncedSearch}
@@ -169,6 +187,14 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
           onLoadMore={handleLoadMore}
         />
       </main>
+
+      {/* Transaction Detail Sheet */}
+      <TransactionDetailSheet
+        open={detailSheetOpen}
+        onOpenChange={setDetailSheetOpen}
+        transaction={selectedTransaction}
+        onEdit={handleEditFromDetail}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -195,7 +221,15 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
       <EditTransactionSheet
         open={editSheetOpen}
         onOpenChange={setEditSheetOpen}
-        transaction={transactionToEdit}
+        transaction={transactionToEdit ? {
+          id: transactionToEdit.id,
+          type: transactionToEdit.type,
+          amount: transactionToEdit.amount,
+          category: transactionToEdit.category,
+          subcategory: transactionToEdit.subcategory,
+          date: transactionToEdit.date,
+          description: transactionToEdit.description,
+        } : null}
       />
     </div>
   );

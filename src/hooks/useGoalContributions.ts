@@ -47,7 +47,7 @@ export function useGoalContributions(goalId: string | null) {
 
 export function useCreateContribution() {
   const queryClient = useQueryClient();
-  const { family } = useAuth();
+  const { family, user, familyMember } = useAuth();
 
   return useMutation({
     mutationFn: async (data: ContributionInput & { goal: Goal }) => {
@@ -106,6 +106,9 @@ export function useCreateContribution() {
           source: 'GOAL_CONTRIBUTION',
           bank_account_id: data.bank_account_id || null,
           credit_card_id: data.credit_card_id || null,
+          // Audit fields
+          created_by_user_id: user?.id,
+          created_by_name: familyMember?.display_name || user?.email?.split('@')[0] || 'Usuário',
         });
 
       if (txError) {

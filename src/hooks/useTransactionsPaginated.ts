@@ -15,6 +15,14 @@ export interface PaginatedTransaction {
   description: string | null;
   payment_method: string;
   created_at: string;
+  // Audit fields
+  source: string | null;
+  created_by_user_id: string | null;
+  created_by_name: string | null;
+  last_edited_by_user_id: string | null;
+  last_edited_at: string | null;
+  // Goal reference
+  goal_id: string | null;
 }
 
 interface TransactionsPage {
@@ -33,7 +41,11 @@ export function useTransactionsPaginated(filterType?: 'all' | 'income' | 'expens
 
       let query = supabase
         .from("transactions")
-        .select("id, type, amount, category_id, subcategory_id, date, description, payment_method, created_at")
+        .select(`
+          id, type, amount, category_id, subcategory_id, date, description, payment_method, created_at,
+          source, created_by_user_id, created_by_name, last_edited_by_user_id, last_edited_at,
+          goal_id, goals(title)
+        `)
         .eq("family_id", family.id)
         .order("date", { ascending: false })
         .order("created_at", { ascending: false })
