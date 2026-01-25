@@ -44,6 +44,7 @@ export const QUERY_INVALIDATION_GROUPS = {
   // When a transaction is created/updated/deleted
   transactionMutation: [
     'transactions',
+    'transactions-paginated',
     'finance-summary', 
     'home-summary',
     'budget-alerts',
@@ -85,6 +86,7 @@ export const QUERY_INVALIDATION_GROUPS = {
   appResume: [
     'home-summary',
     'transactions',
+    'transactions-paginated',
     'finance-summary',
     'budget-alerts',
   ],
