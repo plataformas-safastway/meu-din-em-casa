@@ -1,66 +1,27 @@
 import { useState } from "react";
-import {
-  ArrowLeft,
-  Users,
-  UserPlus,
-  Shield,
-  Bell,
-  MapPin,
-  ChevronRight,
-  Crown,
-  MoreVertical,
-  Trash2,
-  Settings,
-} from "lucide-react";
+import { ArrowLeft, UserPlus, Shield, Bell, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { useFamilyMembers, useMyPermissions, useRemoveFamilyMember } from "@/hooks/useFamilyPermissions";
+import { useMyPermissions } from "@/hooks/useFamilyPermissions";
+import { useActiveMembersCount } from "@/hooks/useFamilyMembersSoftDelete";
 import { InviteFamilyMemberSheet } from "@/components/InviteFamilyMemberSheet";
-import { MemberPermissionsSheet } from "@/components/family/MemberPermissionsSheet";
 import { NotificationPreferencesSheet } from "@/components/family/NotificationPreferencesSheet";
 import { LocationContextCard } from "@/components/family/LocationContextCard";
 import { FamilyActivityFeed } from "@/components/family/FamilyActivityFeed";
+import { FamilyMembersTabs } from "@/components/family/FamilyMembersTabs";
 
 interface FamilyPageProps {
   onBack: () => void;
 }
 
 export function FamilyPage({ onBack }: FamilyPageProps) {
-  const { family, familyMember: currentMember } = useAuth();
-  const { data: members, isLoading } = useFamilyMembers();
+  const { family } = useAuth();
   const { data: myPermissions } = useMyPermissions();
-  const removeMember = useRemoveFamilyMember();
+  const { data: activeMembersCount } = useActiveMembersCount();
 
-  const [selectedMember, setSelectedMember] = useState<any>(null);
-  const [showPermissions, setShowPermissions] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [memberToRemove, setMemberToRemove] = useState<any>(null);
 
   const canManage = myPermissions?.can_manage_family || myPermissions?.is_owner;
-
-  const handleRemoveMember = async () => {
-    if (!memberToRemove) return;
-    await removeMember.mutateAsync(memberToRemove.id);
-    setMemberToRemove(null);
-  };
 
   const initials = family?.name
     ?.split(" ")
@@ -93,7 +54,7 @@ export function FamilyPage({ onBack }: FamilyPageProps) {
             <div className="flex-1">
               <h2 className="font-semibold text-foreground text-lg">{family?.name}</h2>
               <p className="text-sm text-muted-foreground">
-                {members?.length || 1} membro{(members?.length || 1) > 1 ? "s" : ""}
+                {activeMembersCount || 1} membro{(activeMembersCount || 1) > 1 ? "s" : ""} ativo{(activeMembersCount || 1) > 1 ? "s" : ""}
               </p>
             </div>
             {canManage && (
@@ -109,103 +70,12 @@ export function FamilyPage({ onBack }: FamilyPageProps) {
           </div>
         </div>
 
-        {/* Members List */}
+        {/* Members List with Tabs */}
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground mb-3 px-1">
             MEMBROS
           </h3>
-          <div className="bg-card rounded-2xl border border-border/30 overflow-hidden divide-y divide-border/30">
-            {isLoading ? (
-              <div className="p-4 text-center text-muted-foreground">
-                Carregando membros...
-              </div>
-            ) : (
-              members?.map((member: any) => {
-                const isOwner = member.role === "owner";
-                const isCurrentUser = member.id === currentMember?.id;
-                const permissions = member.member_permissions?.[0];
-
-                return (
-                  <div
-                    key={member.id}
-                    className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors"
-                  >
-                    <Avatar className="w-12 h-12">
-                      <AvatarImage src={member.avatar_url || undefined} />
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {member.display_name?.charAt(0)?.toUpperCase() || "?"}
-                      </AvatarFallback>
-                    </Avatar>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium truncate">
-                          {member.display_name}
-                        </span>
-                        {isCurrentUser && (
-                          <Badge variant="secondary" className="text-xs">
-                            Você
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {isOwner ? (
-                          <Badge variant="default" className="text-xs gap-1">
-                            <Crown className="w-3 h-3" />
-                            Proprietário
-                          </Badge>
-                        ) : permissions?.can_manage_family ? (
-                          <Badge variant="outline" className="text-xs">
-                            Administrador
-                          </Badge>
-                        ) : permissions?.can_edit_all ? (
-                          <Badge variant="outline" className="text-xs">
-                            Editor
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs">
-                            Visualizador
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    {canManage && !isOwner && !isCurrentUser && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedMember(member);
-                              setShowPermissions(true);
-                            }}
-                          >
-                            <Settings className="w-4 h-4 mr-2" />
-                            Permissões
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => setMemberToRemove(member)}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Remover
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-
-                    {(isOwner || isCurrentUser) && !canManage && (
-                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
+          <FamilyMembersTabs />
         </div>
 
         {/* Quick Actions */}
@@ -249,40 +119,10 @@ export function FamilyPage({ onBack }: FamilyPageProps) {
       </main>
 
       {/* Sheets */}
-      {selectedMember && (
-        <MemberPermissionsSheet
-          open={showPermissions}
-          onOpenChange={setShowPermissions}
-          member={selectedMember}
-        />
-      )}
-
       <NotificationPreferencesSheet
         open={showNotifications}
         onOpenChange={setShowNotifications}
       />
-
-      {/* Remove Member Dialog */}
-      <AlertDialog open={!!memberToRemove} onOpenChange={() => setMemberToRemove(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remover membro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {memberToRemove?.display_name} perderá acesso às finanças da família.
-              O histórico de lançamentos será mantido.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRemoveMember}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Remover
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

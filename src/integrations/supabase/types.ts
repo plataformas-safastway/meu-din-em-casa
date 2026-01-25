@@ -1196,6 +1196,8 @@ export type Database = {
       }
       family_members: {
         Row: {
+          added_at: string | null
+          added_by_user_id: string | null
           avatar_url: string | null
           birth_date: string | null
           cpf: string | null
@@ -1207,10 +1209,17 @@ export type Database = {
           phone_country: string | null
           phone_e164: string | null
           profession: string | null
+          removed_at: string | null
+          removed_by_user_id: string | null
+          removed_reason: string | null
           role: Database["public"]["Enums"]["family_role"]
+          status: Database["public"]["Enums"]["member_status"]
+          updated_at: string | null
           user_id: string
         }
         Insert: {
+          added_at?: string | null
+          added_by_user_id?: string | null
           avatar_url?: string | null
           birth_date?: string | null
           cpf?: string | null
@@ -1222,10 +1231,17 @@ export type Database = {
           phone_country?: string | null
           phone_e164?: string | null
           profession?: string | null
+          removed_at?: string | null
+          removed_by_user_id?: string | null
+          removed_reason?: string | null
           role?: Database["public"]["Enums"]["family_role"]
+          status?: Database["public"]["Enums"]["member_status"]
+          updated_at?: string | null
           user_id: string
         }
         Update: {
+          added_at?: string | null
+          added_by_user_id?: string | null
           avatar_url?: string | null
           birth_date?: string | null
           cpf?: string | null
@@ -1237,7 +1253,12 @@ export type Database = {
           phone_country?: string | null
           phone_e164?: string | null
           profession?: string | null
+          removed_at?: string | null
+          removed_by_user_id?: string | null
+          removed_reason?: string | null
           role?: Database["public"]["Enums"]["family_role"]
+          status?: Database["public"]["Enums"]["member_status"]
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -3802,6 +3823,14 @@ export type Database = {
         Args: { _transaction_id: string; _user_id: string }
         Returns: boolean
       }
+      restore_family_member: {
+        Args: { _member_id: string; _restored_by: string }
+        Returns: boolean
+      }
+      soft_delete_family_member: {
+        Args: { _member_id: string; _reason?: string; _removed_by: string }
+        Returns: boolean
+      }
       switch_active_family: {
         Args: { _to_family_id: string; _user_id: string }
         Returns: boolean
@@ -3825,6 +3854,7 @@ export type Database = {
       family_role: "owner" | "member"
       import_file_type: "ofx" | "xls" | "xlsx" | "pdf"
       import_status: "pending" | "processing" | "completed" | "failed"
+      member_status: "INVITED" | "ACTIVE" | "REMOVED" | "DISABLED"
       payment_method:
         | "cash"
         | "debit"
@@ -3985,6 +4015,7 @@ export const Constants = {
       family_role: ["owner", "member"],
       import_file_type: ["ofx", "xls", "xlsx", "pdf"],
       import_status: ["pending", "processing", "completed", "failed"],
+      member_status: ["INVITED", "ACTIVE", "REMOVED", "DISABLED"],
       payment_method: ["cash", "debit", "credit", "pix", "transfer", "cheque"],
       transaction_classification: [
         "income",
