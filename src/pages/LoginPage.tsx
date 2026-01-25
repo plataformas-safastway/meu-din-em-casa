@@ -74,15 +74,15 @@ export function LoginPage() {
         const dashboardRoles = ['admin', 'admin_master', 'cs', 'customer_success', 'financeiro', 'tecnologia', 'suporte', 'diretoria', 'gestao_estrategica'];
         const hasDashboardAccess = roleData ? dashboardRoles.includes(roleData) : false;
 
-        // Check app access (user has family)
-        const { data: familyMember } = await supabase
+        // Check app access - get ALL families for the user
+        const { data: familyMembers } = await supabase
           .from('family_members')
-          .select('id')
-          .eq('user_id', userId)
-          .limit(1)
-          .maybeSingle();
+          .select('id, family_id')
+          .eq('user_id', userId);
         
-        const hasAppAccess = !!familyMember;
+        const familiesCount = familyMembers?.length ?? 0;
+        const hasAppAccess = familiesCount > 0;
+        const hasMultipleFamilies = familiesCount > 1;
 
         // Decide redirect based on access
         if (hasAppAccess && hasDashboardAccess) {
@@ -91,8 +91,11 @@ export function LoginPage() {
         } else if (hasDashboardAccess) {
           // Only dashboard
           redirectTo = "/admin";
+        } else if (hasMultipleFamilies) {
+          // Multiple families - show family selector
+          redirectTo = "/select-family";
         } else if (hasAppAccess) {
-          // Only app
+          // Only one family - go directly to app
           redirectTo = "/app";
         } else {
           // No family yet - go to signup to create/join family

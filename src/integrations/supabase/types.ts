@@ -1203,6 +1203,7 @@ export type Database = {
           display_name: string
           family_id: string
           id: string
+          last_active_at: string | null
           phone_country: string | null
           phone_e164: string | null
           role: Database["public"]["Enums"]["family_role"]
@@ -1216,6 +1217,7 @@ export type Database = {
           display_name: string
           family_id: string
           id?: string
+          last_active_at?: string | null
           phone_country?: string | null
           phone_e164?: string | null
           role?: Database["public"]["Enums"]["family_role"]
@@ -1229,6 +1231,7 @@ export type Database = {
           display_name?: string
           family_id?: string
           id?: string
+          last_active_at?: string | null
           phone_country?: string | null
           phone_e164?: string | null
           role?: Database["public"]["Enums"]["family_role"]
@@ -1238,6 +1241,51 @@ export type Database = {
           {
             foreignKeyName: "family_members_family_id_fkey"
             columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_switch_log: {
+        Row: {
+          from_family_id: string | null
+          id: string
+          ip_address: string | null
+          switched_at: string
+          to_family_id: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          from_family_id?: string | null
+          id?: string
+          ip_address?: string | null
+          switched_at?: string
+          to_family_id: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          from_family_id?: string | null
+          id?: string
+          ip_address?: string | null
+          switched_at?: string
+          to_family_id?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_switch_log_from_family_id_fkey"
+            columns: ["from_family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_switch_log_to_family_id_fkey"
+            columns: ["to_family_id"]
             isOneToOne: false
             referencedRelation: "families"
             referencedColumns: ["id"]
@@ -3438,6 +3486,17 @@ export type Database = {
       }
       get_product_stability_metrics: { Args: never; Returns: Json }
       get_revenue_metrics: { Args: { _months?: number }; Returns: Json }
+      get_user_families: {
+        Args: { _user_id: string }
+        Returns: {
+          family_id: string
+          family_name: string
+          is_owner: boolean
+          last_active_at: string
+          member_role: string
+          members_count: number
+        }[]
+      }
       get_user_family_id: { Args: never; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
@@ -3458,6 +3517,10 @@ export type Database = {
       has_tech_access: { Args: { _user_id: string }; Returns: boolean }
       is_family_member: { Args: { f_id: string }; Returns: boolean }
       is_family_owner: { Args: { f_id: string }; Returns: boolean }
+      switch_active_family: {
+        Args: { _to_family_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:

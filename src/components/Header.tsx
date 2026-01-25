@@ -3,6 +3,8 @@ import { Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getGreeting, getFirstName } from "@/lib/formatters";
 import { useAuth } from "@/contexts/AuthContext";
+import { FamilySelectorSheet } from "@/components/FamilySelectorSheet";
+import { useHasMultipleFamilies } from "@/hooks/useMultiFamily";
 import {
   Sheet,
   SheetContent,
@@ -19,6 +21,7 @@ interface HeaderProps {
 
 export function Header({ userName, onSettingsClick, onNotificationsClick }: HeaderProps) {
   const { familyMember } = useAuth();
+  const { hasMultipleFamilies } = useHasMultipleFamilies();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [greeting, setGreeting] = useState(getGreeting());
 
@@ -104,6 +107,9 @@ export function Header({ userName, onSettingsClick, onNotificationsClick }: Head
             
             {/* Right: Actions */}
             <div className="flex items-center gap-1 flex-shrink-0">
+              {/* Family Selector - only shows if user has multiple families */}
+              {hasMultipleFamilies && <FamilySelectorSheet />}
+              
               <Button 
                 variant="ghost" 
                 size="icon"
