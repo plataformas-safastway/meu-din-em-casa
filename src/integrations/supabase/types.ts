@@ -1777,6 +1777,172 @@ export type Database = {
           },
         ]
       }
+      installment_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          installment_group_id: string | null
+          performed_by: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          installment_group_id?: string | null
+          performed_by?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          installment_group_id?: string | null
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installment_audit_log_installment_group_id_fkey"
+            columns: ["installment_group_id"]
+            isOneToOne: false
+            referencedRelation: "installment_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      installment_groups: {
+        Row: {
+          bank_account_id: string | null
+          category_id: string
+          confidence_level:
+            | Database["public"]["Enums"]["confidence_level"]
+            | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          credit_card_id: string | null
+          description: string | null
+          family_id: string
+          first_due_date: string
+          id: string
+          installment_value: number
+          installments_total: number
+          needs_user_confirmation: boolean | null
+          parent_transaction_id: string | null
+          source: string
+          subcategory_id: string | null
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          bank_account_id?: string | null
+          category_id: string
+          confidence_level?:
+            | Database["public"]["Enums"]["confidence_level"]
+            | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          credit_card_id?: string | null
+          description?: string | null
+          family_id: string
+          first_due_date: string
+          id?: string
+          installment_value: number
+          installments_total: number
+          needs_user_confirmation?: boolean | null
+          parent_transaction_id?: string | null
+          source?: string
+          subcategory_id?: string | null
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          bank_account_id?: string | null
+          category_id?: string
+          confidence_level?:
+            | Database["public"]["Enums"]["confidence_level"]
+            | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          credit_card_id?: string | null
+          description?: string | null
+          family_id?: string
+          first_due_date?: string
+          id?: string
+          installment_value?: number
+          installments_total?: number
+          needs_user_confirmation?: boolean | null
+          parent_transaction_id?: string | null
+          source?: string
+          subcategory_id?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installment_groups_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installment_groups_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installment_groups_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installment_groups_parent_transaction_id_fkey"
+            columns: ["parent_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      installment_patterns: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          pattern: string
+          pattern_type: string
+          priority: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          pattern: string
+          pattern_type: string
+          priority?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          pattern?: string
+          pattern_type?: string
+          priority?: number | null
+        }
+        Relationships: []
+      }
       installments: {
         Row: {
           category_id: string
@@ -2471,6 +2637,70 @@ export type Database = {
           subcategory_id?: string | null
         }
         Relationships: []
+      }
+      planned_installments: {
+        Row: {
+          amount: number
+          created_at: string
+          due_date: string
+          family_id: string
+          id: string
+          installment_group_id: string
+          installment_index: number
+          reconciled_at: string | null
+          reconciled_transaction_id: string | null
+          status: Database["public"]["Enums"]["installment_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          due_date: string
+          family_id: string
+          id?: string
+          installment_group_id: string
+          installment_index: number
+          reconciled_at?: string | null
+          reconciled_transaction_id?: string | null
+          status?: Database["public"]["Enums"]["installment_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          due_date?: string
+          family_id?: string
+          id?: string
+          installment_group_id?: string
+          installment_index?: number
+          reconciled_at?: string | null
+          reconciled_transaction_id?: string | null
+          status?: Database["public"]["Enums"]["installment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planned_installments_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planned_installments_installment_group_id_fkey"
+            columns: ["installment_group_id"]
+            isOneToOne: false
+            referencedRelation: "installment_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planned_installments_reconciled_transaction_id_fkey"
+            columns: ["reconciled_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recurring_alerts_sent: {
         Row: {
@@ -3453,6 +3683,9 @@ export type Database = {
         Row: {
           amount: number
           bank_account_id: string | null
+          card_charge_type:
+            | Database["public"]["Enums"]["card_charge_type"]
+            | null
           category_id: string
           check_number: string | null
           classification:
@@ -3470,7 +3703,11 @@ export type Database = {
           id: string
           import_id: string | null
           import_source: string | null
+          installment_group_id: string | null
+          installment_index: number | null
+          installments_total: number | null
           is_auto_generated: boolean
+          is_recurrent: boolean | null
           is_recurring: boolean
           last_edited_at: string | null
           last_edited_by_user_id: string | null
@@ -3481,6 +3718,7 @@ export type Database = {
           original_description: string | null
           original_subcategory_id: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
+          recurrence_pattern: string | null
           recurring_transaction_id: string | null
           review_status: string | null
           source: string
@@ -3493,6 +3731,9 @@ export type Database = {
         Insert: {
           amount: number
           bank_account_id?: string | null
+          card_charge_type?:
+            | Database["public"]["Enums"]["card_charge_type"]
+            | null
           category_id: string
           check_number?: string | null
           classification?:
@@ -3512,7 +3753,11 @@ export type Database = {
           id?: string
           import_id?: string | null
           import_source?: string | null
+          installment_group_id?: string | null
+          installment_index?: number | null
+          installments_total?: number | null
           is_auto_generated?: boolean
+          is_recurrent?: boolean | null
           is_recurring?: boolean
           last_edited_at?: string | null
           last_edited_by_user_id?: string | null
@@ -3523,6 +3768,7 @@ export type Database = {
           original_description?: string | null
           original_subcategory_id?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          recurrence_pattern?: string | null
           recurring_transaction_id?: string | null
           review_status?: string | null
           source?: string
@@ -3535,6 +3781,9 @@ export type Database = {
         Update: {
           amount?: number
           bank_account_id?: string | null
+          card_charge_type?:
+            | Database["public"]["Enums"]["card_charge_type"]
+            | null
           category_id?: string
           check_number?: string | null
           classification?:
@@ -3554,7 +3803,11 @@ export type Database = {
           id?: string
           import_id?: string | null
           import_source?: string | null
+          installment_group_id?: string | null
+          installment_index?: number | null
+          installments_total?: number | null
           is_auto_generated?: boolean
+          is_recurrent?: boolean | null
           is_recurring?: boolean
           last_edited_at?: string | null
           last_edited_by_user_id?: string | null
@@ -3565,6 +3818,7 @@ export type Database = {
           original_description?: string | null
           original_subcategory_id?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          recurrence_pattern?: string | null
           recurring_transaction_id?: string | null
           review_status?: string | null
           source?: string
@@ -3601,6 +3855,13 @@ export type Database = {
             columns: ["goal_id"]
             isOneToOne: false
             referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_installment_group_id_fkey"
+            columns: ["installment_group_id"]
+            isOneToOne: false
+            referencedRelation: "installment_groups"
             referencedColumns: ["id"]
           },
           {
@@ -3894,6 +4155,10 @@ export type Database = {
           token: string
         }[]
       }
+      create_planned_installments: {
+        Args: { p_group_id: string; p_start_index?: number }
+        Returns: undefined
+      }
       expire_old_imports: { Args: never; Returns: undefined }
       get_engagement_metrics_report: { Args: never; Returns: Json }
       get_executive_metrics: {
@@ -3947,6 +4212,10 @@ export type Database = {
         Returns: boolean
       }
       is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
+      reconcile_installment: {
+        Args: { p_planned_id: string; p_transaction_id: string }
+        Returns: boolean
+      }
       restore_family_member: {
         Args: { _member_id: string; _restored_by: string }
         Returns: boolean
@@ -3996,10 +4265,13 @@ export type Database = {
         | "gestao_estrategica"
       bank_account_type: "checking" | "savings" | "digital" | "salary"
       card_brand: "visa" | "mastercard" | "elo" | "amex" | "hipercard"
+      card_charge_type: "ONE_SHOT" | "INSTALLMENT" | "RECURRENT"
       card_type: "credit" | "debit" | "both"
+      confidence_level: "HIGH" | "MEDIUM" | "LOW"
       family_role: "owner" | "member"
       import_file_type: "ofx" | "xls" | "xlsx" | "pdf"
       import_status: "pending" | "processing" | "completed" | "failed"
+      installment_status: "POSTED" | "PLANNED" | "RECONCILED" | "CANCELLED"
       member_status: "INVITED" | "ACTIVE" | "REMOVED" | "DISABLED" | "BLOCKED"
       payment_method:
         | "cash"
@@ -4158,10 +4430,13 @@ export const Constants = {
       ],
       bank_account_type: ["checking", "savings", "digital", "salary"],
       card_brand: ["visa", "mastercard", "elo", "amex", "hipercard"],
+      card_charge_type: ["ONE_SHOT", "INSTALLMENT", "RECURRENT"],
       card_type: ["credit", "debit", "both"],
+      confidence_level: ["HIGH", "MEDIUM", "LOW"],
       family_role: ["owner", "member"],
       import_file_type: ["ofx", "xls", "xlsx", "pdf"],
       import_status: ["pending", "processing", "completed", "failed"],
+      installment_status: ["POSTED", "PLANNED", "RECONCILED", "CANCELLED"],
       member_status: ["INVITED", "ACTIVE", "REMOVED", "DISABLED", "BLOCKED"],
       payment_method: ["cash", "debit", "credit", "pix", "transfer", "cheque"],
       transaction_classification: [
