@@ -18,10 +18,11 @@ export interface TransactionInput {
   notes?: string;
 }
 
-export function useTransactions(month?: number, year?: number) {
+export function useTransactions(month?: number, year?: number, options?: { enabled?: boolean }) {
   const { family } = useAuth();
   const currentMonth = month ?? new Date().getMonth();
   const currentYear = year ?? new Date().getFullYear();
+  const isEnabled = options?.enabled ?? true;
 
   return useQuery({
     queryKey: ["transactions", family?.id, currentMonth, currentYear],
@@ -43,8 +44,10 @@ export function useTransactions(month?: number, year?: number) {
       if (error) throw error;
       return data;
     },
-    enabled: !!family,
+    enabled: !!family && isEnabled,
     staleTime: STALE_TIMES.transactions,
+    // Keep previous data while refetching
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -71,8 +74,9 @@ export function useAllTransactions() {
   });
 }
 
-export function useTransactionsLast6Months() {
+export function useTransactionsLast6Months(options?: { enabled?: boolean }) {
   const { family } = useAuth();
+  const isEnabled = options?.enabled ?? true;
 
   return useQuery({
     queryKey: ["transactions", family?.id, "last-6-months"],
@@ -94,7 +98,10 @@ export function useTransactionsLast6Months() {
       if (error) throw error;
       return data;
     },
-    enabled: !!family,
+    enabled: !!family && isEnabled,
+    // This is deferred/secondary data, longer stale time
+    staleTime: STALE_TIMES.projection,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -222,10 +229,11 @@ export function useDeleteTransaction() {
   });
 }
 
-export function useFinanceSummary(month?: number, year?: number) {
+export function useFinanceSummary(month?: number, year?: number, options?: { enabled?: boolean }) {
   const { family } = useAuth();
   const currentMonth = month ?? new Date().getMonth();
   const currentYear = year ?? new Date().getFullYear();
+  const isEnabled = options?.enabled ?? true;
 
   return useQuery({
     queryKey: ["finance-summary", family?.id, currentMonth, currentYear],
@@ -272,6 +280,8 @@ export function useFinanceSummary(month?: number, year?: number) {
         transactionCount: transactions.length,
       };
     },
-    enabled: !!family,
+    enabled: !!family && isEnabled,
+    staleTime: STALE_TIMES.financeSummary,
+    placeholderData: (previousData) => previousData,
   });
 }

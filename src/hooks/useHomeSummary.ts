@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { STALE_TIMES } from "@/lib/queryConfig";
+import { fetchWithTTFB, markHomeDataReady } from "@/lib/performance";
 
 export interface AccountPreview {
   id: string;
@@ -63,25 +65,24 @@ export function useHomeSummary(month: number, year: number) {
         throw new Error("Not authenticated");
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/home-summary?month=${monthStr}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/home-summary?month=${monthStr}`;
+      
+      const { data } = await fetchWithTTFB<HomeSummaryData>(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to fetch home summary");
-      }
+      // Mark home data ready for performance tracking
+      markHomeDataReady();
 
-      return response.json();
+      return data;
     },
     enabled: !!user,
-    staleTime: 60000,
+    staleTime: STALE_TIMES.homeSummary,
+    // Keep previous data while refetching to avoid flicker
+    placeholderData: (previousData) => previousData,
   });
 }
 

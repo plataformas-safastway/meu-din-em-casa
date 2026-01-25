@@ -1,27 +1,38 @@
-import { useState } from "react";
+import { useState, Suspense, lazy, memo } from "react";
 import { Dashboard } from "./Dashboard";
-import { TransactionsPage } from "./TransactionsPage";
-import { CategoriesPage } from "./CategoriesPage";
-import { GoalsPage } from "./GoalsPage";
-import { SettingsPage } from "./SettingsPage";
-import { ProfilePage } from "./ProfilePage";
-import { BanksPage } from "./BanksPage";
-import { ImportFlowPage } from "./import";
-import { ReportsPage } from "./ReportsPage";
-import { CategoryReportPage } from "./CategoryReportPage";
-import { BudgetsPage } from "./BudgetsPage";
-import { CashflowPage } from "./CashflowPage";
-import { ProjectionPage } from "./ProjectionPage";
-import { HelpCenterPage } from "./HelpCenterPage";
-import { EducationPage } from "./EducationPage";
-import { LearnMorePage } from "./LearnMorePage";
-import EbooksAdminPage from "./EbooksAdminPage";
-import { OpenFinancePage } from "./OpenFinancePage";
-import { FamilyPage } from "./FamilyPage";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { WhatsAppCTA } from "@/components/WhatsAppCTA";
 import { LocationContextBanner } from "@/components/family";
 import { CSInAppMessage } from "@/components/cs/CSInAppMessage";
+import { ScreenLoader } from "@/components/ui/money-loader";
+
+// Lazy load heavy modules - these won't be in initial bundle
+const TransactionsPage = lazy(() => import("./TransactionsPage").then(m => ({ default: m.TransactionsPage })));
+const CategoriesPage = lazy(() => import("./CategoriesPage").then(m => ({ default: m.CategoriesPage })));
+const GoalsPage = lazy(() => import("./GoalsPage").then(m => ({ default: m.GoalsPage })));
+const SettingsPage = lazy(() => import("./SettingsPage").then(m => ({ default: m.SettingsPage })));
+const ProfilePage = lazy(() => import("./ProfilePage").then(m => ({ default: m.ProfilePage })));
+const BanksPage = lazy(() => import("./BanksPage").then(m => ({ default: m.BanksPage })));
+const ImportFlowPage = lazy(() => import("./import").then(m => ({ default: m.ImportFlowPage })));
+const ReportsPage = lazy(() => import("./ReportsPage").then(m => ({ default: m.ReportsPage })));
+const CategoryReportPage = lazy(() => import("./CategoryReportPage").then(m => ({ default: m.CategoryReportPage })));
+const BudgetsPage = lazy(() => import("./BudgetsPage").then(m => ({ default: m.BudgetsPage })));
+const CashflowPage = lazy(() => import("./CashflowPage").then(m => ({ default: m.CashflowPage })));
+const ProjectionPage = lazy(() => import("./ProjectionPage").then(m => ({ default: m.ProjectionPage })));
+const HelpCenterPage = lazy(() => import("./HelpCenterPage").then(m => ({ default: m.HelpCenterPage })));
+const EducationPage = lazy(() => import("./EducationPage").then(m => ({ default: m.EducationPage })));
+const LearnMorePage = lazy(() => import("./LearnMorePage").then(m => ({ default: m.LearnMorePage })));
+const EbooksAdminPage = lazy(() => import("./EbooksAdminPage"));
+const OpenFinancePage = lazy(() => import("./OpenFinancePage").then(m => ({ default: m.OpenFinancePage })));
+const FamilyPage = lazy(() => import("./FamilyPage").then(m => ({ default: m.FamilyPage })));
+
+// Minimal loading component for lazy modules
+const PageLoader = memo(() => (
+  <div className="flex items-center justify-center min-h-[50vh]">
+    <ScreenLoader label="Carregando..." />
+  </div>
+));
+PageLoader.displayName = "PageLoader";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -39,20 +50,32 @@ const Index = () => {
   };
 
   const renderPage = () => {
+    // Dashboard is always loaded eagerly - it's the first screen
+    if (activeTab === "dashboard") {
+      return (
+        <Dashboard 
+          onSettingsClick={() => setActiveTab("settings")} 
+          onGoalsClick={() => setActiveTab("objectives")}
+          onLearnMore={handleLearnMore}
+          onBanksClick={() => setActiveTab("banks")}
+          onCategoriesClick={() => setActiveTab("categories")}
+          onTransactionsClick={() => setActiveTab("transactions")}
+          onBudgetsClick={() => setActiveTab("goals")}
+          onProjectionClick={() => setActiveTab("projection")}
+        />
+      );
+    }
+
+    // All other pages are lazy loaded
+    return (
+      <Suspense fallback={<PageLoader />}>
+        {renderLazyPage()}
+      </Suspense>
+    );
+  };
+
+  const renderLazyPage = () => {
     switch (activeTab) {
-      case "dashboard":
-        return (
-          <Dashboard 
-            onSettingsClick={() => setActiveTab("settings")} 
-            onGoalsClick={() => setActiveTab("objectives")}
-            onLearnMore={handleLearnMore}
-            onBanksClick={() => setActiveTab("banks")}
-            onCategoriesClick={() => setActiveTab("categories")}
-            onTransactionsClick={() => setActiveTab("transactions")}
-            onBudgetsClick={() => setActiveTab("goals")}
-            onProjectionClick={() => setActiveTab("projection")}
-          />
-        );
       case "transactions":
         return <TransactionsPage onBack={() => setActiveTab("dashboard")} />;
       case "categories":

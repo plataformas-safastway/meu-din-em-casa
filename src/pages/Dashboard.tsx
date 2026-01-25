@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, memo, useCallback } from "react";
 import { Header } from "@/components/Header";
 import { MonthSelector } from "@/components/MonthSelector";
 import { GlobalBalanceCard } from "@/components/home/GlobalBalanceCard";
@@ -25,8 +25,9 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { getCategoryById } from "@/data/categories";
 import { Transaction, TransactionType } from "@/types/finance";
 import { toast } from "sonner";
-import { format, subMonths } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { markHomeRender } from "@/lib/performance";
 
 interface DashboardProps {
   onSettingsClick?: () => void;
@@ -39,7 +40,15 @@ interface DashboardProps {
   onProjectionClick?: () => void;
 }
 
-export function Dashboard({ 
+// Memoized sub-components to prevent re-renders
+const MemoizedQuickActions = memo(QuickActions);
+const MemoizedGoalsWidget = memo(GoalsWidget);
+const MemoizedBudgetAlertsWidget = memo(BudgetAlertsWidget);
+const MemoizedProjectionPreviewWidget = memo(ProjectionPreviewWidget);
+const MemoizedMonthlyChart = memo(MonthlyChart);
+const MemoizedCategoryChart = memo(CategoryChart);
+
+export const Dashboard = memo(function Dashboard({ 
   onSettingsClick, 
   onGoalsClick,
   onLearnMore,
@@ -54,20 +63,49 @@ export function Dashboard({
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
+  const [hasMarkedRender, setHasMarkedRender] = useState(false);
 
   const selectedMonth = selectedDate.getMonth();
   const selectedYear = selectedDate.getFullYear();
 
   const { family, user } = useAuth();
-  const { data: transactions = [], isLoading: loadingTransactions } = useTransactions(selectedMonth, selectedYear);
-  const { data: summary, isLoading: loadingSummary } = useFinanceSummary(selectedMonth, selectedYear);
-  const { data: homeSummary, isLoading: loadingHomeSummary } = useHomeSummary(selectedMonth, selectedYear);
-  const { data: last6MonthsTransactions = [] } = useTransactionsLast6Months();
+  
+  // PRIMARY: Home summary is the main data source for first load
+  const { data: homeSummary, isLoading: loadingHomeSummary, isFetched: homeSummaryFetched } = useHomeSummary(selectedMonth, selectedYear);
+  
+  // SECONDARY: These load after home summary, only for detailed views
+  // Defer loading transactions until home summary is ready
+  const { data: transactions = [], isLoading: loadingTransactions } = useTransactions(
+    selectedMonth, 
+    selectedYear,
+    { enabled: homeSummaryFetched } // Only fetch after home summary
+  );
+  const { data: summary, isLoading: loadingSummary } = useFinanceSummary(
+    selectedMonth, 
+    selectedYear,
+    { enabled: homeSummaryFetched }
+  );
+  
+  // DEFERRED: These load lazily for charts (not critical for first paint)
+  const { data: last6MonthsTransactions = [] } = useTransactionsLast6Months(
+    { enabled: homeSummaryFetched && !loadingHomeSummary }
+  );
+  
+  // Insights are not critical for first load
   const { insights } = useInsights();
+  
   const createTransaction = useCreateTransaction();
   const { state: onboardingState } = useOnboarding();
 
-  // Get user's first name for greeting
+  // Mark home render once we've mounted
+  useEffect(() => {
+    if (!hasMarkedRender) {
+      markHomeRender();
+      setHasMarkedRender(true);
+    }
+  }, [hasMarkedRender]);
+
+  // Get user's first name for greeting - memoized
   const userName = useMemo(() => {
     if (homeSummary?.greeting?.firstName) {
       return homeSummary.greeting.firstName;
@@ -79,32 +117,33 @@ export function Dashboard({
       return family.name;
     }
     return "Usuário";
-  }, [homeSummary, user, family]);
+  }, [homeSummary?.greeting?.firstName, user?.user_metadata?.display_name, family?.name]);
 
-  const handleAddIncome = () => {
+  // Memoized callbacks to prevent child re-renders
+  const handleAddIncome = useCallback(() => {
     setDefaultTransactionType("income");
     setIsSheetOpen(true);
-  };
+  }, []);
 
-  const handleAddExpense = () => {
+  const handleAddExpense = useCallback(() => {
     setDefaultTransactionType("expense");
     setIsSheetOpen(true);
-  };
+  }, []);
 
-  const handleAddGoal = () => {
+  const handleAddGoal = useCallback(() => {
     onGoalsClick?.();
-  };
+  }, [onGoalsClick]);
 
-  const handleViewReceipts = () => {
+  const handleViewReceipts = useCallback(() => {
     toast.info("Em breve! Vocês poderão anexar recibos aos lançamentos.");
-  };
+  }, []);
 
-  const handleTransactionClick = (transaction: Transaction) => {
+  const handleTransactionClick = useCallback((transaction: Transaction) => {
     setTransactionToEdit(transaction);
     setEditSheetOpen(true);
-  };
+  }, []);
 
-  const handleSubmitTransaction = async (transaction: any) => {
+  const handleSubmitTransaction = useCallback(async (transaction: any) => {
     try {
       let transactionDate = transaction.date;
       const transactionMonth = new Date(transactionDate).getMonth() + 1;
@@ -135,23 +174,25 @@ export function Dashboard({
     } catch (error) {
       toast.error("Erro ao salvar lançamento");
     }
-  };
+  }, [selectedMonth, selectedYear, selectedDate, createTransaction]);
 
-  // Transform transactions for display
-  const displayTransactions = transactions.map((t: any) => ({
-    id: t.id,
-    type: t.type as TransactionType,
-    amount: Number(t.amount),
-    category: t.category_id,
-    subcategory: t.subcategory_id || undefined,
-    date: t.date,
-    paymentMethod: t.payment_method as any,
-    description: t.description || undefined,
-    createdAt: t.created_at,
-    goalTitle: t.goals?.title || undefined,
-  }));
+  // Transform transactions for display - memoized
+  const displayTransactions = useMemo(() => 
+    transactions.map((t: any) => ({
+      id: t.id,
+      type: t.type as TransactionType,
+      amount: Number(t.amount),
+      category: t.category_id,
+      subcategory: t.subcategory_id || undefined,
+      date: t.date,
+      paymentMethod: t.payment_method as any,
+      description: t.description || undefined,
+      createdAt: t.created_at,
+      goalTitle: t.goals?.title || undefined,
+    })),
+  [transactions]);
 
-  // Transform expenses by category for chart
+  // Transform expenses by category for chart - memoized
   const categoryExpenses = useMemo(() => {
     if (!summary?.expensesByCategory) return [];
     
@@ -168,9 +209,9 @@ export function Dashboard({
         percentage,
       };
     }).sort((a, b) => b.amount - a.amount);
-  }, [summary]);
+  }, [summary?.expensesByCategory, summary?.expenses]);
 
-  // Monthly data from real transactions - only show months with data
+  // Monthly data from real transactions - memoized
   const monthlyData = useMemo(() => {
     if (last6MonthsTransactions.length === 0) return [];
     
@@ -217,10 +258,18 @@ export function Dashboard({
     return months;
   }, [last6MonthsTransactions]);
 
-  const isLoading = loadingTransactions || loadingSummary || loadingHomeSummary;
+  // Only wait for home summary for first render (skeleton state)
+  const isLoading = loadingHomeSummary;
   const showLoading = useDebouncedLoading(isLoading, { delay: 300, minDuration: 500 });
 
-  if (showLoading && transactions.length === 0) {
+  // Memoized callbacks for navigation
+  const handleLearnMoreAccounts = useCallback(() => onLearnMore?.("accounts"), [onLearnMore]);
+  const handleLearnMoreCards = useCallback(() => onLearnMore?.("cards"), [onLearnMore]);
+  const handleOpenSheet = useCallback(() => setIsSheetOpen(true), []);
+  const handleCloseSheet = useCallback((open: boolean) => setIsSheetOpen(open), []);
+  const handleCloseEditSheet = useCallback((open: boolean) => setEditSheetOpen(open), []);
+
+  if (showLoading && !homeSummary) {
     return (
       <div className="min-h-screen bg-background">
         <Header userName="..." onSettingsClick={onSettingsClick} />
@@ -254,7 +303,7 @@ export function Dashboard({
           accounts={homeSummary?.accountsPreview ?? []}
           hasMoreAccounts={homeSummary?.hasMoreAccounts ?? false}
           totalAccounts={homeSummary?.totalAccounts ?? 0}
-          onLearnMore={() => onLearnMore?.("accounts")}
+          onLearnMore={handleLearnMoreAccounts}
         />
 
         {/* Credit Cards Preview Card */}
@@ -264,12 +313,12 @@ export function Dashboard({
           totalCards={homeSummary?.totalCreditCards ?? 0}
           totalBill={homeSummary?.totalCreditCardBill ?? 0}
           bestCardSuggestion={homeSummary?.bestCardSuggestion ?? null}
-          onLearnMore={() => onLearnMore?.("cards")}
+          onLearnMore={handleLearnMoreCards}
           onAddCard={onBanksClick}
         />
 
         {/* Quick Actions */}
-        <QuickActions
+        <MemoizedQuickActions
           onAddIncome={handleAddIncome}
           onAddExpense={handleAddExpense}
           onAddGoal={handleAddGoal}
@@ -279,24 +328,24 @@ export function Dashboard({
         {insights.length > 0 && <InsightList insights={insights} />}
 
         {/* Goals Widget */}
-        <GoalsWidget onViewAll={onGoalsClick} />
+        <MemoizedGoalsWidget onViewAll={onGoalsClick} />
 
         {/* Budget & Projection Widgets */}
         <div className="grid gap-4 md:grid-cols-2">
-          <BudgetAlertsWidget 
+          <MemoizedBudgetAlertsWidget 
             month={selectedMonth} 
             year={selectedYear} 
             onViewAll={onBudgetsClick}
             limit={3}
           />
-          <ProjectionPreviewWidget onViewAll={onProjectionClick} />
+          <MemoizedProjectionPreviewWidget onViewAll={onProjectionClick} />
         </div>
 
-        {/* Charts Grid */}
+        {/* Charts Grid - only render when we have data */}
         {categoryExpenses.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2">
-            <CategoryChart categories={categoryExpenses} onViewAll={onCategoriesClick} />
-            <MonthlyChart data={monthlyData} />
+            <MemoizedCategoryChart categories={categoryExpenses} onViewAll={onCategoriesClick} />
+            <MemoizedMonthlyChart data={monthlyData} />
           </div>
         )}
 
@@ -310,12 +359,12 @@ export function Dashboard({
       </main>
 
       {/* Floating Action Button */}
-      <FabButton onClick={() => setIsSheetOpen(true)} />
+      <FabButton onClick={handleOpenSheet} />
 
       {/* Add Transaction Sheet */}
       <AddTransactionSheet
         open={isSheetOpen}
-        onOpenChange={setIsSheetOpen}
+        onOpenChange={handleCloseSheet}
         onSubmit={handleSubmitTransaction}
         defaultType={defaultTransactionType}
       />
@@ -323,9 +372,9 @@ export function Dashboard({
       {/* Edit Transaction Sheet */}
       <EditTransactionSheet
         open={editSheetOpen}
-        onOpenChange={setEditSheetOpen}
+        onOpenChange={handleCloseEditSheet}
         transaction={transactionToEdit}
       />
     </div>
   );
-}
+});
