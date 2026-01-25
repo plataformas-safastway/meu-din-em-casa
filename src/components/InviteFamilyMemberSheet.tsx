@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Mail, UserPlus, Copy, Check } from "lucide-react";
+import { Loader2, Mail, UserPlus, Copy, Check, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useCreateInvite } from "@/hooks/useFamilyInvites";
 import { toast } from "sonner";
 
 interface InviteFamilyMemberSheetProps {
@@ -21,16 +22,47 @@ interface InviteFamilyMemberSheetProps {
 
 export function InviteFamilyMemberSheet({ trigger }: InviteFamilyMemberSheetProps) {
   const { family, familyMember } = useAuth();
+  const createInvite = useCreateInvite();
+  
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [inviteLink, setInviteLink] = useState("");
+  const [generatingLink, setGeneratingLink] = useState(false);
 
-  const inviteLink = family 
-    ? `${window.location.origin}/signup?invite=${family.id}` 
-    : "";
+  // Generate a secure invite link
+  const generateInviteLink = async () => {
+    if (!family) return;
+    
+    setGeneratingLink(true);
+    try {
+      const result = await createInvite.mutateAsync({
+        familyId: family.id,
+      });
+      
+      const link = `${window.location.origin}/invite?token=${result.token}`;
+      setInviteLink(link);
+      toast.success("Link de convite gerado!");
+    } catch (error) {
+      console.error('Error creating invite:', error);
+      toast.error("Erro ao gerar link de convite");
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
+
+  // Generate link when sheet opens
+  const handleOpenChange = async (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen && !inviteLink && family) {
+      await generateInviteLink();
+    }
+  };
 
   const handleCopyLink = async () => {
+    if (!inviteLink) return;
+    
     try {
       await navigator.clipboard.writeText(inviteLink);
       setCopied(true);
@@ -57,12 +89,21 @@ export function InviteFamilyMemberSheet({ trigger }: InviteFamilyMemberSheetProp
     setLoading(true);
 
     try {
+      // Create a new invite with the email
+      const result = await createInvite.mutateAsync({
+        familyId: family.id,
+        email,
+      });
+      
+      const link = `${window.location.origin}/invite?token=${result.token}`;
+
+      // Send email with the invite link
       const { error } = await supabase.functions.invoke('send-family-invite', {
         body: {
           email,
           familyName: family.name,
           inviterName: familyMember.display_name,
-          inviteLink,
+          inviteLink: link,
         },
       });
 
@@ -86,7 +127,7 @@ export function InviteFamilyMemberSheet({ trigger }: InviteFamilyMemberSheetProp
   };
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
         {trigger || (
           <Button variant="outline" size="sm">
@@ -141,11 +182,29 @@ export function InviteFamilyMemberSheet({ trigger }: InviteFamilyMemberSheetProp
 
           {/* Link sharing */}
           <div className="space-y-2">
-            <Label>Link de convite</Label>
+            <div className="flex items-center justify-between">
+              <Label>Link de convite</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={generateInviteLink}
+                disabled={generatingLink}
+                className="h-6 px-2 text-xs"
+              >
+                {generatingLink ? (
+                  <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                ) : (
+                  <RefreshCw className="w-3 h-3 mr-1" />
+                )}
+                Gerar novo
+              </Button>
+            </div>
             <div className="flex gap-2">
               <Input
                 value={inviteLink}
                 readOnly
+                placeholder={generatingLink ? "Gerando link..." : "Clique em 'Gerar novo'"}
                 className="flex-1 text-sm bg-muted"
               />
               <Button
@@ -153,6 +212,7 @@ export function InviteFamilyMemberSheet({ trigger }: InviteFamilyMemberSheetProp
                 variant="outline"
                 onClick={handleCopyLink}
                 className="shrink-0"
+                disabled={!inviteLink}
               >
                 {copied ? (
                   <Check className="w-4 h-4 text-primary" />
@@ -162,7 +222,7 @@ export function InviteFamilyMemberSheet({ trigger }: InviteFamilyMemberSheetProp
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Qualquer pessoa com este link pode se cadastrar e entrar na sua família.
+              O link expira em 7 dias e pode ser usado apenas uma vez.
             </p>
           </div>
 
@@ -171,7 +231,8 @@ export function InviteFamilyMemberSheet({ trigger }: InviteFamilyMemberSheetProp
             <h4 className="font-medium text-sm mb-2">Como funciona?</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li>• O convidado receberá um e-mail com o link</li>
-              <li>• Ao se cadastrar, ele terá acesso às finanças da família</li>
+              <li>• Ele precisará apenas completar seus dados pessoais</li>
+              <li>• Não precisa configurar nada da família</li>
               <li>• Você pode remover membros a qualquer momento</li>
             </ul>
           </div>

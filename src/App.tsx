@@ -23,6 +23,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { SelectContextPage } from "./pages/SelectContextPage";
 import { SelectFamilyPage } from "./pages/SelectFamilyPage";
+import { InviteAcceptPage } from "./pages/InviteAcceptPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -136,6 +137,7 @@ function AppRoutes() {
       <Route path="/termos" element={<TermosPage />} />
       <Route path="/privacidade" element={<PrivacidadePage />} />
       <Route path="/qa-report" element={<QAReportPage />} />
+      <Route path="/invite" element={<InviteAcceptPage />} />
       
       {/* User app routes */}
       <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />

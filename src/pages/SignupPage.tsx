@@ -35,14 +35,23 @@ const objectives = [
 export function SignupPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const inviteFamilyId = searchParams.get("invite");
+  const inviteToken = searchParams.get("token"); // New secure token
+  const legacyInviteId = searchParams.get("invite"); // Legacy family ID (deprecated)
 
   const { signUp, signIn, user, family, joinFamily, createFamily, deleteAccount } = useAuth();
 
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
 
-  const isInviteFlow = useMemo(() => Boolean(inviteFamilyId), [inviteFamilyId]);
+  // Redirect to new invite flow if token is present
+  useEffect(() => {
+    if (inviteToken) {
+      navigate(`/invite?token=${inviteToken}`, { replace: true });
+    }
+  }, [inviteToken, navigate]);
+
+  // For legacy invite links, we can still support them but they're less secure
+  const isLegacyInviteFlow = useMemo(() => Boolean(legacyInviteId), [legacyInviteId]);
 
   // Step 1 - Account
   const [name, setName] = useState("");
@@ -71,10 +80,10 @@ export function SignupPage() {
       setEmail(user.email ?? "");
     }
 
-    if (isInviteFlow) {
+    if (isLegacyInviteFlow) {
       setStep(1);
     }
-  }, [user, family, navigate, isInviteFlow]);
+  }, [user, family, navigate, isLegacyInviteFlow]);
 
   const handleStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,8 +100,8 @@ export function SignupPage() {
       return;
     }
 
-    // INVITE FLOW
-    if (isInviteFlow && inviteFamilyId) {
+    // LEGACY INVITE FLOW (deprecated - use /invite?token= instead)
+    if (isLegacyInviteFlow && legacyInviteId) {
       setLoading(true);
 
       try {
@@ -137,7 +146,7 @@ export function SignupPage() {
           }
         }
 
-        const { error: joinError } = await joinFamily(inviteFamilyId, name, cpf.replace(/\D/g, ""), birthDate);
+        const { error: joinError } = await joinFamily(legacyInviteId, name, cpf.replace(/\D/g, ""), birthDate);
         if (joinError) {
           toast.error("Erro ao entrar na família");
           setLoading(false);
