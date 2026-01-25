@@ -21,6 +21,7 @@ import { SpreadsheetImportPage } from "./pages/import/SpreadsheetImportPage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import { SelectContextPage } from "./pages/SelectContextPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -129,6 +130,7 @@ function AppRoutes() {
       <Route path="/" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/select-context" element={<ProtectedRoute requireFamily={false}><SelectContextPage /></ProtectedRoute>} />
       <Route path="/termos" element={<TermosPage />} />
       <Route path="/privacidade" element={<PrivacidadePage />} />
       <Route path="/qa-report" element={<QAReportPage />} />

@@ -63,14 +63,41 @@ export function LoginPage() {
 
     let redirectTo = safeNext ?? (from?.pathname ? `${from.pathname}${from.search ?? ""}` : null);
 
-    // Fallback: redirect by role (single login)
+    // If no explicit redirect, check user access and decide
     if (!redirectTo) {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
 
       if (userId) {
+        // Check dashboard access
         const { data: roleData } = await supabase.rpc("get_user_role", { _user_id: userId });
-        redirectTo = roleData === "admin" || roleData === "cs" ? "/admin" : "/app";
+        const dashboardRoles = ['admin', 'admin_master', 'cs', 'customer_success', 'financeiro', 'tecnologia', 'suporte', 'diretoria', 'gestao_estrategica'];
+        const hasDashboardAccess = roleData ? dashboardRoles.includes(roleData) : false;
+
+        // Check app access (user has family)
+        const { data: familyMember } = await supabase
+          .from('family_members')
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1)
+          .maybeSingle();
+        
+        const hasAppAccess = !!familyMember;
+
+        // Decide redirect based on access
+        if (hasAppAccess && hasDashboardAccess) {
+          // Both accesses - show context selector
+          redirectTo = "/select-context";
+        } else if (hasDashboardAccess) {
+          // Only dashboard
+          redirectTo = "/admin";
+        } else if (hasAppAccess) {
+          // Only app
+          redirectTo = "/app";
+        } else {
+          // No family yet - go to signup to create/join family
+          redirectTo = "/signup";
+        }
       } else {
         redirectTo = "/app";
       }
@@ -78,7 +105,6 @@ export function LoginPage() {
 
     toast.success("Bem-vindos de volta");
     navigate(redirectTo, { replace: true });
-
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
