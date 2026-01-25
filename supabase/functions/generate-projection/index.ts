@@ -121,12 +121,30 @@ serve(async (req) => {
       .eq("family_id", familyId)
       .eq("is_active", true);
 
-    // Get installments
-    const { data: installments } = await supabase
+    // Get legacy installments (for backwards compatibility)
+    const { data: legacyInstallments } = await supabase
       .from("installments")
       .select("*")
       .eq("family_id", familyId)
       .eq("is_active", true);
+
+    // Get new planned installments (PLANNED status only)
+    const { data: plannedInstallments } = await supabase
+      .from("planned_installments")
+      .select(`
+        *,
+        installment_group:installment_groups(
+          description,
+          category_id,
+          subcategory_id,
+          credit_card_id,
+          installments_total,
+          source
+        )
+      `)
+      .eq("family_id", familyId)
+      .eq("status", "PLANNED")
+      .gte("due_date", today.toISOString().split("T")[0]);
 
     // Generate projections for each month
     const projections: MonthProjection[] = [];
@@ -175,7 +193,8 @@ serve(async (req) => {
       // Calculate installments for this month
       let creditCardInstallments = 0;
       
-      (installments || []).forEach((inst: any) => {
+      // Process legacy installments table
+      (legacyInstallments || []).forEach((inst: any) => {
         const startDate = new Date(inst.start_date);
         const monthsDiff = (projDate.getFullYear() - startDate.getFullYear()) * 12 + 
                            (projDate.getMonth() - startDate.getMonth());
@@ -188,6 +207,23 @@ serve(async (req) => {
             label: `${inst.description} (${installmentNum}/${inst.total_installments})`,
             amount: Number(inst.installment_amount),
             category: inst.category_id,
+          });
+        }
+      });
+
+      // Process new planned_installments table
+      (plannedInstallments || []).forEach((planned: any) => {
+        const dueDate = new Date(planned.due_date);
+        // Check if this installment falls in the current projection month
+        if (dueDate.getFullYear() === projDate.getFullYear() && 
+            dueDate.getMonth() === projDate.getMonth()) {
+          const group = planned.installment_group;
+          creditCardInstallments += Number(planned.amount);
+          drivers.push({
+            type: "INSTALLMENT",
+            label: `${group?.description || 'Parcela'} (${planned.installment_index}/${group?.installments_total || '?'})`,
+            amount: Number(planned.amount),
+            category: group?.category_id,
           });
         }
       });
@@ -222,7 +258,7 @@ serve(async (req) => {
             avgMonthlyIncome: Math.round(avgIncome),
             avgMonthlyExpense: Math.round(avgExpense),
             savingsRate: avgIncome > 0 ? Math.round(((avgIncome - avgExpense) / avgIncome) * 100) : 0,
-            totalInstallments: (installments || []).length,
+            totalInstallments: (legacyInstallments || []).length + (plannedInstallments || []).length,
             totalRecurring: (recurring || []).length,
             projectedBalances: projections.map(p => ({
               month: p.monthLabel,
