@@ -34,6 +34,8 @@ interface BestCardSuggestion {
 }
 
 serve(async (req) => {
+  const startTime = performance.now();
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -229,8 +231,17 @@ serve(async (req) => {
       bestCardSuggestion,
     };
 
+    const duration = Math.round(performance.now() - startTime);
+    console.log(`[home-summary] Completed in ${duration}ms`);
+
     return new Response(JSON.stringify(response), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { 
+        ...corsHeaders, 
+        "Content-Type": "application/json",
+        "X-Response-Time": `${duration}ms`,
+        // Cache for 30 seconds, stale-while-revalidate for 60 more
+        "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+      },
     });
   } catch (error) {
     console.error("Error in home-summary:", error);

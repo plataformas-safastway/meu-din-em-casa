@@ -2,6 +2,7 @@
  * Performance Monitoring & Web Vitals
  * 
  * Instrumenta TTFB, FCP, LCP, INP, CLS
+ * + First load metrics for Home
  */
 
 interface PerformanceMetric {
@@ -18,6 +19,8 @@ const THRESHOLDS = {
   INP: { good: 200, poor: 500 },
   CLS: { good: 0.1, poor: 0.25 },
   TTFB: { good: 800, poor: 1800 },
+  HOME_RENDER: { good: 500, poor: 1500 },
+  HOME_DATA: { good: 1000, poor: 3000 },
 };
 
 function getRating(name: string, value: number): 'good' | 'needs-improvement' | 'poor' {
@@ -30,6 +33,37 @@ function getRating(name: string, value: number): 'good' | 'needs-improvement' | 
 
 // Store metrics in memory for debugging
 const metricsStore: PerformanceMetric[] = [];
+
+// Timing marks for first load
+let appStartTime: number | null = null;
+let homeRenderTime: number | null = null;
+let homeDataTime: number | null = null;
+
+export function markAppStart() {
+  appStartTime = performance.now();
+  if (import.meta.env.DEV) {
+    console.log('%c[Perf] App start marked', 'color: #60a5fa;');
+  }
+}
+
+export function markHomeRender() {
+  if (appStartTime === null) return;
+  homeRenderTime = performance.now() - appStartTime;
+  logMetric('HOME_RENDER', homeRenderTime);
+}
+
+export function markHomeDataReady() {
+  if (appStartTime === null) return;
+  homeDataTime = performance.now() - appStartTime;
+  logMetric('HOME_DATA', homeDataTime);
+}
+
+export function getFirstLoadMetrics() {
+  return {
+    homeRender: homeRenderTime,
+    homeData: homeDataTime,
+  };
+}
 
 export function logMetric(name: string, value: number) {
   const metric: PerformanceMetric = {
@@ -63,14 +97,15 @@ export function clearMetrics() {
 // Measure TTFB per endpoint
 const endpointTimings = new Map<string, number[]>();
 
-export function measureEndpointTTFB(endpoint: string, ttfb: number) {
+export function measureEndpointTTFB(endpoint: string, ttfb: number, payloadSize?: number) {
   const timings = endpointTimings.get(endpoint) || [];
   timings.push(ttfb);
   endpointTimings.set(endpoint, timings.slice(-10)); // Keep last 10
   
   if (import.meta.env.DEV) {
     const avg = timings.reduce((a, b) => a + b, 0) / timings.length;
-    console.log(`[TTFB] ${endpoint}: ${Math.round(ttfb)}ms (avg: ${Math.round(avg)}ms)`);
+    const sizeStr = payloadSize ? ` | ${(payloadSize / 1024).toFixed(1)}KB` : '';
+    console.log(`[TTFB] ${endpoint}: ${Math.round(ttfb)}ms (avg: ${Math.round(avg)}ms)${sizeStr}`);
   }
 }
 
@@ -86,6 +121,9 @@ export function getEndpointTTFB(endpoint: string): { latest: number; avg: number
 // Initialize Web Vitals observation
 export function initWebVitals() {
   if (typeof window === 'undefined') return;
+
+  // Mark app start immediately
+  markAppStart();
 
   // FCP - First Contentful Paint
   const fcpObserver = new PerformanceObserver((list) => {
@@ -148,20 +186,24 @@ export function initWebVitals() {
   }
 }
 
-// Fetch wrapper that measures TTFB
+// Fetch wrapper that measures TTFB and payload size
 export async function fetchWithTTFB<T>(
   url: string,
   options?: RequestInit
-): Promise<{ data: T; ttfb: number }> {
+): Promise<{ data: T; ttfb: number; payloadSize: number }> {
   const start = performance.now();
   
   const response = await fetch(url, options);
   const ttfb = performance.now() - start;
   
+  // Get response text to measure payload
+  const text = await response.text();
+  const payloadSize = new Blob([text]).size;
+  
   // Extract endpoint name
   const endpoint = url.replace(/\?.*$/, '').split('/').pop() || url;
-  measureEndpointTTFB(endpoint, ttfb);
+  measureEndpointTTFB(endpoint, ttfb, payloadSize);
   
-  const data = await response.json();
-  return { data, ttfb };
+  const data = JSON.parse(text) as T;
+  return { data, ttfb, payloadSize };
 }
