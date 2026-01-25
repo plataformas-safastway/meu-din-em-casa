@@ -12,6 +12,8 @@ export const profileSchema = z.object({
     "Telefone em formato inválido"
   ),
   phone_country: z.string().optional().default("BR"),
+  birth_date: z.string().optional().nullable(),
+  profession: z.string().max(100, "Profissão muito longa").optional().nullable(),
 });
 
 export const passwordSchema = z.object({
@@ -165,6 +167,14 @@ export function useUpdateProfile() {
       
       if (data.updates.phone_country !== undefined) {
         updatePayload.phone_country = data.updates.phone_country || "BR";
+      }
+
+      if (data.updates.birth_date !== undefined) {
+        updatePayload.birth_date = data.updates.birth_date || null;
+      }
+
+      if (data.updates.profession !== undefined) {
+        updatePayload.profession = data.updates.profession || null;
       }
 
       const { error } = await supabase

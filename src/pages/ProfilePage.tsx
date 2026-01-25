@@ -10,7 +10,9 @@ import {
   Trash2, 
   Loader2,
   Save,
-  Shield
+  Shield,
+  Calendar,
+  Briefcase
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +43,8 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
       display_name: familyMember?.display_name || "",
       phone_e164: (familyMember as any)?.phone_e164 || "",
       phone_country: (familyMember as any)?.phone_country || "BR",
+      birth_date: (familyMember as any)?.birth_date || "",
+      profession: (familyMember as any)?.profession || "",
     },
   });
 
@@ -51,6 +55,8 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
         display_name: familyMember.display_name || "",
         phone_e164: (familyMember as any)?.phone_e164 || "",
         phone_country: (familyMember as any)?.phone_country || "BR",
+        birth_date: (familyMember as any)?.birth_date || "",
+        profession: (familyMember as any)?.profession || "",
       });
     }
   }, [familyMember, form]);
@@ -150,7 +156,49 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
                 </p>
               </div>
 
-              <Button 
+              <FormField
+                control={form.control}
+                name="birth_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Data de Nascimento
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="date" 
+                        {...field} 
+                        value={field.value || ""} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="profession"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Briefcase className="w-4 h-4" />
+                      Profissão
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Ex: Engenheiro, Médico, Professor..." 
+                        {...field} 
+                        value={field.value || ""} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button
                 type="submit" 
                 className="w-full"
                 disabled={updateProfile.isPending || !form.formState.isDirty}

@@ -1206,6 +1206,7 @@ export type Database = {
           last_active_at: string | null
           phone_country: string | null
           phone_e164: string | null
+          profession: string | null
           role: Database["public"]["Enums"]["family_role"]
           user_id: string
         }
@@ -1220,6 +1221,7 @@ export type Database = {
           last_active_at?: string | null
           phone_country?: string | null
           phone_e164?: string | null
+          profession?: string | null
           role?: Database["public"]["Enums"]["family_role"]
           user_id: string
         }
@@ -1234,6 +1236,7 @@ export type Database = {
           last_active_at?: string | null
           phone_country?: string | null
           phone_e164?: string | null
+          profession?: string | null
           role?: Database["public"]["Enums"]["family_role"]
           user_id?: string
         }
