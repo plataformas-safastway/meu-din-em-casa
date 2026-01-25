@@ -11,14 +11,22 @@ export interface ExecutiveMetrics {
     active: number;
     new: number;
     growth_rate: number;
+    dau: number;
+    mau: number;
   };
   revenue: {
     mrr: number;
     mrr_growth: number;
+    arr: number;
+    average_ticket: number;
+    ltv: number;
+    cac: number;
   };
   engagement: {
     average_score: number;
     churn_rate: number;
+    activation_rate: number;
+    retention_rate: number;
   };
   calculated_at: string;
 }

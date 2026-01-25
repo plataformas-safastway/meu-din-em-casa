@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 24/01/2026 - Sprint 6 CS Automation + IA
-export const HELP_CENTER_VERSION = "24/01/2026 v7";
+// Última atualização: 25/01/2026 - Sprint 7 Relatórios Executivos & BI
+export const HELP_CENTER_VERSION = "25/01/2026 v8";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [

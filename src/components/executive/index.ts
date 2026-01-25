@@ -5,3 +5,5 @@ export { EngagementReport } from './EngagementReport';
 export { ProductReport } from './ProductReport';
 export { InvestorReport } from './InvestorReport';
 export { ReportAuditLog } from './ReportAuditLog';
+export { TechReport } from './TechReport';
+export { CSReport } from './CSReport';
