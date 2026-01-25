@@ -63,14 +63,18 @@ serve(async (req) => {
     // Use service role for data queries
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get family
+    // Get family - filter by ACTIVE status
     const { data: member, error: memberError } = await supabase
       .from("family_members")
       .select("family_id")
       .eq("user_id", userId)
-      .single();
+      .eq("status", "ACTIVE")
+      .order("last_active_at", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
 
     if (memberError || !member) {
+      console.error("Member lookup error:", memberError);
       return new Response(JSON.stringify({ error: "No family found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -71,12 +71,15 @@ serve(async (req) => {
     const month = url.searchParams.get("month") || new Date().toISOString().slice(0, 7);
     const [year, monthNum] = month.split("-").map(Number);
 
-    // Get family member
+    // Get family member - filter by ACTIVE status
     const { data: familyMember } = await supabase
       .from("family_members")
       .select("family_id, display_name, avatar_url")
       .eq("user_id", userId)
-      .single();
+      .eq("status", "ACTIVE")
+      .order("last_active_at", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!familyMember) {
       return new Response(JSON.stringify({ error: "Family not found" }), {
