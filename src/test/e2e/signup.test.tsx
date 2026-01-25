@@ -92,9 +92,9 @@ describe("2. Testes de Cadastro e Onboarding", () => {
       
       renderWithProviders(<SignupPage />);
 
-      // Verificar campos do primeiro step
+      // Verificar campos do primeiro step - o título é "Criar sua conta"
       await waitFor(() => {
-        expect(screen.getByText(/criar conta|cadastro|bem-vind/i)).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: /criar sua conta/i })).toBeInTheDocument();
       });
       
       runner.addStep(
@@ -166,8 +166,8 @@ describe("2. Testes de Cadastro e Onboarding", () => {
         <OnboardingImportStep onImport={mockOnImport} onSkip={mockOnSkip} />
       );
 
-      // Verificar texto de importação opcional
-      expect(screen.getByText(/importar dados|opcional/i)).toBeInTheDocument();
+      // Verificar heading específico de importação opcional
+      expect(screen.getByRole("heading", { name: /importar dados/i })).toBeInTheDocument();
       
       runner.addStep(
         "Verificar tela de importação opcional",
