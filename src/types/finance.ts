@@ -10,7 +10,19 @@ export type TransactionClassification =
 
 export type ExpenseType = 'fixed' | 'variable';
 
-export type PaymentMethod = 'debit' | 'credit' | 'pix' | 'cash' | 'transfer' | 'cheque';
+export type PaymentMethod = 'debit' | 'credit' | 'pix' | 'cash' | 'transfer' | 'cheque' | 'boleto' | 'other';
+
+// Payment method display info
+export const paymentMethodLabels: Record<PaymentMethod, { label: string; icon: string }> = {
+  pix: { label: 'PIX', icon: '⚡' },
+  boleto: { label: 'Boleto', icon: '📄' },
+  debit: { label: 'Débito', icon: '💳' },
+  credit: { label: 'Cartão', icon: '💳' },
+  cheque: { label: 'Cheque', icon: '📝' },
+  cash: { label: 'Dinheiro', icon: '💵' },
+  transfer: { label: 'Transferência', icon: '🔄' },
+  other: { label: 'Outro', icon: '📦' },
+};
 
 export interface Subcategory {
   id: string;
