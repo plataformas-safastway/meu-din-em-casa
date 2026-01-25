@@ -1,7 +1,8 @@
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { STALE_TIMES } from "@/lib/queryConfig";
+import { STALE_TIMES, invalidateQueryGroup } from "@/lib/queryConfig";
+import { TransactionFilters } from "@/components/extrato";
 
 const PAGE_SIZE = 50;
 
@@ -23,19 +24,84 @@ export interface PaginatedTransaction {
   last_edited_at: string | null;
   // Goal reference
   goal_id: string | null;
+  // Financial instrument
+  bank_account_id: string | null;
+  credit_card_id: string | null;
 }
 
 interface TransactionsPage {
   data: PaginatedTransaction[];
   nextCursor: string | null;
   hasMore: boolean;
+  totalCount?: number;
 }
 
-export function useTransactionsPaginated(filterType?: 'all' | 'income' | 'expense') {
+// Calculate date range from filter settings
+function getDateRange(filters: TransactionFilters): { startDate?: string; endDate?: string } {
+  const now = new Date();
+  
+  switch (filters.periodType) {
+    case 'this-month': {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      return {
+        startDate: start.toISOString().split('T')[0],
+        endDate: end.toISOString().split('T')[0],
+      };
+    }
+    case 'last-month': {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0);
+      return {
+        startDate: start.toISOString().split('T')[0],
+        endDate: end.toISOString().split('T')[0],
+      };
+    }
+    case 'last-30': {
+      const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return {
+        startDate: start.toISOString().split('T')[0],
+        endDate: now.toISOString().split('T')[0],
+      };
+    }
+    case 'last-90': {
+      const start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      return {
+        startDate: start.toISOString().split('T')[0],
+        endDate: now.toISOString().split('T')[0],
+      };
+    }
+    case 'month-select': {
+      if (filters.selectedMonth) {
+        const [year, month] = filters.selectedMonth.split('-').map(Number);
+        const start = new Date(year, month - 1, 1);
+        const end = new Date(year, month, 0);
+        return {
+          startDate: start.toISOString().split('T')[0],
+          endDate: end.toISOString().split('T')[0],
+        };
+      }
+      return {};
+    }
+    case 'custom': {
+      return {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      };
+    }
+    default:
+      return {};
+  }
+}
+
+export function useTransactionsPaginated(
+  filterType?: 'all' | 'income' | 'expense',
+  advancedFilters?: TransactionFilters
+) {
   const { family } = useAuth();
 
   return useInfiniteQuery({
-    queryKey: ['transactions-paginated', filterType],
+    queryKey: ['transactions-paginated', filterType, advancedFilters],
     queryFn: async ({ pageParam }): Promise<TransactionsPage> => {
       if (!family?.id) throw new Error("No family");
 
@@ -44,16 +110,61 @@ export function useTransactionsPaginated(filterType?: 'all' | 'income' | 'expens
         .select(`
           id, type, amount, category_id, subcategory_id, date, description, payment_method, created_at,
           source, created_by_user_id, created_by_name, last_edited_by_user_id, last_edited_at,
-          goal_id, goals(title)
+          goal_id, bank_account_id, credit_card_id, goals(title)
         `)
         .eq("family_id", family.id)
         .order("date", { ascending: false })
         .order("created_at", { ascending: false })
-        .limit(PAGE_SIZE + 1); // Fetch one extra to know if there's more
+        .limit(PAGE_SIZE + 1);
 
-      // Apply type filter
-      if (filterType && filterType !== 'all') {
-        query = query.eq("type", filterType);
+      // Apply type filter (basic)
+      const effectiveType = advancedFilters?.type || filterType;
+      if (effectiveType && effectiveType !== 'all') {
+        query = query.eq("type", effectiveType);
+      }
+
+      // Apply advanced filters
+      if (advancedFilters) {
+        // Date range
+        const { startDate, endDate } = getDateRange(advancedFilters);
+        if (startDate) {
+          query = query.gte("date", startDate);
+        }
+        if (endDate) {
+          query = query.lte("date", endDate);
+        }
+
+        // Categories
+        if (advancedFilters.onlyUnclassified) {
+          query = query.eq("category_id", "desconhecidas");
+        } else if (advancedFilters.categoryIds.length > 0) {
+          query = query.in("category_id", advancedFilters.categoryIds);
+        }
+
+        // Bank accounts
+        if (advancedFilters.bankAccountIds.length > 0) {
+          query = query.in("bank_account_id", advancedFilters.bankAccountIds);
+        }
+
+        // Credit cards
+        if (advancedFilters.creditCardIds.length > 0) {
+          query = query.in("credit_card_id", advancedFilters.creditCardIds);
+        }
+
+        // Payment methods (cast to any for type compatibility with new payment methods)
+        if (advancedFilters.paymentMethods.length > 0) {
+          query = query.in("payment_method", advancedFilters.paymentMethods as any);
+        }
+
+        // Sources
+        if (advancedFilters.sources.length > 0) {
+          query = query.in("source", advancedFilters.sources);
+        }
+
+        // Search query (description)
+        if (advancedFilters.searchQuery && advancedFilters.searchQuery.length >= 2) {
+          query = query.ilike("description", `%${advancedFilters.searchQuery}%`);
+        }
       }
 
       // Cursor-based pagination using (date, created_at, id)
@@ -98,4 +209,111 @@ export function flattenPaginatedTransactions(
 ): PaginatedTransaction[] {
   if (!pages) return [];
   return pages.flatMap(page => page.data);
+}
+
+// Bulk delete mutation
+export function useBulkDeleteTransactions() {
+  const queryClient = useQueryClient();
+  const { family } = useAuth();
+
+  return useMutation({
+    mutationFn: async (transactionIds: string[]) => {
+      if (!family?.id) throw new Error("No family");
+      if (transactionIds.length === 0) throw new Error("No transactions to delete");
+
+      // Delete in batches of 100 to avoid timeout
+      const BATCH_SIZE = 100;
+      let deletedCount = 0;
+
+      for (let i = 0; i < transactionIds.length; i += BATCH_SIZE) {
+        const batch = transactionIds.slice(i, i + BATCH_SIZE);
+        
+        const { error } = await supabase
+          .from("transactions")
+          .delete()
+          .eq("family_id", family.id)
+          .in("id", batch);
+
+        if (error) throw error;
+        deletedCount += batch.length;
+      }
+
+      // Log audit entry
+      await supabase.from("audit_logs").insert({
+        action: "bulk_delete_transactions",
+        entity_type: "transaction",
+        user_id: (await supabase.auth.getUser()).data.user?.id || "",
+        family_id: family.id,
+        metadata: {
+          deleted_count: deletedCount,
+          transaction_ids_sample: transactionIds.slice(0, 5), // Only log first 5 for privacy
+        },
+      });
+
+      return { deletedCount };
+    },
+    onSuccess: () => {
+      invalidateQueryGroup(queryClient, 'transactionMutation');
+    },
+  });
+}
+
+// Get filtered transaction count (for "select all" confirmation)
+export function useFilteredTransactionCount(filters?: TransactionFilters) {
+  const { family } = useAuth();
+
+  return useInfiniteQuery({
+    queryKey: ['transactions-count', filters],
+    queryFn: async (): Promise<{ count: number }> => {
+      if (!family?.id) throw new Error("No family");
+
+      let query = supabase
+        .from("transactions")
+        .select("id", { count: 'exact', head: true })
+        .eq("family_id", family.id);
+
+      // Apply filters (same as paginated query)
+      if (filters) {
+        const effectiveType = filters.type;
+        if (effectiveType && effectiveType !== 'all') {
+          query = query.eq("type", effectiveType);
+        }
+
+        const { startDate, endDate } = getDateRange(filters);
+        if (startDate) query = query.gte("date", startDate);
+        if (endDate) query = query.lte("date", endDate);
+
+        if (filters.onlyUnclassified) {
+          query = query.eq("category_id", "desconhecidas");
+        } else if (filters.categoryIds.length > 0) {
+          query = query.in("category_id", filters.categoryIds);
+        }
+
+        if (filters.bankAccountIds.length > 0) {
+          query = query.in("bank_account_id", filters.bankAccountIds);
+        }
+        if (filters.creditCardIds.length > 0) {
+          query = query.in("credit_card_id", filters.creditCardIds);
+        }
+        if (filters.paymentMethods.length > 0) {
+          query = query.in("payment_method", filters.paymentMethods as any);
+        }
+        if (filters.sources.length > 0) {
+          query = query.in("source", filters.sources);
+        }
+        if (filters.searchQuery && filters.searchQuery.length >= 2) {
+          query = query.ilike("description", `%${filters.searchQuery}%`);
+        }
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+
+      return { count: count || 0 };
+    },
+    initialPageParam: undefined,
+    getNextPageParam: () => undefined,
+    enabled: !!family?.id,
+    staleTime: STALE_TIMES.transactions,
+  });
 }
