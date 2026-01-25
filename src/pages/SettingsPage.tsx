@@ -8,16 +8,28 @@ import { useUserAccess } from "@/hooks/useUserAccess";
 import { toast } from "sonner";
 import { EducationPreferences } from "@/components/onboarding";
 
+type NavigationSource = 'home_onboarding' | 'settings' | 'dashboard' | 'default';
+
 interface SettingsPageProps {
   onBack: () => void;
   onNavigate?: (tab: string) => void;
+  onNavigateWithSource?: (tab: string, source: NavigationSource) => void;
 }
 
-export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
+export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: SettingsPageProps) {
   const navigate = useNavigate();
   const { family, familyMember, signOut } = useAuth();
   const { data: userAccess } = useUserAccess();
   const [showEducationPrefs, setShowEducationPrefs] = useState(false);
+
+  // Navigate with 'settings' as the source context for proper back button behavior
+  const navigateToTab = (tab: string) => {
+    if (onNavigateWithSource) {
+      onNavigateWithSource(tab, 'settings');
+    } else if (onNavigate) {
+      onNavigate(tab);
+    }
+  };
 
   const handleAction = (id: string) => {
     switch (id) {
@@ -25,16 +37,16 @@ export function SettingsPage({ onBack, onNavigate }: SettingsPageProps) {
         toast.success("Exportação iniciada! Em breve você receberá o arquivo.");
         break;
       case "banks":
-        onNavigate?.("banks");
+        navigateToTab("banks");
         break;
       case "import":
-        onNavigate?.("import");
+        navigateToTab("import");
         break;
       case "profile":
-        onNavigate?.("profile");
+        onNavigate?.("profile"); // Profile always goes back to settings, no source needed
         break;
       case "family":
-        onNavigate?.("family");
+        navigateToTab("family");
         break;
       case "education":
         setShowEducationPrefs(!showEducationPrefs);

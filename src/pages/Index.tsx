@@ -1,10 +1,11 @@
-import { useState, Suspense, lazy, memo } from "react";
+import { useState, Suspense, lazy, memo, useCallback } from "react";
 import { Dashboard } from "./Dashboard";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { WhatsAppCTA } from "@/components/WhatsAppCTA";
 import { LocationContextBanner } from "@/components/family";
 import { CSInAppMessage } from "@/components/cs/CSInAppMessage";
 import { ScreenLoader } from "@/components/ui/money-loader";
+import { NavigationProvider, NavigationSource, getBackDestinationForSource } from "@/hooks/useNavigationContext";
 
 // Lazy load heavy modules - these won't be in initial bundle
 const TransactionsPage = lazy(() => import("./TransactionsPage").then(m => ({ default: m.TransactionsPage })));
@@ -38,6 +39,9 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [reportCategoryId, setReportCategoryId] = useState<string | null>(null);
   const [learnMoreTab, setLearnMoreTab] = useState<"accounts" | "cards">("accounts");
+  
+  // Track navigation source context for proper back navigation
+  const [navigationSource, setNavigationSource] = useState<NavigationSource>('default');
 
   const handleCategoryReport = (categoryId: string) => {
     setReportCategoryId(categoryId);
@@ -48,6 +52,20 @@ const Index = () => {
     setLearnMoreTab(tab || "accounts");
     setActiveTab("learn-more");
   };
+
+  // Navigate with source context tracking
+  const navigateWithSource = useCallback((tab: string, source: NavigationSource) => {
+    setNavigationSource(source);
+    setActiveTab(tab);
+  }, []);
+
+  // Get back destination based on navigation source
+  const getBackTab = useCallback((defaultTab: string) => {
+    const destination = getBackDestinationForSource(navigationSource, defaultTab);
+    // Reset source after returning
+    setNavigationSource('default');
+    return destination;
+  }, [navigationSource]);
 
   const renderPage = () => {
     // Dashboard is always loaded eagerly - it's the first screen
@@ -63,6 +81,7 @@ const Index = () => {
           onBudgetsClick={() => setActiveTab("goals")}
           onProjectionClick={() => setActiveTab("projection")}
           onNavigate={setActiveTab}
+          onNavigateWithSource={navigateWithSource}
         />
       );
     }
@@ -82,9 +101,11 @@ const Index = () => {
       case "categories":
         return <CategoriesPage onBack={() => setActiveTab("dashboard")} />;
       case "objectives":
-        return <GoalsPage onBack={() => setActiveTab("dashboard")} />;
+        // Goals page - respects navigation source context
+        return <GoalsPage onBack={() => setActiveTab(getBackTab("dashboard"))} />;
       case "goals":
-        return <BudgetsPage onBack={() => setActiveTab("dashboard")} />;
+        // Budgets page - respects navigation source context
+        return <BudgetsPage onBack={() => setActiveTab(getBackTab("dashboard"))} />;
       case "cashflow":
         return <CashflowPage onBack={() => setActiveTab("dashboard")} />;
       case "projection":
@@ -111,14 +132,15 @@ const Index = () => {
           <SettingsPage 
             onBack={() => setActiveTab("dashboard")} 
             onNavigate={setActiveTab}
+            onNavigateWithSource={navigateWithSource}
           />
         );
       case "banks":
-        return <BanksPage onBack={() => setActiveTab("settings")} />;
+        return <BanksPage onBack={() => setActiveTab(getBackTab("settings"))} />;
       case "openfinance":
-        return <OpenFinancePage onBack={() => setActiveTab("settings")} />;
+        return <OpenFinancePage onBack={() => setActiveTab(getBackTab("settings"))} />;
       case "family":
-        return <FamilyPage onBack={() => setActiveTab("settings")} />;
+        return <FamilyPage onBack={() => setActiveTab(getBackTab("settings"))} />;
       case "learn-more":
         return <LearnMorePage onBack={() => setActiveTab("dashboard")} initialTab={learnMoreTab} />;
       case "profile":
@@ -126,7 +148,7 @@ const Index = () => {
       case "import":
         return (
           <ImportFlowPage 
-            onBack={() => setActiveTab("settings")} 
+            onBack={() => setActiveTab(getBackTab("settings"))} 
             onComplete={() => setActiveTab("transactions")}
           />
         );

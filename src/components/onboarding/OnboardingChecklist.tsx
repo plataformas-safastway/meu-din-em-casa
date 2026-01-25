@@ -7,11 +7,14 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useOnboarding, OnboardingStep } from "@/hooks/useOnboarding";
 
+type NavigationSource = 'home_onboarding' | 'settings' | 'dashboard' | 'default';
+
 interface OnboardingChecklistProps {
   onNavigate?: (tab: string) => void;
+  onNavigateWithSource?: (tab: string, source: NavigationSource) => void;
 }
 
-export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
+export function OnboardingChecklist({ onNavigate, onNavigateWithSource }: OnboardingChecklistProps) {
   const { state, isLoading } = useOnboarding();
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -23,24 +26,33 @@ export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
   const totalSteps = state.steps.length;
 
   // Action handlers for each step - map to internal tab names
+  // ALWAYS use 'home_onboarding' as source since we're in the Home > Primeiros Passos context
   const handleStepAction = (step: OnboardingStep) => {
-    if (!onNavigate) return;
+    const navigate = (tab: string) => {
+      if (onNavigateWithSource) {
+        // Use source-aware navigation for proper back button behavior
+        onNavigateWithSource(tab, 'home_onboarding');
+      } else if (onNavigate) {
+        // Fallback to regular navigation
+        onNavigate(tab);
+      }
+    };
     
     switch (step.id) {
       case "bank_account":
-        onNavigate("banks");
+        navigate("banks");
         break;
       case "import":
-        onNavigate("import");
+        navigate("import");
         break;
       case "budget":
-        onNavigate("goals"); // budgets page uses "goals" tab internally
+        navigate("goals"); // budgets page uses "goals" tab internally
         break;
       case "goal":
-        onNavigate("objectives"); // goals page uses "objectives" tab internally
+        navigate("objectives"); // goals page uses "objectives" tab internally
         break;
       case "family_invite":
-        onNavigate("family");
+        navigate("family");
         break;
     }
   };
