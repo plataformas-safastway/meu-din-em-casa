@@ -317,21 +317,36 @@ export const defaultCategories: Category[] = [
 
 // Payment methods for EXPENSES
 export const expensePaymentMethods = [
-  { id: "pix", name: "PIX", icon: "📱" },
-  { id: "cash", name: "Dinheiro", icon: "💵" },
-  { id: "transfer", name: "Transferência", icon: "🔄" },
-  { id: "credit", name: "Cartão de Crédito", icon: "💳" },
-  { id: "debit", name: "Cartão de Débito", icon: "💳" },
-  { id: "cheque", name: "Cheque", icon: "📝" },
+  { id: "pix", name: "PIX", icon: "⚡", requiresAccount: true },
+  { id: "boleto", name: "Boleto", icon: "📄", requiresAccount: true },
+  { id: "transfer", name: "Transferência", icon: "🔄", requiresAccount: true },
+  { id: "debit", name: "Débito", icon: "💳", requiresAccount: true },
+  { id: "credit", name: "Cartão", icon: "💳", requiresCard: true },
+  { id: "cheque", name: "Cheque", icon: "📝", requiresAccount: true },
+  { id: "cash", name: "Dinheiro", icon: "💵", requiresAccount: false },
 ];
 
 // Payment methods for INCOME (no debit/credit cards)
 export const incomePaymentMethods = [
-  { id: "pix", name: "PIX", icon: "📱" },
-  { id: "cash", name: "Dinheiro", icon: "💵" },
-  { id: "transfer", name: "Transferência", icon: "🔄" },
-  { id: "cheque", name: "Cheque", icon: "📝" },
+  { id: "pix", name: "PIX", icon: "⚡", requiresAccount: true },
+  { id: "transfer", name: "Transferência", icon: "🔄", requiresAccount: true },
+  { id: "boleto", name: "Boleto", icon: "📄", requiresAccount: true },
+  { id: "cheque", name: "Cheque", icon: "📝", requiresAccount: true },
+  { id: "cash", name: "Dinheiro", icon: "💵", requiresAccount: false },
 ];
+
+// Helper to check if payment method requires bank account
+export const requiresBankAccount = (methodId: string): boolean => {
+  const allMethods = [...expensePaymentMethods, ...incomePaymentMethods];
+  const method = allMethods.find(m => m.id === methodId);
+  return method?.requiresAccount === true;
+};
+
+// Helper to check if payment method requires credit card
+export const requiresCreditCard = (methodId: string): boolean => {
+  const method = expensePaymentMethods.find(m => m.id === methodId);
+  return method?.requiresCard === true;
+};
 
 // Legacy export for backward compatibility
 export const paymentMethods = expensePaymentMethods;
