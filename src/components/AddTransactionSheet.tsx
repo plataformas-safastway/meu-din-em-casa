@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Check, ChevronRight, Building2, CreditCard, Calendar, FileText, Sparkles } from "lucide-react";
+import { Check, ChevronRight, Calendar, FileText, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { defaultCategories, getCategoryById } from "@/data/categories";
+import { defaultCategories, getCategoryById, requiresBankAccount, requiresCreditCard } from "@/data/categories";
 import { useBankAccounts, useCreditCards } from "@/hooks/useBankData";
 import { useDebouncedSuggestion, useRecentCategories } from "@/hooks/useCategorySuggestion";
 import { TransactionType, TransactionClassification, ExpenseType, PaymentMethod } from "@/types/finance";
@@ -17,6 +16,9 @@ import {
   PaymentMethodSelector,
   AmountInput,
   SuggestionBadge,
+  InstrumentSelector,
+  QuickBankAccountSheet,
+  QuickCreditCardSheet,
 } from "@/components/transaction";
 
 interface AddTransactionSheetProps {
@@ -62,11 +64,15 @@ export function AddTransactionSheet({
   const [isSaving, setIsSaving] = useState(false);
   const [suggestionApplied, setSuggestionApplied] = useState(false);
   const [suggestionSource, setSuggestionSource] = useState<'history' | 'descriptor' | 'none'>('none');
+  
+  // Quick registration modals
+  const [showQuickAccount, setShowQuickAccount] = useState(false);
+  const [showQuickCard, setShowQuickCard] = useState(false);
 
   const amountInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: bankAccounts = [] } = useBankAccounts();
-  const { data: creditCards = [] } = useCreditCards();
+  const { data: bankAccounts = [], refetch: refetchAccounts } = useBankAccounts();
+  const { data: creditCards = [], refetch: refetchCards } = useCreditCards();
   const { data: recentCategories = [] } = useRecentCategories();
   const { suggestion, updateDescription, clearSuggestion } = useDebouncedSuggestion();
 
@@ -75,6 +81,19 @@ export function AddTransactionSheet({
   
   const filteredCategories = defaultCategories.filter((cat) => cat.type === type);
   const selectedCategory = getCategoryById(category);
+
+  // Validation helpers
+  const needsAccount = requiresBankAccount(paymentMethod);
+  const needsCard = requiresCreditCard(paymentMethod);
+  const needsCheckNumber = paymentMethod === "cheque";
+  
+  // Check if instrument is valid
+  const hasValidInstrument = () => {
+    if (paymentMethod === "cash") return true;
+    if (needsAccount) return bankAccounts.length > 0 && !!bankAccountId;
+    if (needsCard) return creditCards.length > 0 && !!creditCardId;
+    return true;
+  };
 
   // Auto-focus amount input when sheet opens
   useEffect(() => {
@@ -99,6 +118,8 @@ export function AddTransactionSheet({
     setSubcategory("");
     setShowSubcategories(false);
     setCheckNumber("");
+    setBankAccountId("");
+    setCreditCardId("");
     // Reset to valid payment method for new type
     if (classification === "income" && (paymentMethod === "credit" || paymentMethod === "debit")) {
       setPaymentMethod("pix");
@@ -116,23 +137,30 @@ export function AddTransactionSheet({
     }
   }, [open, defaultType]);
 
-  // Reset bank/card selection and check number when payment method changes
+  // Reset selections when payment method changes
   useEffect(() => {
-    if (paymentMethod !== "credit") {
+    if (!needsCard) {
       setCreditCardId("");
     }
-    if (!["debit", "pix", "transfer"].includes(paymentMethod)) {
+    if (!needsAccount) {
       setBankAccountId("");
     }
     if (paymentMethod !== "cheque") {
       setCheckNumber("");
     }
-  }, [paymentMethod]);
+    
+    // Auto-select first instrument if only one exists
+    if (needsAccount && bankAccounts.length === 1 && !bankAccountId) {
+      setBankAccountId(bankAccounts[0].id);
+    }
+    if (needsCard && creditCards.length === 1 && !creditCardId) {
+      setCreditCardId(creditCards[0].id);
+    }
+  }, [paymentMethod, bankAccounts, creditCards, needsAccount, needsCard, bankAccountId, creditCardId]);
 
   // Apply category suggestion when available and user hasn't selected manually
   useEffect(() => {
     if (suggestion && suggestion.confidence > 0.5 && !category && !suggestionApplied) {
-      // Only apply if the suggested category matches current transaction type
       const suggestedCat = getCategoryById(suggestion.categoryId);
       if (suggestedCat && suggestedCat.type === type) {
         setCategory(suggestion.categoryId);
@@ -149,7 +177,6 @@ export function AddTransactionSheet({
   const handleDescriptionChange = useCallback((newDescription: string) => {
     setDescription(newDescription);
     updateDescription(newDescription);
-    // Reset suggestion state when description changes significantly
     if (!newDescription || newDescription.length < 3) {
       setSuggestionApplied(false);
       setSuggestionSource('none');
@@ -165,13 +192,39 @@ export function AddTransactionSheet({
     }
   };
 
+  // Handle quick account registration success
+  const handleQuickAccountSuccess = async () => {
+    await refetchAccounts();
+    // Auto-select the newly created account (will be first due to ordering)
+    setTimeout(() => {
+      if (bankAccounts.length > 0) {
+        setBankAccountId(bankAccounts[0].id);
+      }
+    }, 500);
+  };
+
+  // Handle quick card registration success  
+  const handleQuickCardSuccess = async () => {
+    await refetchCards();
+    setTimeout(() => {
+      if (creditCards.length > 0) {
+        setCreditCardId(creditCards[0].id);
+      }
+    }, 500);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validation
     if (!amount || !category) return;
-
-    // Validate check number for cheque payment
-    if (paymentMethod === "cheque" && !checkNumber.trim()) {
+    if (paymentMethod === "cheque" && !checkNumber.trim()) return;
+    
+    // Validate instrument requirement
+    if (needsAccount && !bankAccountId) {
+      return;
+    }
+    if (needsCard && !creditCardId) {
       return;
     }
 
@@ -211,10 +264,6 @@ export function AddTransactionSheet({
       setIsSaving(false);
     }
   };
-
-  const needsBankAccount = ["debit", "pix", "transfer"].includes(paymentMethod);
-  const needsCreditCard = paymentMethod === "credit";
-  const needsCheckNumber = paymentMethod === "cheque";
 
   // Get display name for bank account with more info
   const getBankAccountDisplay = (account: typeof bankAccounts[0]) => {
@@ -277,313 +326,301 @@ export function AddTransactionSheet({
     return labels[classification];
   };
 
+  // Check if form is valid for submission
+  const isFormValid = () => {
+    if (!amount || !category) return false;
+    if (needsCheckNumber && !checkNumber.trim()) return false;
+    if (needsAccount && bankAccounts.length > 0 && !bankAccountId) return false;
+    if (needsCard && creditCards.length > 0 && !creditCardId) return false;
+    // Block if instrument is required but none exist
+    if (needsAccount && bankAccounts.length === 0) return false;
+    if (needsCard && creditCards.length === 0) return false;
+    return true;
+  };
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[92vh] rounded-t-3xl">
-        <SheetHeader className="pb-3">
-          <SheetTitle className="text-center">{getTitle()}</SheetTitle>
-        </SheetHeader>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className="h-[92vh] rounded-t-3xl">
+          <SheetHeader className="pb-3">
+            <SheetTitle className="text-center">{getTitle()}</SheetTitle>
+          </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col h-[calc(100%-50px)]">
-          <ScrollArea className="flex-1 -mx-6 px-6">
-            <div className="space-y-5 pb-6">
-              {/* Subcategory Selection View */}
-              {showSubcategories && selectedCategory ? (
-                <div className="space-y-4 animate-fade-in">
-                  <Label className="text-base">Subcategoria</Label>
-                  <div className="grid gap-2">
-                    {selectedCategory.subcategories.map((sub) => (
-                      <button
-                        key={sub.id}
-                        type="button"
-                        onClick={() => {
-                          setSubcategory(sub.id);
-                          setShowSubcategories(false);
-                        }}
-                        className={cn(
-                          "flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left min-h-[52px] active:scale-[0.98]",
-                          subcategory === sub.id
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        )}
-                      >
-                        <span className="font-medium text-base">{sub.name}</span>
-                        {subcategory === sub.id && <Check className="w-5 h-5 text-primary" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Type Toggle - With classifications */}
-                  <TransactionTypeSelector
-                    value={classification}
-                    onChange={setClassification}
-                    showAdvanced={true}
-                  />
-
-                  {/* Amount - FIRST FIELD, BIGGER, AUTO-FOCUS */}
-                  <AmountInput
-                    ref={amountInputRef}
-                    value={amount}
-                    onChange={setAmount}
-                    classification={classification}
-                  />
-
-                  {/* Expense Type (only for expenses) */}
-                  {type === "expense" && classification === "expense" && (
-                    <div className="space-y-2 animate-fade-in">
-                      <Label className="text-base">Tipo de Despesa</Label>
-                      <div className="grid grid-cols-2 gap-3">
+          <form onSubmit={handleSubmit} className="flex flex-col h-[calc(100%-50px)]">
+            <ScrollArea className="flex-1 -mx-6 px-6">
+              <div className="space-y-5 pb-6">
+                {/* Subcategory Selection View */}
+                {showSubcategories && selectedCategory ? (
+                  <div className="space-y-4 animate-fade-in">
+                    <Label className="text-base">Subcategoria</Label>
+                    <div className="grid gap-2">
+                      {selectedCategory.subcategories.map((sub) => (
                         <button
+                          key={sub.id}
                           type="button"
-                          onClick={() => setExpenseType("fixed")}
+                          onClick={() => {
+                            setSubcategory(sub.id);
+                            setShowSubcategories(false);
+                          }}
                           className={cn(
-                            "py-3.5 px-4 rounded-xl border-2 font-medium transition-all min-h-[48px] text-base active:scale-[0.98]",
-                            expenseType === "fixed"
-                              ? "border-primary bg-primary/5 text-primary"
-                              : "border-border text-muted-foreground hover:border-primary/50"
-                          )}
-                        >
-                          🔒 Fixa
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setExpenseType("variable")}
-                          className={cn(
-                            "py-3.5 px-4 rounded-xl border-2 font-medium transition-all min-h-[48px] text-base active:scale-[0.98]",
-                            expenseType === "variable"
-                              ? "border-primary bg-primary/5 text-primary"
-                              : "border-border text-muted-foreground hover:border-primary/50"
-                          )}
-                        >
-                          🔄 Variável
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Category */}
-                  <div className="space-y-2">
-                    <Label className="text-base">Categoria</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {filteredCategories.map((cat) => (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          onClick={() => handleCategorySelect(cat.id)}
-                          className={cn(
-                            "relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all min-h-[72px] active:scale-[0.97]",
-                            category === cat.id
+                            "flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left min-h-[52px] active:scale-[0.98]",
+                            subcategory === sub.id
                               ? "border-primary bg-primary/5"
                               : "border-border hover:border-primary/50"
                           )}
                         >
-                          <span className="text-2xl">{cat.icon}</span>
-                          <span className="text-[11px] text-center leading-tight text-muted-foreground font-medium line-clamp-2">
-                            {cat.name}
-                          </span>
-                          {category === cat.id && (
-                            <div className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
-                              <Check className="w-3.5 h-3.5 text-primary-foreground" />
-                            </div>
-                          )}
-                          {cat.subcategories.length > 0 && (
-                            <div className="absolute bottom-1.5 right-1.5">
-                              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
-                            </div>
-                          )}
+                          <span className="font-medium text-base">{sub.name}</span>
+                          {subcategory === sub.id && <Check className="w-5 h-5 text-primary" />}
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  {/* Selected Subcategory Display */}
-                  {subcategory && selectedCategory && (
-                    <div className="space-y-2 animate-fade-in">
-                      <Label className="text-base">Subcategoria</Label>
-                      <button
-                        type="button"
-                        onClick={() => setShowSubcategories(true)}
-                        className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-primary bg-primary/5 min-h-[52px]"
-                      >
-                        <span className="font-medium text-base">
-                          {selectedCategory.subcategories.find((s) => s.id === subcategory)?.name}
-                        </span>
-                        <ChevronRight className="w-5 h-5 text-primary" />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Payment Method */}
-                  <PaymentMethodSelector
-                    value={paymentMethod}
-                    onChange={setPaymentMethod}
-                    classification={classification}
-                  />
-
-                  {/* Check Number (for cheque payment) */}
-                  {needsCheckNumber && (
-                    <div className="space-y-2 animate-fade-in">
-                      <Label htmlFor="checkNumber" className="text-base flex items-center gap-2">
-                        <FileText className="w-4 h-4" />
-                        Número do Cheque *
-                      </Label>
-                      <Input
-                        id="checkNumber"
-                        type="text"
-                        placeholder="Ex: 000123"
-                        value={checkNumber}
-                        onChange={(e) => setCheckNumber(e.target.value)}
-                        className="h-12 text-base rounded-xl border-2 focus-visible:ring-2 focus-visible:ring-primary/30"
-                        required
-                      />
-                    </div>
-                  )}
-
-                  {/* Bank Account Selection */}
-                  {needsBankAccount && bankAccounts.length > 0 && (
-                    <div className="space-y-2 animate-fade-in">
-                      <Label className="flex items-center gap-2 text-base">
-                        <Building2 className="w-4 h-4" />
-                        Conta bancária
-                      </Label>
-                      <Select value={bankAccountId} onValueChange={setBankAccountId}>
-                        <SelectTrigger className="h-12 rounded-xl border-2 text-base">
-                          <SelectValue placeholder="Selecione (opcional)" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background border-2 shadow-xl z-50">
-                          {bankAccounts.map((account) => (
-                            <SelectItem 
-                              key={account.id} 
-                              value={account.id}
-                              className="py-3 text-base cursor-pointer"
-                            >
-                              {getBankAccountDisplay(account)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {/* Credit Card Selection */}
-                  {needsCreditCard && creditCards.length > 0 && (
-                    <div className="space-y-2 animate-fade-in">
-                      <Label className="flex items-center gap-2 text-base">
-                        <CreditCard className="w-4 h-4" />
-                        Cartão de crédito
-                      </Label>
-                      <Select value={creditCardId} onValueChange={setCreditCardId}>
-                        <SelectTrigger className="h-12 rounded-xl border-2 text-base">
-                          <SelectValue placeholder="Selecione (opcional)" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background border-2 shadow-xl z-50">
-                          {creditCards.map((card) => (
-                            <SelectItem 
-                              key={card.id} 
-                              value={card.id}
-                              className="py-3 text-base cursor-pointer"
-                            >
-                              {getCreditCardDisplay(card)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {/* Date */}
-                  <div className="space-y-2">
-                    <Label htmlFor="date" className="flex items-center gap-2 text-base">
-                      <Calendar className="w-4 h-4" />
-                      Data
-                      <span className="text-xs text-muted-foreground font-normal">
-                        ({formatDateDisplay(date)})
-                      </span>
-                    </Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      className="h-12 rounded-xl border-2 text-base focus-visible:ring-2 focus-visible:ring-primary/30"
+                ) : (
+                  <>
+                    {/* Type Toggle - With classifications */}
+                    <TransactionTypeSelector
+                      value={classification}
+                      onChange={setClassification}
+                      showAdvanced={true}
                     />
-                  </div>
 
-                  {/* Description */}
-                  <div className="space-y-2">
-                    <Label htmlFor="description" className="text-base text-muted-foreground">
-                      Descrição <span className="text-xs">(opcional)</span>
-                    </Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Ex: Supermercado, farmácia..."
-                      value={description}
-                      onChange={(e) => handleDescriptionChange(e.target.value)}
-                      className="resize-none rounded-xl border-2 text-base focus-visible:ring-2 focus-visible:ring-primary/30"
-                      rows={2}
+                    {/* Amount - FIRST FIELD, BIGGER, AUTO-FOCUS */}
+                    <AmountInput
+                      ref={amountInputRef}
+                      value={amount}
+                      onChange={setAmount}
+                      classification={classification}
                     />
-                    {/* Suggestion Badge */}
-                    {suggestionApplied && suggestionSource !== 'none' && category && (
-                      <div className="flex items-center gap-2">
-                        <SuggestionBadge 
-                          source={suggestionSource} 
-                          confidence={suggestion?.confidence || 0.7}
-                          matchCount={suggestion?.matchCount}
-                        />
+
+                    {/* Expense Type (only for expenses) */}
+                    {type === "expense" && classification === "expense" && (
+                      <div className="space-y-2 animate-fade-in">
+                        <Label className="text-base">Tipo de Despesa</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setExpenseType("fixed")}
+                            className={cn(
+                              "py-3.5 px-4 rounded-xl border-2 font-medium transition-all min-h-[48px] text-base active:scale-[0.98]",
+                              expenseType === "fixed"
+                                ? "border-primary bg-primary/5 text-primary"
+                                : "border-border text-muted-foreground hover:border-primary/50"
+                            )}
+                          >
+                            🔒 Fixa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setExpenseType("variable")}
+                            className={cn(
+                              "py-3.5 px-4 rounded-xl border-2 font-medium transition-all min-h-[48px] text-base active:scale-[0.98]",
+                              expenseType === "variable"
+                                ? "border-primary bg-primary/5 text-primary"
+                                : "border-border text-muted-foreground hover:border-primary/50"
+                            )}
+                          >
+                            🔄 Variável
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Category */}
+                    <div className="space-y-2">
+                      <Label className="text-base">Categoria</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {filteredCategories.map((cat) => (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => handleCategorySelect(cat.id)}
+                            className={cn(
+                              "relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all min-h-[72px] active:scale-[0.97]",
+                              category === cat.id
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50"
+                            )}
+                          >
+                            <span className="text-2xl">{cat.icon}</span>
+                            <span className="text-[11px] text-center leading-tight text-muted-foreground font-medium line-clamp-2">
+                              {cat.name}
+                            </span>
+                            {category === cat.id && (
+                              <div className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
+                                <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                              </div>
+                            )}
+                            {cat.subcategories.length > 0 && (
+                              <div className="absolute bottom-1.5 right-1.5">
+                                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Selected Subcategory Display */}
+                    {subcategory && selectedCategory && (
+                      <div className="space-y-2 animate-fade-in">
+                        <Label className="text-base">Subcategoria</Label>
                         <button
                           type="button"
-                          onClick={() => {
-                            setCategory("");
-                            setSubcategory("");
-                            setSuggestionApplied(false);
-                            setSuggestionSource('none');
-                          }}
-                          className="text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => setShowSubcategories(true)}
+                          className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-primary bg-primary/5 min-h-[52px]"
                         >
-                          Alterar
+                          <span className="font-medium text-base">
+                            {selectedCategory.subcategories.find((s) => s.id === subcategory)?.name}
+                          </span>
+                          <ChevronRight className="w-5 h-5 text-primary" />
                         </button>
                       </div>
                     )}
-                  </div>
-                </>
-              )}
-            </div>
-          </ScrollArea>
 
-          {/* Submit Button */}
-          {!showSubcategories && (
-            <div className="pt-4 border-t border-border space-y-3">
-              <Button
-                type="submit"
-                size="lg"
-                className={cn(
-                  "w-full h-14 text-lg font-semibold rounded-xl shadow-lg transition-all duration-200",
-                  isSaving 
-                    ? "opacity-80" 
-                    : "active:scale-[0.98] shadow-primary/20 hover:shadow-xl hover:shadow-primary/30"
+                    {/* Payment Method */}
+                    <PaymentMethodSelector
+                      value={paymentMethod}
+                      onChange={setPaymentMethod}
+                      classification={classification}
+                    />
+
+                    {/* Check Number (for cheque payment) */}
+                    {needsCheckNumber && (
+                      <div className="space-y-2 animate-fade-in">
+                        <Label htmlFor="checkNumber" className="text-base flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          Número do Cheque <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          id="checkNumber"
+                          type="text"
+                          placeholder="Ex: 000123"
+                          value={checkNumber}
+                          onChange={(e) => setCheckNumber(e.target.value)}
+                          className="h-12 text-base rounded-xl border-2 focus-visible:ring-2 focus-visible:ring-primary/30"
+                          required
+                        />
+                      </div>
+                    )}
+
+                    {/* Financial Instrument Selector (Account/Card) */}
+                    <InstrumentSelector
+                      paymentMethod={paymentMethod}
+                      bankAccounts={bankAccounts}
+                      creditCards={creditCards}
+                      selectedAccountId={bankAccountId}
+                      selectedCardId={creditCardId}
+                      onAccountChange={setBankAccountId}
+                      onCardChange={setCreditCardId}
+                      onAddAccount={() => setShowQuickAccount(true)}
+                      onAddCard={() => setShowQuickCard(true)}
+                      required={true}
+                    />
+
+                    {/* Date */}
+                    <div className="space-y-2">
+                      <Label htmlFor="date" className="flex items-center gap-2 text-base">
+                        <Calendar className="w-4 h-4" />
+                        Data
+                        <span className="text-xs text-muted-foreground font-normal">
+                          ({formatDateDisplay(date)})
+                        </span>
+                      </Label>
+                      <Input
+                        id="date"
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="h-12 rounded-xl border-2 text-base focus-visible:ring-2 focus-visible:ring-primary/30"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div className="space-y-2">
+                      <Label htmlFor="description" className="text-base text-muted-foreground">
+                        Descrição <span className="text-xs">(opcional)</span>
+                      </Label>
+                      <Textarea
+                        id="description"
+                        placeholder="Ex: Supermercado, farmácia..."
+                        value={description}
+                        onChange={(e) => handleDescriptionChange(e.target.value)}
+                        className="resize-none rounded-xl border-2 text-base focus-visible:ring-2 focus-visible:ring-primary/30"
+                        rows={2}
+                      />
+                      {/* Suggestion Badge */}
+                      {suggestionApplied && suggestionSource !== 'none' && category && (
+                        <div className="flex items-center gap-2">
+                          <SuggestionBadge 
+                            source={suggestionSource} 
+                            confidence={suggestion?.confidence || 0.7}
+                            matchCount={suggestion?.matchCount}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCategory("");
+                              setSubcategory("");
+                              setSuggestionApplied(false);
+                              setSuggestionSource('none');
+                            }}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Alterar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
-                disabled={!amount || !category || (paymentMethod === "cheque" && !checkNumber.trim()) || isSaving}
-              >
-                {isSaving ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    Salvando...
-                  </span>
-                ) : (
-                  getSubmitLabel()
-                )}
-              </Button>
-              
-              {/* Microcopy */}
-              <p className="text-center text-xs text-muted-foreground/70">
-                Lançar em menos de 10 segundos 🚀
-              </p>
-            </div>
-          )}
-        </form>
-      </SheetContent>
-    </Sheet>
+              </div>
+            </ScrollArea>
+
+            {/* Submit Button */}
+            {!showSubcategories && (
+              <div className="pt-4 border-t border-border space-y-3">
+                <Button
+                  type="submit"
+                  size="lg"
+                  className={cn(
+                    "w-full h-14 text-lg font-semibold rounded-xl shadow-lg transition-all duration-200",
+                    isSaving 
+                      ? "opacity-80" 
+                      : "active:scale-[0.98] shadow-primary/20 hover:shadow-xl hover:shadow-primary/30"
+                  )}
+                  disabled={!isFormValid() || isSaving}
+                >
+                  {isSaving ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      Salvando...
+                    </span>
+                  ) : (
+                    getSubmitLabel()
+                  )}
+                </Button>
+                
+                {/* Microcopy */}
+                <p className="text-center text-xs text-muted-foreground/70">
+                  Lançar em menos de 10 segundos 🚀
+                </p>
+              </div>
+            )}
+          </form>
+        </SheetContent>
+      </Sheet>
+
+      {/* Quick Registration Modals */}
+      <QuickBankAccountSheet
+        open={showQuickAccount}
+        onOpenChange={setShowQuickAccount}
+        onSuccess={handleQuickAccountSuccess}
+      />
+      <QuickCreditCardSheet
+        open={showQuickCard}
+        onOpenChange={setShowQuickCard}
+        onSuccess={handleQuickCardSuccess}
+      />
+    </>
   );
 }
