@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Upload, FileSpreadsheet, File, AlertCircle, Check, Loader2, CreditCard, Building2, Calendar, X, TableIcon } from "lucide-react";
+import { ArrowLeft, Upload, FileSpreadsheet, File, AlertCircle, Check, Loader2, CreditCard, Building2, Calendar, X, TableIcon, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -417,6 +417,25 @@ export function ImportUploadPage() {
               </div>
             </div>
           </Link>
+
+          {/* Download Template CTA */}
+          <a
+            href="/downloads/Planilha_Padrao_OIK.xlsx"
+            download="Planilha_Padrao_OIK.xlsx"
+            className="block p-4 rounded-xl bg-muted/50 border border-border hover:bg-muted transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Download className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-foreground">Planilha padrão OIK</p>
+                <p className="text-sm text-muted-foreground">
+                  Baixe o modelo e importe quando quiser.
+                </p>
+              </div>
+            </div>
+          </a>
         </div>
       </main>
     </div>
