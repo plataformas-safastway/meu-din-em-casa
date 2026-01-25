@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Check, ChevronRight, Calendar, FileText, Sparkles } from "lucide-react";
+import { Check, ChevronRight, Calendar, FileText, Sparkles, Target } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { defaultCategories, getCategoryById, requiresBankAccount, requiresCreditCard } from "@/data/categories";
+import { defaultCategories, getCategoryById, requiresBankAccount, requiresCreditCard, GOALS_CATEGORY_ID, createGoalSubcategoryId } from "@/data/categories";
 import { useBankAccounts, useCreditCards } from "@/hooks/useBankData";
 import { useDebouncedSuggestion, useRecentCategories } from "@/hooks/useCategorySuggestion";
+import { useActiveGoals } from "@/hooks/useGoals";
 import { TransactionType, TransactionClassification, ExpenseType, PaymentMethod } from "@/types/finance";
 import { cn } from "@/lib/utils";
 import {
@@ -20,6 +21,7 @@ import {
   QuickBankAccountSheet,
   QuickCreditCardSheet,
 } from "@/components/transaction";
+import { GoalSelector } from "@/components/goals";
 
 interface AddTransactionSheetProps {
   open: boolean;
@@ -37,6 +39,7 @@ interface AddTransactionSheetProps {
     creditCardId?: string;
     description?: string;
     checkNumber?: string;
+    goalId?: string;
   }) => void;
   defaultType?: TransactionType;
 }
@@ -64,6 +67,7 @@ export function AddTransactionSheet({
   const [isSaving, setIsSaving] = useState(false);
   const [suggestionApplied, setSuggestionApplied] = useState(false);
   const [suggestionSource, setSuggestionSource] = useState<'history' | 'descriptor' | 'none'>('none');
+  const [linkedGoalId, setLinkedGoalId] = useState("");
   
   // Quick registration modals
   const [showQuickAccount, setShowQuickAccount] = useState(false);
@@ -75,7 +79,7 @@ export function AddTransactionSheet({
   const { data: creditCards = [], refetch: refetchCards } = useCreditCards();
   const { data: recentCategories = [] } = useRecentCategories();
   const { suggestion, updateDescription, clearSuggestion } = useDebouncedSuggestion();
-
+  const { data: activeGoals = [] } = useActiveGoals();
   // Derive transaction type from classification
   const type: TransactionType = classification === "income" ? "income" : "expense";
   
@@ -120,6 +124,7 @@ export function AddTransactionSheet({
     setCheckNumber("");
     setBankAccountId("");
     setCreditCardId("");
+    setLinkedGoalId("");
     // Reset to valid payment method for new type
     if (classification === "income" && (paymentMethod === "credit" || paymentMethod === "debit")) {
       setPaymentMethod("pix");
@@ -129,6 +134,17 @@ export function AddTransactionSheet({
       setPaymentMethod("transfer");
     }
   }, [classification]);
+
+  // Auto-set category when goal is linked
+  useEffect(() => {
+    if (linkedGoalId && linkedGoalId !== "_none") {
+      const goal = activeGoals.find(g => g.id === linkedGoalId);
+      if (goal) {
+        setCategory(GOALS_CATEGORY_ID);
+        setSubcategory(createGoalSubcategoryId(goal.title));
+      }
+    }
+  }, [linkedGoalId, activeGoals]);
 
   // Set classification based on defaultType when sheet opens
   useEffect(() => {
@@ -244,6 +260,7 @@ export function AddTransactionSheet({
         creditCardId: creditCardId || undefined,
         description: description || undefined,
         checkNumber: paymentMethod === "cheque" ? checkNumber.trim() : undefined,
+        goalId: linkedGoalId && linkedGoalId !== "_none" ? linkedGoalId : undefined,
       });
 
       // Reset form
@@ -258,6 +275,7 @@ export function AddTransactionSheet({
       setShowSubcategories(false);
       setSuggestionApplied(false);
       setSuggestionSource('none');
+      setLinkedGoalId("");
       clearSuggestion();
       onOpenChange(false);
     } finally {
@@ -534,6 +552,26 @@ export function AddTransactionSheet({
                         className="h-12 rounded-xl border-2 text-base focus-visible:ring-2 focus-visible:ring-primary/30"
                       />
                     </div>
+
+                    {/* Goal Linking (only for expenses) */}
+                    {type === "expense" && activeGoals.length > 0 && (
+                      <GoalSelector
+                        value={linkedGoalId}
+                        onChange={(goalId) => {
+                          setLinkedGoalId(goalId);
+                          // Clear manual category selection if goal selected
+                          if (goalId && goalId !== "_none") {
+                            const goal = activeGoals.find(g => g.id === goalId);
+                            if (goal) {
+                              setCategory(GOALS_CATEGORY_ID);
+                              setSubcategory(createGoalSubcategoryId(goal.title));
+                            }
+                          }
+                        }}
+                        showProgress={true}
+                        disabled={category === GOALS_CATEGORY_ID && !!subcategory && !linkedGoalId}
+                      />
+                    )}
 
                     {/* Description */}
                     <div className="space-y-2">

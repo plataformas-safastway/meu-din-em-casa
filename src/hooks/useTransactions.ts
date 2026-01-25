@@ -14,11 +14,13 @@ export interface TransactionInput {
   subcategory_id?: string | null;
   description?: string | null;
   date: string;
-  payment_method: "cash" | "debit" | "credit" | "pix" | "transfer";
+  payment_method: "cash" | "debit" | "credit" | "pix" | "transfer" | "boleto" | "cheque";
   bank_account_id?: string;
   credit_card_id?: string;
   is_recurring?: boolean;
   notes?: string;
+  // Goal linking
+  goal_id?: string;
   // Audit metadata - set automatically when not provided
   source?: TransactionSource;
   // OCR specific
@@ -155,19 +157,18 @@ export function useCreateTransaction() {
         subcategory_id: data.subcategory_id,
         description: data.description,
         date: data.date,
-        payment_method: data.payment_method,
+        payment_method: data.payment_method as any,
         bank_account_id: data.bank_account_id,
         credit_card_id: data.credit_card_id,
         is_recurring: data.is_recurring || false,
         notes: data.notes,
-        // Audit metadata
-        source: data.source || 'MANUAL',
+        goal_id: data.goal_id || null,
+        source: (data.source || 'MANUAL') as any,
         created_by_user_id: user?.id,
         created_by_name: familyMember?.display_name || user?.email?.split('@')[0] || 'Usuário',
-        // OCR specific
         ocr_confidence: data.ocr_confidence,
         original_description: data.original_description || data.description,
-      }).select("id").single();
+      } as any).select("id").single();
 
       if (error) throw error;
       return { id: inserted.id, ...data };
