@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { ArrowLeft, Search, Loader2, Trash2, Edit2, MoreVertical } from "lucide-react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { ArrowLeft, Search, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Transaction } from "@/types/finance";
 import { getCategoryById } from "@/data/categories";
-import { formatCurrency, formatFullDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { useAllTransactions, useDeleteTransaction } from "@/hooks/useTransactions";
+import { useDeleteTransaction } from "@/hooks/useTransactions";
+import { useTransactionsPaginated, flattenPaginatedTransactions } from "@/hooks/useTransactionsPaginated";
+import { VirtualizedTransactionList } from "@/components/VirtualizedTransactionList";
 import { EditTransactionSheet } from "@/components/EditTransactionSheet";
 import {
   AlertDialog,
@@ -18,12 +19,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface TransactionsPageProps {
   onBack: () => void;
@@ -31,66 +26,80 @@ interface TransactionsPageProps {
 
 export function TransactionsPage({ onBack }: TransactionsPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   
-  const { data: rawTransactions = [], isLoading } = useAllTransactions();
+  // Use paginated query with cursor-based pagination
+  const { 
+    data: paginatedData, 
+    isLoading, 
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useTransactionsPaginated(filterType);
+  
   const deleteTransaction = useDeleteTransaction();
 
-  // Transform database transactions to display format
-  const transactions: Transaction[] = rawTransactions.map(t => ({
-    id: t.id,
-    type: t.type as 'income' | 'expense',
-    amount: Number(t.amount),
-    category: t.category_id,
-    subcategory: t.subcategory_id || undefined,
-    date: t.date,
-    paymentMethod: t.payment_method as any,
-    description: t.description || undefined,
-    createdAt: t.created_at,
-  }));
+  // Debounce search to avoid re-filtering on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const filteredTransactions = transactions.filter(t => {
-    const matchesSearch = t.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         getCategoryById(t.category)?.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = filterType === 'all' || t.type === filterType;
-    return matchesSearch && matchesType;
-  });
+  // Transform and filter transactions (memoized)
+  const transactions: Transaction[] = useMemo(() => {
+    const rawTransactions = flattenPaginatedTransactions(paginatedData?.pages);
+    
+    return rawTransactions
+      .map(t => ({
+        id: t.id,
+        type: t.type as 'income' | 'expense',
+        amount: Number(t.amount),
+        category: t.category_id,
+        subcategory: t.subcategory_id || undefined,
+        date: t.date,
+        paymentMethod: t.payment_method as any,
+        description: t.description || undefined,
+        createdAt: t.created_at,
+      }))
+      .filter(t => {
+        if (!debouncedSearch) return true;
+        const searchLower = debouncedSearch.toLowerCase();
+        const matchesDesc = t.description?.toLowerCase().includes(searchLower);
+        const matchesCat = getCategoryById(t.category)?.name.toLowerCase().includes(searchLower);
+        return matchesDesc || matchesCat;
+      });
+  }, [paginatedData?.pages, debouncedSearch]);
 
-  // Group transactions by date
-  const groupedTransactions = filteredTransactions.reduce((acc, transaction) => {
-    const date = transaction.date;
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(transaction);
-    return acc;
-  }, {} as Record<string, Transaction[]>);
-
-  const sortedDates = Object.keys(groupedTransactions).sort((a, b) => 
-    new Date(b).getTime() - new Date(a).getTime()
-  );
-
-  const handleDeleteClick = (id: string) => {
+  const handleDeleteClick = useCallback((id: string) => {
     setTransactionToDelete(id);
     setDeleteDialogOpen(true);
-  };
+  }, []);
 
-  const handleEditClick = (transaction: Transaction) => {
+  const handleEditClick = useCallback((transaction: Transaction) => {
     setTransactionToEdit(transaction);
     setEditSheetOpen(true);
-  };
+  }, []);
 
-  const confirmDelete = () => {
+  const confirmDelete = useCallback(() => {
     if (transactionToDelete) {
       deleteTransaction.mutate(transactionToDelete);
     }
     setDeleteDialogOpen(false);
     setTransactionToDelete(null);
-  };
+  }, [transactionToDelete, deleteTransaction]);
+
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   if (isLoading) {
     return (
@@ -147,86 +156,18 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
         </div>
       </header>
 
-      {/* Transaction List */}
+      {/* Virtualized Transaction List */}
       <main className="container px-4 py-4">
-        {sortedDates.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              {transactions.length === 0 
-                ? "Nenhum lançamento registrado ainda." 
-                : "Nenhum lançamento encontrado."}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {sortedDates.map((date) => (
-              <div key={date}>
-                <h3 className="text-sm font-medium text-muted-foreground mb-3">
-                  {formatFullDate(date)}
-                </h3>
-                <div className="space-y-2">
-                  {groupedTransactions[date].map((transaction) => {
-                    const category = getCategoryById(transaction.category);
-                    const isExpense = transaction.type === 'expense';
-                    
-                    return (
-                      <div
-                        key={transaction.id}
-                        className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border/30"
-                      >
-                        <div 
-                          className="w-12 h-12 rounded-xl flex items-center justify-center text-xl"
-                          style={{ backgroundColor: `${category?.color}20` }}
-                        >
-                          {category?.icon || "📦"}
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground truncate">
-                            {transaction.description || category?.name}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {category?.name}
-                          </p>
-                        </div>
-
-                        <span className={cn(
-                          "font-semibold whitespace-nowrap",
-                          isExpense ? "text-destructive" : "text-success"
-                        )}>
-                          {isExpense ? "-" : "+"}{formatCurrency(transaction.amount)}
-                        </span>
-
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
-                              onClick={() => handleEditClick(transaction)}
-                            >
-                              <Edit2 className="h-4 w-4 mr-2" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => handleDeleteClick(transaction.id)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <VirtualizedTransactionList
+          transactions={transactions}
+          onTransactionClick={handleEditClick}
+          onEdit={handleEditClick}
+          onDelete={handleDeleteClick}
+          showActions
+          hasMore={!!hasNextPage && !debouncedSearch}
+          isLoadingMore={isFetchingNextPage}
+          onLoadMore={handleLoadMore}
+        />
       </main>
 
       {/* Delete Confirmation Dialog */}
