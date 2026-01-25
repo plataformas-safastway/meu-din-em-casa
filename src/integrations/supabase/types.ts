@@ -3844,6 +3844,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_family_invite: {
+        Args: {
+          invite_token: string
+          p_birth_date?: string
+          p_display_name: string
+          p_phone_country?: string
+          p_phone_e164?: string
+          p_profession?: string
+        }
+        Returns: {
+          error_message: string
+          family_id: string
+          member_id: string
+          success: boolean
+        }[]
+      }
       auto_reveal_expired_privacy: { Args: never; Returns: undefined }
       calculate_cs_signals: { Args: { _family_id: string }; Returns: Json }
       calculate_onboarding_progress: {
@@ -3863,6 +3879,20 @@ export type Database = {
       check_member_permission: {
         Args: { _family_id: string; _permission: string; _user_id: string }
         Returns: boolean
+      }
+      create_family_invite: {
+        Args: {
+          p_family_id: string
+          p_invited_email?: string
+          p_permissions?: Json
+          p_role?: string
+        }
+        Returns: {
+          error_message: string
+          expires_at: string
+          invite_id: string
+          token: string
+        }[]
       }
       expire_old_imports: { Args: never; Returns: undefined }
       get_engagement_metrics_report: { Args: never; Returns: Json }
@@ -3936,6 +3966,20 @@ export type Database = {
       user_is_family_admin: {
         Args: { _family_id: string; _user_id: string }
         Returns: boolean
+      }
+      validate_invite_token: {
+        Args: { invite_token: string }
+        Returns: {
+          error_message: string
+          family_id: string
+          family_name: string
+          invite_id: string
+          invited_email: string
+          inviter_name: string
+          is_valid: boolean
+          permissions: Json
+          role: string
+        }[]
       }
     }
     Enums: {
