@@ -24,7 +24,8 @@ import { useInsights } from "@/hooks/useInsights";
 import { useHomeSummary } from "@/hooks/useHomeSummary";
 import { useDebouncedLoading } from "@/hooks/useLoading";
 import { useOnboarding } from "@/hooks/useOnboarding";
-import { getCategoryById } from "@/data/categories";
+import { useSyncGoalFromTransaction } from "@/hooks/useGoalContributions";
+import { getCategoryById, GOALS_CATEGORY_ID } from "@/data/categories";
 import { Transaction, TransactionType } from "@/types/finance";
 import { OcrExtractedData } from "@/hooks/useReceiptCapture";
 import { toast } from "sonner";
@@ -106,6 +107,7 @@ export const Dashboard = memo(function Dashboard({
   const { insights } = useInsights();
   
   const createTransaction = useCreateTransaction();
+  const syncGoalFromTransaction = useSyncGoalFromTransaction();
   const { state: onboardingState } = useOnboarding();
 
   // Mark home render once we've mounted
@@ -185,18 +187,33 @@ export const Dashboard = memo(function Dashboard({
         payment_method: transaction.paymentMethod,
         bank_account_id: transaction.bankAccountId,
         credit_card_id: transaction.creditCardId,
+        // Goal linking - store goal_id directly on transaction
+        goal_id: transaction.goalId,
       });
 
+      // If this transaction is linked to a goal, sync the goal's current_amount
+      if (transaction.goalId && transaction.category === GOALS_CATEGORY_ID && transaction.subcategory) {
+        await syncGoalFromTransaction.mutateAsync({ subcategoryId: transaction.subcategory });
+      }
+
       const isIncome = transaction.type === "income";
-      toast.success(isIncome ? "Receita registrada! 💰" : "Despesa registrada com sucesso.", {
-        description: isIncome
-          ? "Ótimo! Cada entrada fortalece o orçamento da família."
-          : "Registrar é o primeiro passo para o controle financeiro.",
-      });
+      const isGoalContribution = transaction.goalId;
+      
+      if (isGoalContribution) {
+        toast.success("Aporte registrado! 🎯", {
+          description: "O valor foi adicionado ao seu objetivo.",
+        });
+      } else {
+        toast.success(isIncome ? "Receita registrada! 💰" : "Despesa registrada com sucesso.", {
+          description: isIncome
+            ? "Ótimo! Cada entrada fortalece o orçamento da família."
+            : "Registrar é o primeiro passo para o controle financeiro.",
+        });
+      }
     } catch (error) {
       toast.error("Erro ao salvar lançamento");
     }
-  }, [selectedMonth, selectedYear, selectedDate, createTransaction]);
+  }, [selectedMonth, selectedYear, selectedDate, createTransaction, syncGoalFromTransaction]);
 
   // Transform transactions for display - memoized
   const displayTransactions = useMemo(() => 

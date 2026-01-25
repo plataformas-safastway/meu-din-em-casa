@@ -20,10 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, PiggyBank, Building2, CreditCard } from "lucide-react";
+import { Loader2, PiggyBank, Building2, CreditCard, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatters";
-import { expensePaymentMethods } from "@/data/categories";
+import { expensePaymentMethods, requiresBankAccount, requiresCreditCard } from "@/data/categories";
+import { QuickBankAccountSheet, QuickCreditCardSheet } from "@/components/transaction";
 
 interface QuickContributionSheetProps {
   open: boolean;
@@ -39,22 +40,74 @@ export function QuickContributionSheet({ open, onOpenChange, goal }: QuickContri
   const [bankAccountId, setBankAccountId] = useState<string>("");
   const [creditCardId, setCreditCardId] = useState<string>("");
   
+  // Quick registration modals
+  const [showQuickAccount, setShowQuickAccount] = useState(false);
+  const [showQuickCard, setShowQuickCard] = useState(false);
+  
   const createContribution = useCreateContribution();
-  const { data: bankAccounts = [] } = useBankAccounts();
-  const { data: creditCards = [] } = useCreditCards();
+  const { data: bankAccounts = [], refetch: refetchAccounts } = useBankAccounts();
+  const { data: creditCards = [], refetch: refetchCards } = useCreditCards();
 
   const activeAccounts = bankAccounts.filter((a: { is_active: boolean }) => a.is_active);
   const activeCards = creditCards.filter((c: { is_active: boolean }) => c.is_active);
 
+  // Validation helpers
+  const needsAccount = requiresBankAccount(paymentMethod);
+  const needsCard = requiresCreditCard(paymentMethod);
+  
+  const hasValidInstrument = (): boolean => {
+    if (paymentMethod === 'cash') return true;
+    if (needsAccount) return activeAccounts.length > 0 && !!bankAccountId;
+    if (needsCard) return activeCards.length > 0 && !!creditCardId;
+    return true;
+  };
+
+  const showInstrumentWarning = (): boolean => {
+    if (paymentMethod === 'cash') return false;
+    if (needsAccount && activeAccounts.length === 0) return true;
+    if (needsCard && activeCards.length === 0) return true;
+    return false;
+  };
+
   // Reset source selection when payment method changes
   useEffect(() => {
-    if (paymentMethod !== 'credit') {
+    if (!needsCard) {
       setCreditCardId("");
     }
-    if (paymentMethod === 'credit') {
+    if (!needsAccount) {
       setBankAccountId("");
     }
-  }, [paymentMethod]);
+    
+    // Auto-select first instrument if only one exists
+    if (needsAccount && activeAccounts.length === 1 && !bankAccountId) {
+      setBankAccountId(activeAccounts[0].id);
+    }
+    if (needsCard && activeCards.length === 1 && !creditCardId) {
+      setCreditCardId(activeCards[0].id);
+    }
+  }, [paymentMethod, activeAccounts, activeCards, needsAccount, needsCard, bankAccountId, creditCardId]);
+
+  // Handle quick account registration success
+  const handleQuickAccountSuccess = async () => {
+    await refetchAccounts();
+    setTimeout(() => {
+      const accounts = bankAccounts.filter((a: { is_active: boolean }) => a.is_active);
+      if (accounts.length > 0) {
+        setBankAccountId(accounts[0].id);
+      }
+    }, 500);
+  };
+
+  // Handle quick card registration success  
+  const handleQuickCardSuccess = async () => {
+    await refetchCards();
+    setTimeout(() => {
+      const cards = creditCards.filter((c: { is_active: boolean }) => c.is_active);
+      if (cards.length > 0) {
+        setCreditCardId(cards[0].id);
+      }
+    }, 500);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +125,16 @@ export function QuickContributionSheet({ open, onOpenChange, goal }: QuickContri
       return;
     }
 
+    // Validate instrument requirement
+    if (needsAccount && !bankAccountId) {
+      toast.error("Selecione uma conta bancária");
+      return;
+    }
+    if (needsCard && !creditCardId) {
+      toast.error("Selecione um cartão de crédito");
+      return;
+    }
+
     try {
       await createContribution.mutateAsync({
         goal_id: goal.id,
@@ -79,8 +142,8 @@ export function QuickContributionSheet({ open, onOpenChange, goal }: QuickContri
         description: description || null,
         contributed_at: new Date(date).toISOString(),
         payment_method: paymentMethod as 'pix' | 'cash' | 'transfer' | 'debit' | 'credit' | 'cheque',
-        bank_account_id: bankAccountId && bankAccountId !== "_none" ? bankAccountId : undefined,
-        credit_card_id: creditCardId && creditCardId !== "_none" ? creditCardId : undefined,
+        bank_account_id: bankAccountId || undefined,
+        credit_card_id: creditCardId || undefined,
         goal: goal,
       });
       
@@ -105,164 +168,219 @@ export function QuickContributionSheet({ open, onOpenChange, goal }: QuickContri
     ? Math.min((Number(goal.current_amount || 0) / Number(goal.target_amount)) * 100, 100)
     : null;
 
-  const showBankAccountField = ['pix', 'transfer', 'debit', 'cash', 'cheque'].includes(paymentMethod) && activeAccounts.length > 0;
-  const showCreditCardField = paymentMethod === 'credit' && activeCards.length > 0;
+  const isFormValid = (): boolean => {
+    if (!amount || parseFloat(amount) <= 0) return false;
+    if (!date) return false;
+    return hasValidInstrument();
+  };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-auto max-h-[90vh] rounded-t-3xl overflow-y-auto">
-        <SheetHeader className="pb-4">
-          <SheetTitle className="flex items-center gap-2">
-            <PiggyBank className="w-5 h-5 text-primary" />
-            Adicionar Aporte
-          </SheetTitle>
-          <SheetDescription>
-            {goal?.title}
-          </SheetDescription>
-        </SheetHeader>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className="h-auto max-h-[90vh] rounded-t-3xl overflow-y-auto">
+          <SheetHeader className="pb-4">
+            <SheetTitle className="flex items-center gap-2">
+              <PiggyBank className="w-5 h-5 text-primary" />
+              Adicionar Aporte
+            </SheetTitle>
+            <SheetDescription>
+              {goal?.title}
+            </SheetDescription>
+          </SheetHeader>
 
-        {goal && (
-          <div className="mb-4 p-3 rounded-xl bg-muted/50">
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-muted-foreground">Investido atual</span>
-              <span className="font-medium">{formatCurrency(Number(goal.current_amount || 0))}</span>
+          {goal && (
+            <div className="mb-4 p-3 rounded-xl bg-muted/50">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-muted-foreground">Investido atual</span>
+                <span className="font-medium">{formatCurrency(Number(goal.current_amount || 0))}</span>
+              </div>
+              {goal.target_amount && (
+                <>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-muted-foreground">Meta</span>
+                    <span className="font-medium">{formatCurrency(Number(goal.target_amount))}</span>
+                  </div>
+                  {progress !== null && (
+                    <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="absolute left-0 top-0 h-full rounded-full bg-primary transition-all duration-500"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-            {goal.target_amount && (
-              <>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Meta</span>
-                  <span className="font-medium">{formatCurrency(Number(goal.target_amount))}</span>
-                </div>
-                {progress !== null && (
-                  <div className="relative h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="absolute left-0 top-0 h-full rounded-full bg-primary transition-all duration-500"
-                      style={{ width: `${progress}%` }}
-                    />
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contribution-amount">Valor (R$) *</Label>
+                <Input
+                  id="contribution-amount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0,00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contribution-date">Data *</Label>
+                <Input
+                  id="contribution-date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment-method">Forma de Pagamento *</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger id="payment-method">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {expensePaymentMethods.map((method) => (
+                    <SelectItem key={method.id} value={method.id}>
+                      <span className="flex items-center gap-2">
+                        <span>{method.icon}</span>
+                        <span>{method.name}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Bank Account Selector */}
+            {needsAccount && (
+              <div className="space-y-2">
+                <Label htmlFor="bank-account" className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4" />
+                  Conta Bancária *
+                </Label>
+                {activeAccounts.length > 0 ? (
+                  <Select value={bankAccountId} onValueChange={setBankAccountId}>
+                    <SelectTrigger id="bank-account">
+                      <SelectValue placeholder="Selecione a conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activeAccounts.map((account: { id: string; nickname: string; banks?: { name: string } | null }) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.nickname} {account.banks?.name ? `(${account.banks.name})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="p-3 rounded-xl border-2 border-dashed border-warning/50 bg-warning/5">
+                    <div className="flex items-center gap-2 text-warning mb-2">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-sm font-medium">Nenhuma conta cadastrada</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setShowQuickAccount(true)}
+                    >
+                      <Building2 className="w-4 h-4 mr-2" />
+                      Cadastrar conta agora
+                    </Button>
                   </div>
                 )}
-              </>
+              </div>
             )}
-          </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+            {/* Credit Card Selector */}
+            {needsCard && (
+              <div className="space-y-2">
+                <Label htmlFor="credit-card" className="flex items-center gap-2">
+                  <CreditCard className="w-4 h-4" />
+                  Cartão de Crédito *
+                </Label>
+                {activeCards.length > 0 ? (
+                  <Select value={creditCardId} onValueChange={setCreditCardId}>
+                    <SelectTrigger id="credit-card">
+                      <SelectValue placeholder="Selecione o cartão" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activeCards.map((card: { id: string; card_name: string; brand: string }) => (
+                        <SelectItem key={card.id} value={card.id}>
+                          {card.card_name} ({card.brand.toUpperCase()})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="p-3 rounded-xl border-2 border-dashed border-warning/50 bg-warning/5">
+                    <div className="flex items-center gap-2 text-warning mb-2">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-sm font-medium">Nenhum cartão cadastrado</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setShowQuickCard(true)}
+                    >
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Cadastrar cartão agora
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="contribution-amount">Valor (R$) *</Label>
-              <Input
-                id="contribution-amount"
-                type="number"
-                step="0.01"
-                min="0.01"
-                placeholder="0,00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                autoFocus
+              <Label htmlFor="contribution-description">Observação (opcional)</Label>
+              <Textarea
+                id="contribution-description"
+                placeholder="Ex: Salário de janeiro"
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="contribution-date">Data *</Label>
-              <Input
-                id="contribution-date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" className="flex-1" disabled={!isFormValid() || createContribution.isPending}>
+                {createContribution.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Adicionar
+              </Button>
             </div>
-          </div>
+          </form>
+        </SheetContent>
+      </Sheet>
 
-          <div className="space-y-2">
-            <Label htmlFor="payment-method">Forma de Pagamento</Label>
-            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger id="payment-method">
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                {expensePaymentMethods.map((method) => (
-                  <SelectItem key={method.id} value={method.id}>
-                    <span className="flex items-center gap-2">
-                      <span>{method.icon}</span>
-                      <span>{method.name}</span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {showBankAccountField && (
-            <div className="space-y-2">
-              <Label htmlFor="bank-account" className="flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
-                Conta Bancária
-              </Label>
-              <Select value={bankAccountId} onValueChange={setBankAccountId}>
-              <SelectTrigger id="bank-account">
-                <SelectValue placeholder="Selecione a conta (opcional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_none">Nenhuma</SelectItem>
-                {activeAccounts.map((account: { id: string; nickname: string; banks?: { name: string } | null }) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.nickname} {account.banks?.name ? `(${account.banks.name})` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            </div>
-          )}
-
-          {showCreditCardField && (
-            <div className="space-y-2">
-              <Label htmlFor="credit-card" className="flex items-center gap-2">
-                <CreditCard className="w-4 h-4" />
-                Cartão de Crédito
-              </Label>
-              <Select value={creditCardId} onValueChange={setCreditCardId}>
-              <SelectTrigger id="credit-card">
-                <SelectValue placeholder="Selecione o cartão (opcional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_none">Nenhum</SelectItem>
-                {activeCards.map((card: { id: string; card_name: string; brand: string }) => (
-                  <SelectItem key={card.id} value={card.id}>
-                    {card.card_name} ({card.brand.toUpperCase()})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="contribution-description">Observação (opcional)</Label>
-            <Textarea
-              id="contribution-description"
-              placeholder="Ex: Salário de janeiro"
-              rows={2}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" className="flex-1" disabled={createContribution.isPending}>
-              {createContribution.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Adicionar
-            </Button>
-          </div>
-        </form>
-      </SheetContent>
-    </Sheet>
+      {/* Quick Registration Modals */}
+      <QuickBankAccountSheet
+        open={showQuickAccount}
+        onOpenChange={setShowQuickAccount}
+        onSuccess={handleQuickAccountSuccess}
+      />
+      <QuickCreditCardSheet
+        open={showQuickCard}
+        onOpenChange={setShowQuickCard}
+        onSuccess={handleQuickCardSuccess}
+      />
+    </>
   );
 }
