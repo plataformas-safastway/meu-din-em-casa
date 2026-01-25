@@ -1,10 +1,8 @@
 import { useState, useMemo, useEffect, memo, useCallback } from "react";
 import { Header } from "@/components/Header";
 import { MonthSelector } from "@/components/MonthSelector";
-import { GlobalBalanceCard } from "@/components/home/GlobalBalanceCard";
-import { CreditCardsPreviewCard } from "@/components/home/CreditCardsPreviewCard";
+import { FamilyStatusCard, DailyFocusCard, CollapsibleSection, CreditCardsPreviewCard } from "@/components/home";
 import { QuickActions } from "@/components/QuickActions";
-import { InsightList } from "@/components/InsightCard";
 import { CategoryChart } from "@/components/CategoryChart";
 import { GoalsWidget } from "@/components/goals/GoalsWidget";
 import { TransactionList } from "@/components/TransactionList";
@@ -15,11 +13,11 @@ import { FabButton } from "@/components/QuickActions";
 import { SkeletonHome } from "@/components/ui/money-loader";
 import { WelcomeModal, OnboardingChecklist } from "@/components/onboarding";
 import { BudgetAlertsWidget } from "@/components/budget";
-import { ProjectionPreviewWidget } from "@/components/projection";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions, useFinanceSummary, useCreateTransaction, useTransactionsLast6Months } from "@/hooks/useTransactions";
 import { useInsights } from "@/hooks/useInsights";
 import { useHomeSummary } from "@/hooks/useHomeSummary";
+import { useBudgetAlerts } from "@/hooks/useBudgets";
 import { useDebouncedLoading } from "@/hooks/useLoading";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { getCategoryById } from "@/data/categories";
@@ -28,6 +26,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { markHomeRender } from "@/lib/performance";
+import { motion } from "framer-motion";
 
 interface DashboardProps {
   onSettingsClick?: () => void;
@@ -44,7 +43,6 @@ interface DashboardProps {
 const MemoizedQuickActions = memo(QuickActions);
 const MemoizedGoalsWidget = memo(GoalsWidget);
 const MemoizedBudgetAlertsWidget = memo(BudgetAlertsWidget);
-const MemoizedProjectionPreviewWidget = memo(ProjectionPreviewWidget);
 const MemoizedMonthlyChart = memo(MonthlyChart);
 const MemoizedCategoryChart = memo(CategoryChart);
 
@@ -74,17 +72,19 @@ export const Dashboard = memo(function Dashboard({
   const { data: homeSummary, isLoading: loadingHomeSummary, isFetched: homeSummaryFetched } = useHomeSummary(selectedMonth, selectedYear);
   
   // SECONDARY: These load after home summary, only for detailed views
-  // Defer loading transactions until home summary is ready
   const { data: transactions = [], isLoading: loadingTransactions } = useTransactions(
     selectedMonth, 
     selectedYear,
-    { enabled: homeSummaryFetched } // Only fetch after home summary
+    { enabled: homeSummaryFetched }
   );
   const { data: summary, isLoading: loadingSummary } = useFinanceSummary(
     selectedMonth, 
     selectedYear,
     { enabled: homeSummaryFetched }
   );
+  
+  // Budget alerts for focus card
+  const { data: budgetAlertsData = [] } = useBudgetAlerts(selectedMonth, selectedYear);
   
   // DEFERRED: These load lazily for charts (not critical for first paint)
   const { data: last6MonthsTransactions = [] } = useTransactionsLast6Months(
@@ -105,7 +105,7 @@ export const Dashboard = memo(function Dashboard({
     }
   }, [hasMarkedRender]);
 
-  // Get user's first name for greeting - memoized
+  // Get user's first name for greeting
   const userName = useMemo(() => {
     if (homeSummary?.greeting?.firstName) {
       return homeSummary.greeting.firstName;
@@ -119,7 +119,18 @@ export const Dashboard = memo(function Dashboard({
     return "Usuário";
   }, [homeSummary?.greeting?.firstName, user?.user_metadata?.display_name, family?.name]);
 
-  // Memoized callbacks to prevent child re-renders
+  // Budget alerts for focus card
+  const budgetAlerts = useMemo(() => {
+    return budgetAlertsData
+      .filter((b) => b.percentage >= 80)
+      .map((b) => ({
+        category: getCategoryById(b.budget.category_id)?.name || "Categoria",
+        usedPercent: b.percentage,
+      }))
+      .slice(0, 3);
+  }, [budgetAlertsData]);
+
+  // Memoized callbacks
   const handleAddIncome = useCallback(() => {
     setDefaultTransactionType("income");
     setIsSheetOpen(true);
@@ -133,10 +144,6 @@ export const Dashboard = memo(function Dashboard({
   const handleAddGoal = useCallback(() => {
     onGoalsClick?.();
   }, [onGoalsClick]);
-
-  const handleViewReceipts = useCallback(() => {
-    toast.info("Em breve! Vocês poderão anexar recibos aos lançamentos.");
-  }, []);
 
   const handleTransactionClick = useCallback((transaction: Transaction) => {
     setTransactionToEdit(transaction);
@@ -176,7 +183,7 @@ export const Dashboard = memo(function Dashboard({
     }
   }, [selectedMonth, selectedYear, selectedDate, createTransaction]);
 
-  // Transform transactions for display - memoized
+  // Transform transactions for display
   const displayTransactions = useMemo(() => 
     transactions.map((t: any) => ({
       id: t.id,
@@ -192,7 +199,7 @@ export const Dashboard = memo(function Dashboard({
     })),
   [transactions]);
 
-  // Transform expenses by category for chart - memoized
+  // Transform expenses by category for chart
   const categoryExpenses = useMemo(() => {
     if (!summary?.expensesByCategory) return [];
     
@@ -211,18 +218,16 @@ export const Dashboard = memo(function Dashboard({
     }).sort((a, b) => b.amount - a.amount);
   }, [summary?.expensesByCategory, summary?.expenses]);
 
-  // Monthly data from real transactions - memoized
+  // Monthly data from real transactions
   const monthlyData = useMemo(() => {
     if (last6MonthsTransactions.length === 0) return [];
     
-    // Find the range of months with transactions
     const transactionDates = last6MonthsTransactions.map((t: any) => new Date(t.date));
     const minDate = new Date(Math.min(...transactionDates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...transactionDates.map(d => d.getTime())));
     
     const months: { month: string; income: number; expenses: number }[] = [];
     
-    // Start from the first month with data
     let currentDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
     const endDate = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
     
@@ -231,7 +236,6 @@ export const Dashboard = memo(function Dashboard({
       const yearNum = currentDate.getFullYear();
       const monthLabel = format(currentDate, "MMM", { locale: ptBR });
       
-      // Filter transactions for this month
       const monthTransactions = last6MonthsTransactions.filter((t: any) => {
         const tDate = new Date(t.date);
         return tDate.getMonth() === monthNum && tDate.getFullYear() === yearNum;
@@ -251,19 +255,17 @@ export const Dashboard = memo(function Dashboard({
         expenses
       });
       
-      // Move to next month
       currentDate = new Date(yearNum, monthNum + 1, 1);
     }
     
     return months;
   }, [last6MonthsTransactions]);
 
-  // Only wait for home summary for first render (skeleton state)
+  // Loading state
   const isLoading = loadingHomeSummary;
   const showLoading = useDebouncedLoading(isLoading, { delay: 300, minDuration: 500 });
 
-  // Memoized callbacks for navigation
-  const handleLearnMoreAccounts = useCallback(() => onLearnMore?.("accounts"), [onLearnMore]);
+  // Navigation callbacks
   const handleLearnMoreCards = useCallback(() => onLearnMore?.("cards"), [onLearnMore]);
   const handleOpenSheet = useCallback(() => setIsSheetOpen(true), []);
   const handleCloseSheet = useCallback((open: boolean) => setIsSheetOpen(open), []);
@@ -294,68 +296,132 @@ export const Dashboard = memo(function Dashboard({
           <OnboardingChecklist />
         )}
 
-        {/* Global Balance Card with Accounts Preview */}
-        <GlobalBalanceCard
+        {/* ═══════════════════════════════════════════════════════════════
+            BLOCO 1 — ESTADO FINANCEIRO DA FAMÍLIA (PRIMEIRA DOBRA)
+            Card de leitura única: status emocional + saldo/receita/despesa
+        ═══════════════════════════════════════════════════════════════ */}
+        <FamilyStatusCard
           balance={homeSummary?.balanceGlobal ?? summary?.balance ?? 0}
           income={homeSummary?.income ?? summary?.income ?? 0}
           expenses={homeSummary?.expenses ?? summary?.expenses ?? 0}
           savingsRate={homeSummary?.savingsRate ?? summary?.savingsRate ?? 0}
-          accounts={homeSummary?.accountsPreview ?? []}
-          hasMoreAccounts={homeSummary?.hasMoreAccounts ?? false}
-          totalAccounts={homeSummary?.totalAccounts ?? 0}
-          onLearnMore={handleLearnMoreAccounts}
         />
 
-        {/* Credit Cards Preview Card */}
-        <CreditCardsPreviewCard
-          cards={homeSummary?.creditCardsPreview ?? []}
-          hasMoreCards={homeSummary?.hasMoreCreditCards ?? false}
-          totalCards={homeSummary?.totalCreditCards ?? 0}
-          totalBill={homeSummary?.totalCreditCardBill ?? 0}
+        {/* ═══════════════════════════════════════════════════════════════
+            BLOCO 2 — FOCO DO DIA (INSIGHT ÚNICO)
+            1 insight prioritário, nunca lista
+        ═══════════════════════════════════════════════════════════════ */}
+        <DailyFocusCard
+          insights={insights}
           bestCardSuggestion={homeSummary?.bestCardSuggestion ?? null}
-          onLearnMore={handleLearnMoreCards}
-          onAddCard={onBanksClick}
+          budgetAlerts={budgetAlerts}
         />
 
-        {/* Quick Actions */}
-        <MemoizedQuickActions
-          onAddIncome={handleAddIncome}
-          onAddExpense={handleAddExpense}
-          onAddGoal={handleAddGoal}
-        />
+        {/* ═══════════════════════════════════════════════════════════════
+            BLOCO 3 — AÇÕES RÁPIDAS (1 CLIQUE)
+            Receita, Despesa, Objetivo, Importar
+        ═══════════════════════════════════════════════════════════════ */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <MemoizedQuickActions
+            onAddIncome={handleAddIncome}
+            onAddExpense={handleAddExpense}
+            onAddGoal={handleAddGoal}
+          />
+          <p className="text-xs text-muted-foreground text-center mt-2 opacity-70">
+            Registrar agora evita ruído depois.
+          </p>
+        </motion.div>
 
-        {/* Insights */}
-        {insights.length > 0 && <InsightList insights={insights} />}
+        {/* ═══════════════════════════════════════════════════════════════
+            BLOCO 4 — CONTEXTO (COLAPSÁVEL)
+            Dados tradicionais: cartões, metas, orçamento, gráficos, extrato
+        ═══════════════════════════════════════════════════════════════ */}
 
-        {/* Goals Widget */}
-        <MemoizedGoalsWidget onViewAll={onGoalsClick} />
+        {/* Credit Cards Preview - collapsible */}
+        {(homeSummary?.creditCardsPreview?.length ?? 0) > 0 && (
+          <CollapsibleSection
+            title="Cartões de Crédito"
+            defaultOpen={false}
+            onViewAll={handleLearnMoreCards}
+            viewAllLabel="Gerenciar"
+          >
+            <CreditCardsPreviewCard
+              cards={homeSummary?.creditCardsPreview ?? []}
+              hasMoreCards={homeSummary?.hasMoreCreditCards ?? false}
+              totalCards={homeSummary?.totalCreditCards ?? 0}
+              totalBill={homeSummary?.totalCreditCardBill ?? 0}
+              bestCardSuggestion={null}
+              onLearnMore={handleLearnMoreCards}
+              onAddCard={onBanksClick}
+            />
+          </CollapsibleSection>
+        )}
 
-        {/* Budget & Projection Widgets */}
-        <div className="grid gap-4 md:grid-cols-2">
+        {/* Goals Widget - collapsible */}
+        <CollapsibleSection
+          title="Objetivos"
+          defaultOpen={false}
+          onViewAll={onGoalsClick}
+          viewAllLabel="Ver todos"
+        >
+          <MemoizedGoalsWidget onViewAll={onGoalsClick} />
+        </CollapsibleSection>
+
+        {/* Budget Alerts - collapsible */}
+        <CollapsibleSection
+          title="Orçamento"
+          defaultOpen={false}
+          onViewAll={onBudgetsClick}
+          viewAllLabel="Gerenciar"
+        >
           <MemoizedBudgetAlertsWidget 
             month={selectedMonth} 
             year={selectedYear} 
             onViewAll={onBudgetsClick}
             limit={3}
           />
-          <MemoizedProjectionPreviewWidget onViewAll={onProjectionClick} />
-        </div>
+        </CollapsibleSection>
 
-        {/* Charts Grid - only render when we have data */}
-        {categoryExpenses.length > 0 && (
-          <div className="grid gap-4 md:grid-cols-2">
-            <MemoizedCategoryChart categories={categoryExpenses} onViewAll={onCategoriesClick} />
+        {/* Monthly Evolution Chart - collapsible */}
+        {monthlyData.length > 0 && (
+          <CollapsibleSection
+            title="Evolução Mensal"
+            defaultOpen={false}
+          >
             <MemoizedMonthlyChart data={monthlyData} />
-          </div>
+          </CollapsibleSection>
         )}
 
-        {/* Recent Transactions */}
-        <TransactionList 
-          transactions={displayTransactions} 
-          limit={5} 
-          onTransactionClick={handleTransactionClick}
+        {/* Category Chart - collapsible */}
+        {categoryExpenses.length > 0 && (
+          <CollapsibleSection
+            title="Despesas por Categoria"
+            defaultOpen={false}
+            onViewAll={onCategoriesClick}
+            viewAllLabel="Ver detalhes"
+          >
+            <MemoizedCategoryChart categories={categoryExpenses} onViewAll={onCategoriesClick} />
+          </CollapsibleSection>
+        )}
+
+        {/* Recent Transactions - collapsible */}
+        <CollapsibleSection
+          title="Últimos Lançamentos"
+          defaultOpen={false}
           onViewAll={onTransactionsClick}
-        />
+          viewAllLabel="Ver extrato"
+        >
+          <TransactionList 
+            transactions={displayTransactions} 
+            limit={5} 
+            onTransactionClick={handleTransactionClick}
+            onViewAll={onTransactionsClick}
+          />
+        </CollapsibleSection>
       </main>
 
       {/* Floating Action Button */}
