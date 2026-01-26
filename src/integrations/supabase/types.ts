@@ -4866,6 +4866,7 @@ export type Database = {
         | "customer_success"
         | "diretoria"
         | "gestao_estrategica"
+        | "legal"
       bank_account_type: "checking" | "savings" | "digital" | "salary"
       card_brand: "visa" | "mastercard" | "elo" | "amex" | "hipercard"
       card_charge_type: "ONE_SHOT" | "INSTALLMENT" | "RECURRENT"
@@ -5031,6 +5032,7 @@ export const Constants = {
         "customer_success",
         "diretoria",
         "gestao_estrategica",
+        "legal",
       ],
       bank_account_type: ["checking", "savings", "digital", "salary"],
       card_brand: ["visa", "mastercard", "elo", "amex", "hipercard"],
