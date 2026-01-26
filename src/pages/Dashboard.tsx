@@ -11,6 +11,7 @@ import { TransactionList } from "@/components/TransactionList";
 import { MonthlyChart } from "@/components/MonthlyChart";
 import { AddTransactionSheet } from "@/components/AddTransactionSheet";
 import { EditTransactionSheet } from "@/components/EditTransactionSheet";
+import { AddCreditCardSheet } from "@/components/AddCreditCardSheet";
 import { FabButton } from "@/components/QuickActions";
 import { SkeletonHome } from "@/components/ui/money-loader";
 import { WelcomeModal, OnboardingChecklist } from "@/components/onboarding";
@@ -74,6 +75,9 @@ export const Dashboard = memo(function Dashboard({
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [hasMarkedRender, setHasMarkedRender] = useState(false);
+  
+  // Credit card sheet state (for direct CTA from home)
+  const [addCreditCardOpen, setAddCreditCardOpen] = useState(false);
   
   // Receipt capture state
   const [receiptCaptureOpen, setReceiptCaptureOpen] = useState(false);
@@ -317,6 +321,11 @@ export const Dashboard = memo(function Dashboard({
   const handleLearnMoreAccounts = useCallback(() => onLearnMore?.("accounts"), [onLearnMore]);
   const handleLearnMoreCards = useCallback(() => onLearnMore?.("cards"), [onLearnMore]);
   const handleOpenSheet = useCallback(() => setIsSheetOpen(true), []);
+  
+  // Direct credit card CTA - opens AddCreditCardSheet directly from Home
+  const handleAddCreditCardFromHome = useCallback(() => {
+    setAddCreditCardOpen(true);
+  }, []);
   const handleCloseSheet = useCallback((open: boolean) => setIsSheetOpen(open), []);
   const handleCloseEditSheet = useCallback((open: boolean) => setEditSheetOpen(open), []);
 
@@ -368,7 +377,7 @@ export const Dashboard = memo(function Dashboard({
           totalBill={homeSummary?.totalCreditCardBill ?? 0}
           bestCardSuggestion={homeSummary?.bestCardSuggestion ?? null}
           onLearnMore={handleLearnMoreCards}
-          onAddCard={onBanksClick}
+          onAddCard={handleAddCreditCardFromHome}
         />
 
         {/* Quick Actions */}
@@ -448,6 +457,12 @@ export const Dashboard = memo(function Dashboard({
         extractedData={extractedReceiptData}
         imageFile={receiptImageFile}
         imagePreview={receiptImagePreview}
+      />
+
+      {/* Add Credit Card Sheet - direct from Home CTA */}
+      <AddCreditCardSheet
+        open={addCreditCardOpen}
+        onOpenChange={setAddCreditCardOpen}
       />
     </div>
   );
