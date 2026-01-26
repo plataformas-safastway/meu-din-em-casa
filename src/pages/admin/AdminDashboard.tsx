@@ -83,8 +83,10 @@ import { useExecutiveAccess } from "@/hooks/useExecutiveReports";
 import { useLegalAccess } from "@/hooks/useLegalAccess";
 import { ForcePasswordChangeModal } from "@/components/auth/ForcePasswordChangeModal";
 import { CreateMasterUserSheet } from "@/components/admin/CreateMasterUserSheet";
+import { AdminUsersManagementPage } from "./AdminUsersManagementPage";
+import { useCanManageAdmins } from "@/hooks/useAdminUsers";
 
-type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings" 
+type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings" | "admin-users"
   | "fin-overview" | "fin-users" | "fin-payments" | "fin-invoices" | "fin-reports" | "fin-audit"
   | "sup-errors" | "sup-users" | "sup-audit"
   | "cs-overview" | "cs-users" | "cs-automation" | "cs-health" | "cs-audit" | "cs-lgpd"
@@ -106,6 +108,7 @@ export function AdminDashboard() {
   const { data: hasLegalAccess } = useLegalAccess();
   const { data: userAccess } = useUserAccess();
   const { data: mustChangePassword, refetch: refetchPasswordCheck } = useMustChangePassword();
+  const { data: canManageAdmins } = useCanManageAdmins();
 
   const handleSignOut = async () => {
     await signOut();
@@ -118,6 +121,7 @@ export function AdminDashboard() {
     { id: "ebooks" as AdminTab, label: "eBooks", icon: BookOpen },
     { id: "metrics" as AdminTab, label: "Métricas", icon: BarChart3 },
     { id: "openfinance" as AdminTab, label: "Open Finance", icon: Building2 },
+    ...(canManageAdmins ? [{ id: "admin-users" as AdminTab, label: "Usuários Admin", icon: UserCog }] : []),
     ...(isAdmin ? [{ id: "settings" as AdminTab, label: "Configurações", icon: Settings }] : []),
   ];
 
@@ -212,6 +216,8 @@ export function AdminDashboard() {
         return <AdminMetricsPage />;
       case "openfinance":
         return <AdminOpenFinancePage />;
+      case "admin-users":
+        return canManageAdmins ? <AdminUsersManagementPage /> : <AccessDenied message="Acesso restrito a MASTER e ADMIN" />;
       case "settings":
         return <AdminSettingsPlaceholder />;
       case "fin-overview":
