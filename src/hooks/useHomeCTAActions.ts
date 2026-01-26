@@ -5,7 +5,7 @@
 
 import { useCallback } from 'react';
 import { useCTARouter } from './useCTARouter';
-import { CTADefaultMode, toMonthRef } from '@/types/navigation';
+import { CTADefaultMode, CTATargetScreen, toMonthRef } from '@/types/navigation';
 
 interface UseHomeCTAActionsParams {
   /** Navigation function */
@@ -314,6 +314,71 @@ export function useHomeCTAActions({ navigate, monthRef }: UseHomeCTAActionsParam
   }, [buildCTARequest, handleHomeCTA, navigate, currentMonthRef]);
 
   // ==========================================
+  // UPCOMING DUES CTAs
+  // ==========================================
+
+  /** View all upcoming dues */
+  const onUpcomingDuesViewAll = useCallback(() => {
+    const request = buildCTARequest({
+      targetScreen: 'projection',
+      defaultMode: CTADefaultMode.DETAILS,
+      slot: 'upcoming_due',
+      entityType: 'recurring',
+      monthRef: currentMonthRef,
+      actionName: 'view_all_dues',
+    });
+    handleHomeCTA(request, navigate);
+  }, [buildCTARequest, handleHomeCTA, navigate, currentMonthRef]);
+
+  // ==========================================
+  // INSIGHT CTAs
+  // ==========================================
+
+  /** View all insights */
+  const onInsightsViewAll = useCallback(() => {
+    const request = buildCTARequest({
+      targetScreen: 'reports',
+      defaultMode: CTADefaultMode.DETAILS,
+      slot: 'insight',
+      entityType: 'category',
+      monthRef: currentMonthRef,
+      actionName: 'view_insights',
+    });
+    handleHomeCTA(request, navigate);
+  }, [buildCTARequest, handleHomeCTA, navigate, currentMonthRef]);
+
+  /** Handle insight click (navigate to related screen) */
+  const onInsightClick = useCallback((insightId: string, targetScreen?: CTATargetScreen) => {
+    const request = buildCTARequest({
+      targetScreen: targetScreen || 'reports',
+      defaultMode: CTADefaultMode.DETAILS,
+      slot: 'insight',
+      entityType: 'category',
+      entityId: insightId,
+      monthRef: currentMonthRef,
+      actionName: 'insight_action',
+    });
+    handleHomeCTA(request, navigate);
+  }, [buildCTARequest, handleHomeCTA, navigate, currentMonthRef]);
+
+  // ==========================================
+  // CATEGORY CTAs
+  // ==========================================
+
+  /** View all categories */
+  const onCategoriesViewAll = useCallback(() => {
+    const request = buildCTARequest({
+      targetScreen: 'categories',
+      defaultMode: CTADefaultMode.DETAILS,
+      slot: 'budget',
+      entityType: 'category',
+      monthRef: currentMonthRef,
+      actionName: 'view_categories',
+    });
+    handleHomeCTA(request, navigate);
+  }, [buildCTARequest, handleHomeCTA, navigate, currentMonthRef]);
+
+  // ==========================================
   // PROJECTION CTAs
   // ==========================================
 
@@ -398,5 +463,15 @@ export function useHomeCTAActions({ navigate, monthRef }: UseHomeCTAActionsParam
     // Transaction List
     onTransactionsViewAll,
     onTransactionEdit,
+    
+    // Upcoming Dues
+    onUpcomingDuesViewAll,
+    
+    // Insights
+    onInsightsViewAll,
+    onInsightClick,
+    
+    // Categories
+    onCategoriesViewAll,
   };
 }

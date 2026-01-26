@@ -104,7 +104,12 @@ export function UpcomingDuesCard({ maxItems = 5, onViewAll, className }: Upcomin
   );
 }
 
-function DueItem({ due }: { due: UpcomingDue }) {
+interface DueItemProps {
+  due: UpcomingDue;
+  onClick?: () => void;
+}
+
+function DueItem({ due, onClick }: DueItemProps) {
   const config = statusConfig[due.status];
   
   const formatDueText = () => {
@@ -121,12 +126,16 @@ function DueItem({ due }: { due: UpcomingDue }) {
   };
 
   return (
-    <div className={cn(
-      "flex items-center justify-between p-3 rounded-lg border",
-      "hover:bg-muted/50 transition-colors",
-      due.status === 'overdue' && "border-destructive/30",
-      due.status === 'urgent' && "border-destructive/20",
-    )}>
+    <div 
+      className={cn(
+        "flex items-center justify-between p-3 rounded-lg border",
+        "hover:bg-muted/50 transition-colors",
+        due.status === 'overdue' && "border-destructive/30",
+        due.status === 'urgent' && "border-destructive/20",
+        onClick && "cursor-pointer"
+      )}
+      onClick={onClick}
+    >
       <div className="flex items-center gap-3 min-w-0">
         <div className={cn(
           "p-2 rounded-full",

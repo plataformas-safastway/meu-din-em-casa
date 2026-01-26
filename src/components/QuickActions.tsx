@@ -1,6 +1,5 @@
-import { Plus, ArrowUpCircle, ArrowDownCircle, Target, Upload, Lock, Camera } from "lucide-react";
+import { Plus, ArrowUpCircle, ArrowDownCircle, Upload, Lock, Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useHasPermission } from "@/hooks/useFamilyPermissions";
 import { toast } from "sonner";
@@ -8,25 +7,12 @@ import { toast } from "sonner";
 interface QuickActionsProps {
   onAddIncome: () => void;
   onAddExpense: () => void;
-  onAddGoal?: () => void;
   onPhotoCapture?: () => void;
+  onImport?: () => void;
 }
 
-export function QuickActions({ onAddIncome, onAddExpense, onAddGoal, onPhotoCapture }: QuickActionsProps) {
-  const navigate = useNavigate();
+export function QuickActions({ onAddIncome, onAddExpense, onPhotoCapture, onImport }: QuickActionsProps) {
   const { hasPermission: canInsert } = useHasPermission("can_insert_transactions");
-
-  const handleImportClick = () => {
-    navigate("/app/import");
-  };
-
-  const handleGoalClick = () => {
-    if (onAddGoal) {
-      onAddGoal();
-    } else {
-      navigate("/app/goals");
-    }
-  };
 
   const handleBlockedAction = () => {
     toast.error("Sem permissão", {
@@ -72,7 +58,7 @@ export function QuickActions({ onAddIncome, onAddExpense, onAddGoal, onPhotoCapt
       id: "import",
       label: "Importar",
       icon: Upload,
-      onClick: handleImportClick,
+      onClick: onImport || (() => {}),
       className: "bg-warning/10 text-warning hover:bg-warning/20 active:bg-warning/30",
       iconBg: "bg-warning/20",
       disabled: false,

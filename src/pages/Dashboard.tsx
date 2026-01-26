@@ -39,13 +39,7 @@ import { markHomeRender } from "@/lib/performance";
 
 interface DashboardProps {
   onSettingsClick?: () => void;
-  onGoalsClick?: () => void;
   onLearnMore?: (tab?: "accounts" | "cards") => void;
-  onBanksClick?: () => void;
-  onCategoriesClick?: () => void;
-  onTransactionsClick?: () => void;
-  onBudgetsClick?: () => void;
-  onProjectionClick?: () => void;
   onNavigate?: (tab: string) => void;
   onNavigateWithSource?: (tab: string, source: 'home_onboarding' | 'settings' | 'dashboard' | 'default') => void;
 }
@@ -61,13 +55,7 @@ const MemoizedUpcomingDuesCard = memo(UpcomingDuesCard);
 
 export const Dashboard = memo(function Dashboard({ 
   onSettingsClick, 
-  onGoalsClick,
   onLearnMore,
-  onBanksClick,
-  onCategoriesClick,
-  onTransactionsClick,
-  onBudgetsClick,
-  onProjectionClick,
   onNavigate,
   onNavigateWithSource,
 }: DashboardProps) {
@@ -160,10 +148,6 @@ export const Dashboard = memo(function Dashboard({
     setDefaultTransactionType("expense");
     setIsSheetOpen(true);
   }, []);
-
-  const handleAddGoal = useCallback(() => {
-    onGoalsClick?.();
-  }, [onGoalsClick]);
 
   const handlePhotoCapture = useCallback(() => {
     setReceiptCaptureOpen(true);
@@ -417,12 +401,18 @@ export const Dashboard = memo(function Dashboard({
         <MemoizedQuickActions
           onAddIncome={handleAddIncome}
           onAddExpense={handleAddExpense}
-          onAddGoal={handleAddGoal}
           onPhotoCapture={handlePhotoCapture}
+          onImport={ctaActions.onQuickImport}
         />
 
         {/* Insights */}
-        {insights.length > 0 && <InsightList insights={insights} />}
+        {insights.length > 0 && (
+          <InsightList 
+            insights={insights} 
+            onViewAll={ctaActions.onInsightsViewAll}
+            onInsightClick={ctaActions.onInsightClick}
+          />
+        )}
 
         {/* Goals Widget */}
         <MemoizedGoalsWidget 
@@ -433,7 +423,10 @@ export const Dashboard = memo(function Dashboard({
         />
 
         {/* Upcoming Dues Card */}
-        <MemoizedUpcomingDuesCard maxItems={3} />
+        <MemoizedUpcomingDuesCard 
+          maxItems={3} 
+          onViewAll={ctaActions.onUpcomingDuesViewAll}
+        />
 
         {/* Budget & Projection Widgets */}
         <div className="grid gap-4 md:grid-cols-2">
@@ -450,7 +443,7 @@ export const Dashboard = memo(function Dashboard({
         {/* Charts Grid - only render when we have data */}
         {categoryExpenses.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2">
-            <MemoizedCategoryChart categories={categoryExpenses} onViewAll={onCategoriesClick} />
+            <MemoizedCategoryChart categories={categoryExpenses} onViewAll={ctaActions.onCategoriesViewAll} />
             <MemoizedMonthlyChart data={monthlyData} />
           </div>
         )}
