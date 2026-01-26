@@ -322,6 +322,114 @@ export type Database = {
           },
         ]
       }
+      category_import_sessions: {
+        Row: {
+          categories_imported: number | null
+          completed_at: string | null
+          created_at: string | null
+          decision: string | null
+          family_id: string
+          id: string
+          import_type: string
+          metadata: Json | null
+          subcategories_imported: number | null
+          transactions_count: number | null
+        }
+        Insert: {
+          categories_imported?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          decision?: string | null
+          family_id: string
+          id?: string
+          import_type: string
+          metadata?: Json | null
+          subcategories_imported?: number | null
+          transactions_count?: number | null
+        }
+        Update: {
+          categories_imported?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          decision?: string | null
+          family_id?: string
+          id?: string
+          import_type?: string
+          metadata?: Json | null
+          subcategories_imported?: number | null
+          transactions_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_import_sessions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      category_reclassification_log: {
+        Row: {
+          created_at: string | null
+          family_id: string
+          id: string
+          new_category_id: string | null
+          new_subcategory_id: string | null
+          old_category_id: string | null
+          old_subcategory_id: string | null
+          reclassification_source: string | null
+          session_id: string | null
+          transaction_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          family_id: string
+          id?: string
+          new_category_id?: string | null
+          new_subcategory_id?: string | null
+          old_category_id?: string | null
+          old_subcategory_id?: string | null
+          reclassification_source?: string | null
+          session_id?: string | null
+          transaction_id: string
+        }
+        Update: {
+          created_at?: string | null
+          family_id?: string
+          id?: string
+          new_category_id?: string | null
+          new_subcategory_id?: string | null
+          old_category_id?: string | null
+          old_subcategory_id?: string | null
+          reclassification_source?: string | null
+          session_id?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_reclassification_log_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_reclassification_log_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "category_import_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_reclassification_log_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       category_rules: {
         Row: {
           category_id: string
@@ -1696,6 +1804,116 @@ export type Database = {
             columns: ["import_id"]
             isOneToOne: false
             referencedRelation: "imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      imported_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          family_id: string
+          icon: string | null
+          id: string
+          import_session_id: string | null
+          is_active: boolean | null
+          mapped_to_category_id: string | null
+          name: string
+          normalized_name: string
+          original_category_name: string | null
+          source: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          family_id: string
+          icon?: string | null
+          id?: string
+          import_session_id?: string | null
+          is_active?: boolean | null
+          mapped_to_category_id?: string | null
+          name: string
+          normalized_name: string
+          original_category_name?: string | null
+          source?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          family_id?: string
+          icon?: string | null
+          id?: string
+          import_session_id?: string | null
+          is_active?: boolean | null
+          mapped_to_category_id?: string | null
+          name?: string
+          normalized_name?: string
+          original_category_name?: string | null
+          source?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imported_categories_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      imported_subcategories: {
+        Row: {
+          created_at: string | null
+          family_id: string
+          id: string
+          imported_category_id: string
+          is_active: boolean | null
+          mapped_to_subcategory_id: string | null
+          name: string
+          normalized_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          family_id: string
+          id?: string
+          imported_category_id: string
+          is_active?: boolean | null
+          mapped_to_subcategory_id?: string | null
+          name: string
+          normalized_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          family_id?: string
+          id?: string
+          imported_category_id?: string
+          is_active?: boolean | null
+          mapped_to_subcategory_id?: string | null
+          name?: string
+          normalized_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imported_subcategories_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imported_subcategories_imported_category_id_fkey"
+            columns: ["imported_category_id"]
+            isOneToOne: false
+            referencedRelation: "imported_categories"
             referencedColumns: ["id"]
           },
         ]
