@@ -27,8 +27,10 @@ import { useHomeSummary } from "@/hooks/useHomeSummary";
 import { useDebouncedLoading } from "@/hooks/useLoading";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useSyncGoalFromTransaction } from "@/hooks/useGoalContributions";
+import { useHomeCTAActions } from "@/hooks/useHomeCTAActions";
 import { getCategoryById, GOALS_CATEGORY_ID } from "@/data/categories";
 import { Transaction, TransactionType } from "@/types/finance";
+import { toMonthRef } from "@/types/navigation";
 import { OcrExtractedData } from "@/hooks/useReceiptCapture";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -118,6 +120,13 @@ export const Dashboard = memo(function Dashboard({
   const createTransactionWithInstallments = useCreateTransactionWithInstallments();
   const syncGoalFromTransaction = useSyncGoalFromTransaction();
   const { state: onboardingState } = useOnboarding();
+  
+  // CTA Router for unified navigation
+  const currentMonthRef = toMonthRef(selectedDate);
+  const ctaActions = useHomeCTAActions({
+    navigate: onNavigate || (() => {}),
+    monthRef: currentMonthRef,
+  });
 
   // Mark home render once we've mounted
   useEffect(() => {
@@ -321,9 +330,23 @@ export const Dashboard = memo(function Dashboard({
   const isLoading = loadingHomeSummary;
   const showLoading = useDebouncedLoading(isLoading, { delay: 300, minDuration: 500 });
 
-  // Memoized callbacks for navigation
-  const handleLearnMoreAccounts = useCallback(() => onLearnMore?.("accounts"), [onLearnMore]);
-  const handleLearnMoreCards = useCallback(() => onLearnMore?.("cards"), [onLearnMore]);
+  // Memoized callbacks for navigation (now using CTA Router)
+  const handleLearnMoreAccounts = useCallback(() => {
+    if (onLearnMore) {
+      onLearnMore("accounts");
+    } else {
+      ctaActions.onBalanceViewAccounts();
+    }
+  }, [onLearnMore, ctaActions]);
+  
+  const handleLearnMoreCards = useCallback(() => {
+    if (onLearnMore) {
+      onLearnMore("cards");
+    } else {
+      ctaActions.onCardViewAll();
+    }
+  }, [onLearnMore, ctaActions]);
+  
   const handleOpenSheet = useCallback(() => setIsSheetOpen(true), []);
   
   // Direct credit card CTA - opens AddCreditCardSheet directly from Home
@@ -371,6 +394,9 @@ export const Dashboard = memo(function Dashboard({
           hasMoreAccounts={homeSummary?.hasMoreAccounts ?? false}
           totalAccounts={homeSummary?.totalAccounts ?? 0}
           onLearnMore={handleLearnMoreAccounts}
+          onAddExpense={ctaActions.onBalanceAddExpense}
+          onAddIncome={ctaActions.onBalanceAddIncome}
+          onViewStatement={ctaActions.onBalanceViewStatement}
         />
 
         {/* Credit Cards Preview Card */}
@@ -382,6 +408,9 @@ export const Dashboard = memo(function Dashboard({
           bestCardSuggestion={homeSummary?.bestCardSuggestion ?? null}
           onLearnMore={handleLearnMoreCards}
           onAddCard={handleAddCreditCardFromHome}
+          onAddTransaction={ctaActions.onCardAddTransaction}
+          onPayBill={ctaActions.onCardPayBill}
+          onViewBill={ctaActions.onCardViewBill}
         />
 
         {/* Quick Actions */}
@@ -396,7 +425,12 @@ export const Dashboard = memo(function Dashboard({
         {insights.length > 0 && <InsightList insights={insights} />}
 
         {/* Goals Widget */}
-        <MemoizedGoalsWidget onViewAll={onGoalsClick} />
+        <MemoizedGoalsWidget 
+          onViewAll={ctaActions.onGoalViewAll}
+          onAddContribution={ctaActions.onGoalAddContribution}
+          onEditGoal={ctaActions.onGoalEdit}
+          onViewDetails={ctaActions.onGoalViewDetails}
+        />
 
         {/* Upcoming Dues Card */}
         <MemoizedUpcomingDuesCard maxItems={3} />
@@ -406,10 +440,11 @@ export const Dashboard = memo(function Dashboard({
           <MemoizedBudgetAlertsWidget 
             month={selectedMonth} 
             year={selectedYear} 
-            onViewAll={onBudgetsClick}
+            onViewAll={ctaActions.onBudgetViewAll}
+            onAdjustBudget={ctaActions.onBudgetAdjust}
             limit={3}
           />
-          <MemoizedProjectionPreviewWidget onViewAll={onProjectionClick} />
+          <MemoizedProjectionPreviewWidget onViewAll={ctaActions.onProjectionViewAll} />
         </div>
 
         {/* Charts Grid - only render when we have data */}
@@ -425,7 +460,7 @@ export const Dashboard = memo(function Dashboard({
           transactions={displayTransactions} 
           limit={5} 
           onTransactionClick={handleTransactionClick}
-          onViewAll={onTransactionsClick}
+          onViewAll={ctaActions.onTransactionsViewAll}
         />
       </main>
 

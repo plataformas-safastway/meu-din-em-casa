@@ -20,9 +20,20 @@ import {
 
 interface GoalsWidgetProps {
   onViewAll?: () => void;
+  /** CTA: Add contribution to a goal */
+  onAddContribution?: (goalId?: string) => void;
+  /** CTA: Edit goal */
+  onEditGoal?: (goalId: string) => void;
+  /** CTA: View goal details */
+  onViewDetails?: (goalId: string) => void;
 }
 
-export function GoalsWidget({ onViewAll }: GoalsWidgetProps) {
+export function GoalsWidget({ 
+  onViewAll, 
+  onAddContribution,
+  onEditGoal,
+  onViewDetails,
+}: GoalsWidgetProps) {
   const { data: goals = [], isLoading } = useActiveGoals();
   const createGoal = useCreateGoal();
   const updateGoal = useUpdateGoal();

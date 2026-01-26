@@ -11,6 +11,8 @@ interface BudgetAlertsWidgetProps {
   month?: number;
   year?: number;
   onViewAll?: () => void;
+  /** CTA: Adjust budget for a category */
+  onAdjustBudget?: (categoryId?: string) => void;
   limit?: number;
 }
 
@@ -93,6 +95,7 @@ export function BudgetAlertsWidget({
   month, 
   year, 
   onViewAll,
+  onAdjustBudget,
   limit = 3 
 }: BudgetAlertsWidgetProps) {
   const { data: alerts = [], isLoading } = useBudgetAlerts(month, year);

@@ -14,6 +14,12 @@ interface GlobalBalanceCardProps {
   hasMoreAccounts: boolean;
   totalAccounts: number;
   onLearnMore?: () => void;
+  /** CTA: Add expense */
+  onAddExpense?: (accountId?: string) => void;
+  /** CTA: Add income */
+  onAddIncome?: (accountId?: string) => void;
+  /** CTA: View statement */
+  onViewStatement?: (accountId?: string) => void;
 }
 
 export function GlobalBalanceCard({
@@ -25,6 +31,9 @@ export function GlobalBalanceCard({
   hasMoreAccounts,
   totalAccounts,
   onLearnMore,
+  onAddExpense,
+  onAddIncome,
+  onViewStatement,
 }: GlobalBalanceCardProps) {
   const isPositive = balance >= 0;
   const savingsIsGood = savingsRate >= 10;
@@ -69,11 +78,13 @@ export function GlobalBalanceCard({
           </motion.p>
         </div>
 
-        {/* Income/Expenses Grid - More visual */}
+        {/* Income/Expenses Grid - Clickable for CTAs */}
         <div className="grid grid-cols-2 gap-4 pt-2">
-          <motion.div 
+          <motion.button 
             whileHover={{ scale: 1.02 }}
-            className="flex items-center gap-3 p-2 rounded-xl bg-white/5 transition-colors"
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onAddIncome?.()}
+            className="flex items-center gap-3 p-2 rounded-xl bg-white/5 transition-colors hover:bg-white/10 text-left"
           >
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
               <ArrowUpRight className="w-5 h-5" />
@@ -82,11 +93,13 @@ export function GlobalBalanceCard({
               <p className="text-xs text-primary-foreground/70">Receitas</p>
               <p className="text-sm font-semibold">{formatCurrency(income)}</p>
             </div>
-          </motion.div>
+          </motion.button>
 
-          <motion.div 
+          <motion.button 
             whileHover={{ scale: 1.02 }}
-            className="flex items-center gap-3 p-2 rounded-xl bg-white/5 transition-colors"
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onAddExpense?.()}
+            className="flex items-center gap-3 p-2 rounded-xl bg-white/5 transition-colors hover:bg-white/10 text-left"
           >
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
               <ArrowDownRight className="w-5 h-5" />
@@ -95,7 +108,7 @@ export function GlobalBalanceCard({
               <p className="text-xs text-primary-foreground/70">Despesas</p>
               <p className="text-sm font-semibold">{formatCurrency(expenses)}</p>
             </div>
-          </motion.div>
+          </motion.button>
         </div>
 
         {/* Accounts Preview */}
@@ -105,12 +118,15 @@ export function GlobalBalanceCard({
               Por Conta
             </p>
             {accounts.map((account, index) => (
-              <motion.div 
+              <motion.button 
                 key={account.id} 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="flex items-center justify-between"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                onClick={() => onViewStatement?.(account.id)}
+                className="flex items-center justify-between w-full hover:bg-white/5 rounded-lg p-1 -mx-1 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-primary-foreground/70" />
@@ -122,7 +138,7 @@ export function GlobalBalanceCard({
                 )}>
                   {formatCurrency(account.balance)}
                 </span>
-              </motion.div>
+              </motion.button>
             ))}
             
             {hasMoreAccounts && (

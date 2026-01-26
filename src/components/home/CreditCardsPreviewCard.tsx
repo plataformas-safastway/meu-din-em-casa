@@ -15,6 +15,12 @@ interface CreditCardsPreviewCardProps {
   bestCardSuggestion: BestCardSuggestion | null;
   onLearnMore?: () => void;
   onAddCard?: () => void;
+  /** CTA: Add card transaction (purchase) */
+  onAddTransaction?: (cardId?: string) => void;
+  /** CTA: Pay card bill */
+  onPayBill?: (cardId?: string) => void;
+  /** CTA: View card bill details */
+  onViewBill?: (cardId?: string) => void;
 }
 
 export function CreditCardsPreviewCard({
@@ -25,6 +31,9 @@ export function CreditCardsPreviewCard({
   bestCardSuggestion,
   onLearnMore,
   onAddCard,
+  onAddTransaction,
+  onPayBill,
+  onViewBill,
 }: CreditCardsPreviewCardProps) {
   if (cards.length === 0) {
     return (
@@ -95,16 +104,18 @@ export function CreditCardsPreviewCard({
             </div>
           </div>
 
-          {/* Cards Preview */}
+          {/* Cards Preview - Clickable for CTAs */}
           <div className="space-y-3">
             {cards.map((card, index) => (
-              <motion.div 
+              <motion.button 
                 key={card.id} 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ scale: 1.01 }}
-                className="bg-white/10 rounded-xl p-3 space-y-2 transition-colors hover:bg-white/15"
+                whileTap={{ scale: 0.99 }}
+                onClick={() => onViewBill?.(card.id)}
+                className="bg-white/10 rounded-xl p-3 space-y-2 transition-colors hover:bg-white/15 w-full text-left"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium truncate max-w-[150px]">{card.label}</span>
@@ -127,7 +138,7 @@ export function CreditCardsPreviewCard({
                     </div>
                   </div>
                 )}
-              </motion.div>
+              </motion.button>
             ))}
           </div>
 
