@@ -27,6 +27,7 @@ import {
   Activity,
   Scale,
   Vault,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +38,7 @@ import { useFinancialAccess } from "@/hooks/useFinancialAccess";
 import { useSupportAccess } from "@/hooks/useSupportAccess";
 import { useCSAccess } from "@/hooks/useCSAccess";
 import { useTechAccess } from "@/hooks/useTechAccess";
+import { useMustChangePassword } from "@/hooks/useMasterUserSetup";
 import { AdminUsersPage } from "./AdminUsersPage";
 import { AdminEbooksPage } from "./AdminEbooksPage";
 import { AdminMetricsPage } from "./AdminMetricsPage";
@@ -79,6 +81,8 @@ import {
 import ExecutiveReportsPage from "./executive/ExecutiveReportsPage";
 import { useExecutiveAccess } from "@/hooks/useExecutiveReports";
 import { useLegalAccess } from "@/hooks/useLegalAccess";
+import { ForcePasswordChangeModal } from "@/components/auth/ForcePasswordChangeModal";
+import { CreateMasterUserSheet } from "@/components/admin/CreateMasterUserSheet";
 
 type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings" 
   | "fin-overview" | "fin-users" | "fin-payments" | "fin-invoices" | "fin-reports" | "fin-audit"
@@ -101,6 +105,7 @@ export function AdminDashboard() {
   const { data: hasExecutiveAccess } = useExecutiveAccess();
   const { data: hasLegalAccess } = useLegalAccess();
   const { data: userAccess } = useUserAccess();
+  const { data: mustChangePassword, refetch: refetchPasswordCheck } = useMustChangePassword();
 
   const handleSignOut = async () => {
     await signOut();
@@ -269,10 +274,17 @@ export function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-card border-r border-border flex flex-col">
-        <div className="p-4 border-b border-border">
+    <>
+      {/* Force password change modal for MASTER users */}
+      <ForcePasswordChangeModal 
+        open={!!mustChangePassword} 
+        onSuccess={() => refetchPasswordCheck()}
+      />
+
+      <div className="min-h-screen bg-background flex">
+        {/* Sidebar */}
+        <aside className="w-64 bg-card border-r border-border flex flex-col">
+          <div className="p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Shield className="w-8 h-8 text-primary" />
             <div>
@@ -474,13 +486,14 @@ export function AdminDashboard() {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        <div className="p-6">
-          {renderContent()}
-        </div>
-      </main>
-    </div>
+        {/* Main content */}
+        <main className="flex-1 overflow-auto">
+          <div className="p-6">
+            {renderContent()}
+          </div>
+        </main>
+      </div>
+    </>
   );
 }
 
@@ -580,11 +593,34 @@ function AdminSettingsPlaceholder() {
         <h2 className="text-2xl font-bold">Configurações</h2>
         <p className="text-muted-foreground">Configurações do sistema</p>
       </div>
+
+      {/* Create Master User Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserPlus className="w-5 h-5" />
+            Usuário MASTER
+          </CardTitle>
+          <CardDescription>
+            Crie um usuário administrativo com acesso total ao sistema
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CreateMasterUserSheet 
+            trigger={
+              <Button className="gap-2">
+                <Shield className="w-4 h-4" />
+                Criar Usuário MASTER
+              </Button>
+            }
+          />
+        </CardContent>
+      </Card>
       
       <Card>
         <CardContent className="p-8 text-center text-muted-foreground">
           <Settings className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>Configurações em desenvolvimento</p>
+          <p>Mais configurações em desenvolvimento</p>
         </CardContent>
       </Card>
     </div>

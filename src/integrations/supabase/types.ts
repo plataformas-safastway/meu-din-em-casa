@@ -4591,6 +4591,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_security_settings: {
+        Row: {
+          created_at: string
+          id: string
+          must_change_password: boolean
+          password_changed_at: string | null
+          temp_password_created_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          must_change_password?: boolean
+          password_changed_at?: string | null
+          temp_password_created_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          must_change_password?: boolean
+          password_changed_at?: string | null
+          temp_password_created_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_status_audit: {
         Row: {
           changed_at: string
@@ -4950,6 +4980,7 @@ export type Database = {
         }
         Returns: string
       }
+      mark_password_changed: { Args: { _user_id: string }; Returns: boolean }
       reconcile_installment: {
         Args: { p_planned_id: string; p_transaction_id: string }
         Returns: boolean
@@ -4972,6 +5003,10 @@ export type Database = {
       }
       user_is_family_admin: {
         Args: { _family_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_must_change_password: {
+        Args: { _user_id: string }
         Returns: boolean
       }
       user_shares_family_with: {
