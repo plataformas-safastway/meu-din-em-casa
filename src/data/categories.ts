@@ -35,16 +35,6 @@ export const defaultCategories: Category[] = [
 
   // ========== EXPENSE CATEGORIES ==========
   {
-    id: "objetivos",
-    name: "Objetivos",
-    code: "OBJ",
-    icon: "🎯",
-    color: "hsl(var(--primary))",
-    type: "expense",
-    isDefault: true,
-    subcategories: [], // Subcategories are created dynamically per goal
-  },
-  {
     id: "casa",
     name: "Casa",
     code: "C",
@@ -312,6 +302,17 @@ export const defaultCategories: Category[] = [
       "Compra/troca de veículos",
       "Compra/troca de Imóveis",
     ]),
+  },
+  // ========== OBJETIVOS - Always last ==========
+  {
+    id: "objetivos",
+    name: "Objetivos",
+    code: "OBJ",
+    icon: "🎯",
+    color: "hsl(var(--primary))",
+    type: "expense",
+    isDefault: true,
+    subcategories: [], // Subcategories are created dynamically per goal
   },
 ];
 
