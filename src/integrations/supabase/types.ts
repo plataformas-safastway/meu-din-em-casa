@@ -3002,6 +3002,27 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          count: number
+          created_at: string | null
+          key: string
+          reset_at: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string | null
+          key: string
+          reset_at: string
+        }
+        Update: {
+          count?: number
+          created_at?: string | null
+          key?: string
+          reset_at?: string
+        }
+        Relationships: []
+      }
       recurring_alerts_sent: {
         Row: {
           alert_date: string
@@ -4588,6 +4609,7 @@ export type Database = {
         Args: { _family_id: string; _permission: string; _user_id: string }
         Returns: boolean
       }
+      cleanup_expired_rate_limits: { Args: never; Returns: undefined }
       create_family_invite: {
         Args: {
           p_family_id: string

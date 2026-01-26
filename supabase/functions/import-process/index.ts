@@ -11,6 +11,87 @@ const corsHeaders = {
 };
 
 // ============================================
+// RATE LIMITING
+// ============================================
+
+interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  resetAt: Date;
+  retryAfterSec: number;
+}
+
+const IMPORT_RATE_LIMIT = { limit: 10, windowSec: 60 }; // 10 req/min (heavy operation)
+
+async function checkRateLimit(
+  supabaseAdmin: any,
+  key: string,
+  limit: number,
+  windowSec: number
+): Promise<RateLimitResult> {
+  const now = new Date();
+  const resetAt = new Date(now.getTime() + windowSec * 1000);
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("rate_limits")
+      .select("count, reset_at")
+      .eq("key", key)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[rateLimit] DB error:", error);
+      return { allowed: true, remaining: limit, resetAt, retryAfterSec: 0 };
+    }
+
+    if (!data || new Date(data.reset_at) <= now) {
+      await supabaseAdmin
+        .from("rate_limits")
+        .upsert({ key, count: 1, reset_at: resetAt.toISOString() });
+      return { allowed: true, remaining: limit - 1, resetAt, retryAfterSec: 0 };
+    }
+
+    if (data.count >= limit) {
+      const existingResetAt = new Date(data.reset_at);
+      const retryAfterSec = Math.ceil((existingResetAt.getTime() - now.getTime()) / 1000);
+      return { allowed: false, remaining: 0, resetAt: existingResetAt, retryAfterSec: Math.max(1, retryAfterSec) };
+    }
+
+    await supabaseAdmin
+      .from("rate_limits")
+      .update({ count: data.count + 1 })
+      .eq("key", key);
+    return { allowed: true, remaining: limit - (data.count + 1), resetAt: new Date(data.reset_at), retryAfterSec: 0 };
+  } catch (err) {
+    console.error("[rateLimit] Unexpected error:", err);
+    return { allowed: true, remaining: limit, resetAt, retryAfterSec: 0 };
+  }
+}
+
+function getClientIP(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") || req.headers.get("cf-connecting-ip") || "unknown";
+}
+
+function rateLimitResponse(result: RateLimitResult): Response {
+  return new Response(
+    JSON.stringify({
+      error: "rate_limited",
+      message: "Muitas tentativas. Aguarde antes de tentar novamente.",
+      retry_after_sec: result.retryAfterSec,
+    }),
+    {
+      status: 429,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "Retry-After": String(result.retryAfterSec),
+      },
+    }
+  );
+}
+
+// ============================================
 // TYPES
 // ============================================
 
@@ -2517,6 +2598,25 @@ serve(async (req) => {
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
     });
+
+    // Rate limit check (by user)
+    const rateLimitKey = `user:${userData.user.id}:import-process`;
+    const clientIP = getClientIP(req);
+    const ipRateLimitKey = `ip:${clientIP}:import-process`;
+    
+    // Check user rate limit
+    const userRateResult = await checkRateLimit(adminClient, rateLimitKey, IMPORT_RATE_LIMIT.limit, IMPORT_RATE_LIMIT.windowSec);
+    if (!userRateResult.allowed) {
+      console.log(`[import-process] Rate limited user: ${userData.user.id}`);
+      return rateLimitResponse(userRateResult);
+    }
+    
+    // Also check IP rate limit (60 req/min for IPs - more permissive)
+    const ipRateResult = await checkRateLimit(adminClient, ipRateLimitKey, 60, 60);
+    if (!ipRateResult.allowed) {
+      console.log(`[import-process] Rate limited IP: ${clientIP}`);
+      return rateLimitResponse(ipRateResult);
+    }
 
     const { data: memberData, error: memberError } = await adminClient
       .from("family_members")
