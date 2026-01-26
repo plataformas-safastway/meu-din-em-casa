@@ -2708,7 +2708,8 @@ serve(async (req) => {
       };
       
       // Determine import_type based on detected source type
-      import_type = accountInfo.sourceType === "credit_card" ? "credit_card" : "bank_statement";
+      // IMPORTANT: constraint requires 'credit_card_invoice' not 'credit_card'
+      import_type = accountInfo.sourceType === "credit_card" ? "credit_card_invoice" : "bank_statement";
       
       console.log(`[AutoDetect] Source type: ${import_type}, Agency: ${accountInfo.agency || "(none)"}, Account: ${accountInfo.accountNumber ? "****" + accountInfo.accountNumber.slice(-4) : "(none)"}`);
       
