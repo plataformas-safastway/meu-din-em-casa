@@ -4687,6 +4687,10 @@ export type Database = {
         Args: { _family_id: string; _user_id: string }
         Returns: boolean
       }
+      user_shares_family_with: {
+        Args: { _family_id: string; _user_id: string }
+        Returns: boolean
+      }
       validate_invite_token: {
         Args: { invite_token: string }
         Returns: {
