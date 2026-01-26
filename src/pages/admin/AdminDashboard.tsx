@@ -58,6 +58,7 @@ import {
   CSAuditPage,
   CSAutomationPage,
   CSHealthPage,
+  LGPDRequestsPage,
 } from "./cs";
 import {
   TechHealthPage,
@@ -73,7 +74,7 @@ import { useExecutiveAccess } from "@/hooks/useExecutiveReports";
 type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings" 
   | "fin-overview" | "fin-users" | "fin-payments" | "fin-invoices" | "fin-reports" | "fin-audit"
   | "sup-errors" | "sup-users" | "sup-audit"
-  | "cs-overview" | "cs-users" | "cs-automation" | "cs-health" | "cs-audit"
+  | "cs-overview" | "cs-users" | "cs-automation" | "cs-health" | "cs-audit" | "cs-lgpd"
   | "tech-health" | "tech-logs" | "tech-integrations" | "tech-keys" | "tech-flags" | "tech-audit"
   | "exec-reports";
 
@@ -127,6 +128,7 @@ export function AdminDashboard() {
     { id: "cs-users" as AdminTab, label: "Base de Usuários", icon: Users },
     { id: "cs-health" as AdminTab, label: "Saúde da Base", icon: Activity },
     { id: "cs-automation" as AdminTab, label: "Automação + IA", icon: Cpu },
+    { id: "cs-lgpd" as AdminTab, label: "Solicitações LGPD", icon: Shield },
     { id: "cs-audit" as AdminTab, label: "Auditoria CS", icon: ClipboardList },
   ] : [];
 
@@ -208,6 +210,8 @@ export function AdminDashboard() {
         return <CSHealthPage />;
       case "cs-automation":
         return <CSAutomationPage />;
+      case "cs-lgpd":
+        return <LGPDRequestsPage />;
       case "cs-audit":
         return <CSAuditPage />;
       case "tech-health":

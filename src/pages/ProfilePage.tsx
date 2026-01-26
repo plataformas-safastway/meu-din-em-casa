@@ -12,7 +12,8 @@ import {
   Save,
   Shield,
   Calendar,
-  Briefcase
+  Briefcase,
+  FileX2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,9 @@ import { PhoneInput } from "@/components/profile/PhoneInput";
 import { ChangePasswordSheet } from "@/components/profile/ChangePasswordSheet";
 import { ExportDataSheet } from "@/components/profile/ExportDataSheet";
 import { DeleteAccountSheet } from "@/components/profile/DeleteAccountSheet";
+import { LGPDDeletionSheet } from "@/components/profile/LGPDDeletionSheet";
+import { useLGPDRequestStatus } from "@/hooks/useLGPDDeletion";
+import { Badge } from "@/components/ui/badge";
 
 interface ProfilePageProps {
   onBack: () => void;
@@ -32,10 +36,12 @@ interface ProfilePageProps {
 export function ProfilePage({ onBack }: ProfilePageProps) {
   const { user, familyMember } = useAuth();
   const updateProfile = useUpdateProfile();
+  const { data: pendingLGPDRequest } = useLGPDRequestStatus();
   
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [exportDataOpen, setExportDataOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [lgpdDeletionOpen, setLgpdDeletionOpen] = useState(false);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -258,12 +264,31 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
 
           <Button
             variant="outline"
+            className="w-full justify-between gap-3"
+            onClick={() => setLgpdDeletionOpen(true)}
+          >
+            <span className="flex items-center gap-3">
+              <FileX2 className="w-4 h-4" />
+              Solicitar Exclusão de Dados
+            </span>
+            {pendingLGPDRequest && (
+              <Badge variant="secondary" className="text-xs">
+                {pendingLGPDRequest.status === "PENDING" ? "Pendente" : "Processando"}
+              </Badge>
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
             className="w-full justify-start gap-3 text-destructive border-destructive/30 hover:bg-destructive/10"
             onClick={() => setDeleteAccountOpen(true)}
           >
             <Trash2 className="w-4 h-4" />
-            Excluir Minha Conta
+            Excluir Conta Imediatamente
           </Button>
+          <p className="text-xs text-muted-foreground">
+            A exclusão imediata remove sua conta sem o período de 30 dias de processamento.
+          </p>
         </div>
 
         {/* Info Card */}
@@ -289,6 +314,10 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
       <DeleteAccountSheet 
         open={deleteAccountOpen} 
         onOpenChange={setDeleteAccountOpen} 
+      />
+      <LGPDDeletionSheet 
+        open={lgpdDeletionOpen} 
+        onOpenChange={setLgpdDeletionOpen} 
       />
     </div>
   );
