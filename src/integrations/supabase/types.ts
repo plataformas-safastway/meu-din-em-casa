@@ -4559,7 +4559,45 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      audit_logs_safe: {
+        Row: {
+          action: string | null
+          actor_user_id: string | null
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          family_id: string | null
+          id: string | null
+          metadata_safe: Json | null
+          module: string | null
+          severity: string | null
+        }
+        Insert: {
+          action?: string | null
+          actor_user_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          family_id?: string | null
+          id?: string | null
+          metadata_safe?: never
+          module?: string | null
+          severity?: string | null
+        }
+        Update: {
+          action?: string | null
+          actor_user_id?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          family_id?: string | null
+          id?: string | null
+          metadata_safe?: never
+          module?: string | null
+          severity?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_family_invite: {
