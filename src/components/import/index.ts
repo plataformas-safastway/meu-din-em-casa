@@ -3,3 +3,7 @@ export { SourceConflictDialog } from "./SourceConflictDialog";
 export { ImportOwnershipConfirmation } from "./ImportOwnershipConfirmation";
 export { DetectedSourceHandler } from "./DetectedSourceHandler";
 export { TransactionReviewItem } from "./TransactionReviewItem";
+export { ClassificationSelector, getClassificationLabel, getClassificationColor } from "./ClassificationSelector";
+export { CategoryDecisionModal } from "./CategoryDecisionModal";
+export { CategoryMergeSheet } from "./CategoryMergeSheet";
+export { CategoryReclassificationSheet } from "./CategoryReclassificationSheet";

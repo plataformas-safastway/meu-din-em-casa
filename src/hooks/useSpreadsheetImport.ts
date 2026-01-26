@@ -28,6 +28,16 @@ export interface ParsedTransaction {
   raw_row: SpreadsheetRow;
   has_error: boolean;
   error_message: string | null;
+  // NEW: Original category from spreadsheet (preserved for audit)
+  original_category?: string;
+  original_subcategory?: string;
+}
+
+export interface ExtractedCategory {
+  name: string;
+  type: "income" | "expense";
+  subcategories: string[];
+  transactionCount: number;
 }
 
 export interface SpreadsheetImportState {
@@ -39,6 +49,7 @@ export interface SpreadsheetImportState {
   allRows: SpreadsheetRow[];
   suggestedMapping: ColumnMapping;
   transactions: ParsedTransaction[];
+  extractedCategories: ExtractedCategory[];
   error: string | null;
 }
 
@@ -310,6 +321,7 @@ export function useSpreadsheetImport() {
       account: null,
     },
     transactions: [],
+    extractedCategories: [],
     error: null,
   });
 
@@ -331,6 +343,7 @@ export function useSpreadsheetImport() {
         account: null,
       },
       transactions: [],
+      extractedCategories: [],
       error: null,
     });
   }, []);
@@ -412,6 +425,7 @@ export function useSpreadsheetImport() {
         allRows,
         suggestedMapping,
         transactions: [],
+        extractedCategories: [],
         error: null,
       });
     } catch (error) {
@@ -424,7 +438,7 @@ export function useSpreadsheetImport() {
   }, []);
 
   const applyMapping = useCallback(
-    (mapping: ColumnMapping, accountId: string | null = null) => {
+    (mapping: ColumnMapping, accountId: string | null = null, useImportedCategories: boolean = false) => {
       const { allRows } = state;
 
       if (!mapping.date || !mapping.description || !mapping.value) {
@@ -435,20 +449,54 @@ export function useSpreadsheetImport() {
         return [];
       }
 
+      // Track categories from spreadsheet
+      const categoryMap = new Map<string, { type: "income" | "expense"; subcategories: Set<string>; count: number }>();
+
       const transactions: ParsedTransaction[] = allRows.map((row, index) => {
         const rawDate = row[mapping.date!];
         const rawDescription = row[mapping.description!];
         const rawValue = row[mapping.value!];
         const rawType = mapping.type ? row[mapping.type] : null;
         const rawCategory = mapping.category ? row[mapping.category] : null;
+        const rawSubcategory = mapping.subcategory ? row[mapping.subcategory] : null;
 
         const parsedDate = parseDate(rawDate);
         const parsedAmount = parseAmount(rawValue);
         const description = rawDescription ? String(rawDescription).trim() : "";
         const type = inferType(rawType, parsedAmount, rawType ? String(rawType) : null);
-        const { category_id, subcategory_id } = matchCategory(
-          rawCategory ? String(rawCategory) : null
-        );
+        
+        // Store original category from spreadsheet
+        const originalCategory = rawCategory ? String(rawCategory).trim() : undefined;
+        const originalSubcategory = rawSubcategory ? String(rawSubcategory).trim() : undefined;
+        
+        // Track extracted categories
+        if (originalCategory) {
+          const catKey = originalCategory.toLowerCase();
+          if (!categoryMap.has(catKey)) {
+            categoryMap.set(catKey, { type, subcategories: new Set(), count: 0 });
+          }
+          const catData = categoryMap.get(catKey)!;
+          catData.count++;
+          if (originalSubcategory) {
+            catData.subcategories.add(originalSubcategory);
+          }
+        }
+        
+        // Use original category or map to OIK
+        let category_id: string;
+        let subcategory_id: string | null;
+        
+        if (useImportedCategories && originalCategory) {
+          // Use normalized imported category name as temporary ID
+          category_id = `imported:${originalCategory.toLowerCase().replace(/\s+/g, "-")}`;
+          subcategory_id = originalSubcategory 
+            ? `imported:${originalSubcategory.toLowerCase().replace(/\s+/g, "-")}`
+            : null;
+        } else {
+          const matched = matchCategory(rawCategory ? String(rawCategory) : null);
+          category_id = matched.category_id;
+          subcategory_id = matched.subcategory_id;
+        }
 
         // Determine errors
         let hasError = false;
@@ -477,10 +525,29 @@ export function useSpreadsheetImport() {
           raw_row: row,
           has_error: hasError,
           error_message: errorMessage,
+          original_category: originalCategory,
+          original_subcategory: originalSubcategory,
         };
       });
 
-      setState((prev) => ({ ...prev, transactions, error: null }));
+      // Convert category map to array
+      const extractedCategories: ExtractedCategory[] = Array.from(categoryMap.entries())
+        .map(([key, data]) => {
+          // Find original casing from first transaction
+          const originalName = transactions.find(
+            (tx) => tx.original_category?.toLowerCase() === key
+          )?.original_category || key;
+          
+          return {
+            name: originalName,
+            type: data.type,
+            subcategories: Array.from(data.subcategories),
+            transactionCount: data.count,
+          };
+        })
+        .sort((a, b) => b.transactionCount - a.transactionCount);
+
+      setState((prev) => ({ ...prev, transactions, extractedCategories, error: null }));
       return transactions;
     },
     [state]
