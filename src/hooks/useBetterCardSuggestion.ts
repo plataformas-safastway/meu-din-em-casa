@@ -20,6 +20,14 @@ interface BetterCardSuggestion {
   extraDaysDue: number;
 }
 
+interface RejectedCardReason {
+  cardId: string;
+  cardName: string;
+  reason: 'no_limit_configured' | 'insufficient_limit' | 'inactive' | 'no_dates_configured';
+  creditLimit?: number | null;
+  transactionAmount?: number;
+}
+
 const MIN_DAYS_DIFFERENCE = 2; // Minimum difference to show suggestion
 const RATE_LIMIT_KEY = "better_card_suggestion_last_shown";
 
@@ -132,6 +140,35 @@ export function useBetterCardSuggestion() {
   const [transactionIdToUpdate, setTransactionIdToUpdate] = useState<string | null>(null);
 
   /**
+   * Log rejected card suggestions for audit/AI improvement (silent, no user notification)
+   */
+  const logRejectedCards = useCallback(async (
+    transactionId: string,
+    rejectedCards: RejectedCardReason[]
+  ) => {
+    if (!family || !familyMember || rejectedCards.length === 0) return;
+    
+    try {
+      await supabase.from("audit_logs").insert({
+        user_id: familyMember.user_id,
+        family_id: family.id,
+        action: "better_card_candidates_rejected",
+        entity_type: "transaction",
+        entity_id: transactionId,
+        module: "smart_tips",
+        severity: "info",
+        metadata: {
+          rejected_cards: rejectedCards,
+          rejection_count: rejectedCards.length,
+        } as any,
+      });
+    } catch (error) {
+      // Silent fail - this is just for analytics
+      console.debug("Failed to log rejected cards:", error);
+    }
+  }, [family, familyMember]);
+
+  /**
    * Find if there's a better card for the given transaction
    */
   const findBetterCard = useCallback((
@@ -139,24 +176,29 @@ export function useBetterCardSuggestion() {
     allCards: CreditCard[],
     transactionAmount: number,
     transactionDate: Date = new Date()
-  ): BetterCardSuggestion | null => {
-    // Don't show if disabled
-    if (hasDisabledSmartTips()) return null;
+  ): { suggestion: BetterCardSuggestion | null; rejectedCards: RejectedCardReason[] } => {
+    const rejectedCards: RejectedCardReason[] = [];
     
-    // Need at least 2 active cards with dates configured
-    const validCards = allCards.filter(c => 
-      c.is_active && 
+    // Don't show if disabled
+    if (hasDisabledSmartTips()) return { suggestion: null, rejectedCards };
+    
+    // Need at least 2 active cards
+    const activeCards = allCards.filter(c => c.is_active);
+    if (activeCards.length < 2) return { suggestion: null, rejectedCards };
+    
+    // Filter cards with dates configured
+    const validCards = activeCards.filter(c => 
       c.closing_day !== null && 
       c.due_day !== null
     );
     
-    if (validCards.length < 2) return null;
+    if (validCards.length < 2) return { suggestion: null, rejectedCards };
     
     const usedCard = validCards.find(c => c.id === usedCardId);
-    if (!usedCard) return null;
+    if (!usedCard) return { suggestion: null, rejectedCards };
     
     const usedMetrics = getCardMetrics(usedCard, transactionDate);
-    if (!usedMetrics) return null;
+    if (!usedMetrics) return { suggestion: null, rejectedCards };
     
     // Find the best alternative
     let bestAlternative: CreditCard | null = null;
@@ -166,11 +208,28 @@ export function useBetterCardSuggestion() {
     for (const card of validCards) {
       if (card.id === usedCardId) continue;
       
-      // Check if card has enough limit (if limit is set and we know the amount)
-      if (card.credit_limit !== null && transactionAmount > 0) {
-        if (transactionAmount > card.credit_limit) {
-          continue; // Card doesn't have enough limit
-        }
+      // RULE: Card must have credit_limit configured
+      if (card.credit_limit === null || card.credit_limit === undefined) {
+        rejectedCards.push({
+          cardId: card.id,
+          cardName: card.card_name,
+          reason: 'no_limit_configured',
+          creditLimit: null,
+          transactionAmount,
+        });
+        continue;
+      }
+      
+      // RULE: Credit limit must be >= transaction amount
+      if (transactionAmount > 0 && transactionAmount > card.credit_limit) {
+        rejectedCards.push({
+          cardId: card.id,
+          cardName: card.card_name,
+          reason: 'insufficient_limit',
+          creditLimit: card.credit_limit,
+          transactionAmount,
+        });
+        continue;
       }
       
       const cardMetrics = getCardMetrics(card, transactionDate);
@@ -191,40 +250,53 @@ export function useBetterCardSuggestion() {
     }
     
     // Only suggest if difference is significant
-    if (!bestAlternative) return null;
+    if (!bestAlternative) return { suggestion: null, rejectedCards };
     if (bestExtraDaysClosing < MIN_DAYS_DIFFERENCE && bestExtraDaysDue < MIN_DAYS_DIFFERENCE) {
-      return null;
+      return { suggestion: null, rejectedCards };
     }
     
     // Check rate limit
-    if (!canShowSuggestion()) return null;
+    if (!canShowSuggestion()) return { suggestion: null, rejectedCards };
     
     return {
-      usedCard,
-      betterCard: bestAlternative,
-      extraDaysClosing: bestExtraDaysClosing,
-      extraDaysDue: bestExtraDaysDue,
+      suggestion: {
+        usedCard,
+        betterCard: bestAlternative,
+        extraDaysClosing: bestExtraDaysClosing,
+        extraDaysDue: bestExtraDaysDue,
+      },
+      rejectedCards,
     };
   }, []);
 
   /**
    * Check and show suggestion after transaction is created
    */
-  const checkAndShowSuggestion = useCallback((
+  const checkAndShowSuggestion = useCallback(async (
     transactionId: string,
     usedCardId: string,
     allCards: CreditCard[],
     transactionAmount: number,
     transactionDate?: Date
   ) => {
-    const result = findBetterCard(usedCardId, allCards, transactionAmount, transactionDate);
+    const { suggestion: result, rejectedCards } = findBetterCard(
+      usedCardId, 
+      allCards, 
+      transactionAmount, 
+      transactionDate
+    );
+    
+    // Log rejected cards for audit/AI (silently, doesn't affect UX)
+    if (rejectedCards.length > 0) {
+      logRejectedCards(transactionId, rejectedCards);
+    }
     
     if (result) {
       setSuggestion(result);
       setTransactionIdToUpdate(transactionId);
       markSuggestionShown();
     }
-  }, [findBetterCard]);
+  }, [findBetterCard, logRejectedCards]);
 
   /**
    * Switch the transaction to use the better card
