@@ -11,8 +11,10 @@ import { useBankAccounts, useCreditCards } from "@/hooks/useBankData";
 import { useDebouncedSuggestion, useRecentCategories } from "@/hooks/useCategorySuggestion";
 import { useActiveGoals } from "@/hooks/useGoals";
 import { useCreateInstallmentGroup } from "@/hooks/useInstallments";
+import { useBetterCardSuggestion } from "@/hooks/useBetterCardSuggestion";
 import { TransactionType, TransactionClassification, ExpenseType, PaymentMethod } from "@/types/finance";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   TransactionTypeSelector,
   PaymentMethodSelector,
@@ -22,6 +24,7 @@ import {
   QuickBankAccountSheet,
   QuickCreditCardSheet,
   InstallmentInput,
+  BetterCardSuggestionToast,
 } from "@/components/transaction";
 import { GoalSelector } from "@/components/goals";
 import { ChargeType } from "@/components/transaction/InstallmentInput";
@@ -46,8 +49,10 @@ interface AddTransactionSheetProps {
     // Installment fields
     cardChargeType?: ChargeType;
     installmentsTotal?: number;
-  }) => void;
+  }) => Promise<string | void> | string | void; // Now can return transaction ID
   defaultType?: TransactionType;
+  // Callback after transaction is created successfully (receives transaction ID)
+  onTransactionCreated?: (transactionId: string, creditCardId?: string) => void;
 }
 
 export function AddTransactionSheet({
@@ -55,6 +60,7 @@ export function AddTransactionSheet({
   onOpenChange,
   onSubmit,
   defaultType = "expense",
+  onTransactionCreated,
 }: AddTransactionSheetProps) {
   const [classification, setClassification] = useState<TransactionClassification>(
     defaultType === "income" ? "income" : "expense"
@@ -91,6 +97,15 @@ export function AddTransactionSheet({
   const { suggestion, updateDescription, clearSuggestion } = useDebouncedSuggestion();
   const { data: activeGoals = [] } = useActiveGoals();
   const createInstallmentGroup = useCreateInstallmentGroup();
+  
+  // Better card suggestion hook
+  const {
+    suggestion: betterCardSuggestion,
+    checkAndShowSuggestion: checkBetterCard,
+    switchCard,
+    dismiss: dismissBetterCard,
+    disablePermanently: disableBetterCardTips,
+  } = useBetterCardSuggestion();
   
   // Derive transaction type from classification
   const type: TransactionType = classification === "income" ? "income" : "expense";
@@ -263,8 +278,10 @@ export function AddTransactionSheet({
 
     try {
       const parsedAmount = parseFloat(amount.replace(",", "."));
+      const transactionDate = date;
+      const usedCardId = creditCardId;
       
-      await onSubmit({
+      const result = await onSubmit({
         type,
         classification,
         expenseType: type === "expense" ? expenseType : undefined,
@@ -282,6 +299,22 @@ export function AddTransactionSheet({
         cardChargeType: needsCard ? cardChargeType : undefined,
         installmentsTotal: needsCard && cardChargeType === "INSTALLMENT" ? installmentsTotal : undefined,
       });
+
+      // Check for better card suggestion if this was a credit card transaction
+      if (needsCard && usedCardId && result && typeof result === 'string') {
+        checkBetterCard(
+          result, // transaction ID
+          usedCardId,
+          creditCards,
+          parsedAmount,
+          new Date(transactionDate + "T12:00:00")
+        );
+        
+        // Notify callback if provided
+        if (onTransactionCreated) {
+          onTransactionCreated(result, usedCardId);
+        }
+      }
 
       // Reset form
       setAmount("");
@@ -692,6 +725,30 @@ export function AddTransactionSheet({
         onOpenChange={setShowQuickCard}
         onSuccess={handleQuickCardSuccess}
       />
+      
+      {/* Better Card Suggestion Toast */}
+      {betterCardSuggestion && (
+        <BetterCardSuggestionToast
+          usedCardName={betterCardSuggestion.usedCard.card_name}
+          betterCardName={betterCardSuggestion.betterCard.card_name}
+          extraDays={betterCardSuggestion.extraDaysClosing > 0 
+            ? betterCardSuggestion.extraDaysClosing 
+            : betterCardSuggestion.extraDaysDue}
+          extraDaysType={betterCardSuggestion.extraDaysClosing > 0 ? "closing" : "due"}
+          onSwitch={async () => {
+            const success = await switchCard();
+            if (success) {
+              toast.success("Cartão trocado com sucesso!");
+            }
+            return success;
+          }}
+          onDismiss={dismissBetterCard}
+          onDisablePermanently={() => {
+            disableBetterCardTips();
+            toast.info("Dicas de cartão desativadas");
+          }}
+        />
+      )}
     </>
   );
 }

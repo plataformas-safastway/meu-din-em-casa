@@ -176,7 +176,7 @@ export const Dashboard = memo(function Dashboard({
     setEditSheetOpen(true);
   }, []);
 
-  const handleSubmitTransaction = useCallback(async (transaction: any) => {
+  const handleSubmitTransaction = useCallback(async (transaction: any): Promise<string | void> => {
     try {
       let transactionDate = transaction.date;
       const transactionMonth = new Date(transactionDate).getMonth() + 1;
@@ -186,7 +186,7 @@ export const Dashboard = memo(function Dashboard({
         transactionDate = format(selectedDate, "yyyy-MM-01");
       }
 
-      await createTransactionWithInstallments.mutateAsync({
+      const result = await createTransactionWithInstallments.mutateAsync({
         type: transaction.type,
         amount: transaction.amount,
         category_id: transaction.category,
@@ -226,8 +226,12 @@ export const Dashboard = memo(function Dashboard({
             : "Registrar é o primeiro passo para o controle financeiro.",
         });
       }
+      
+      // Return transaction ID for better card suggestion
+      return result?.id;
     } catch (error) {
       toast.error("Erro ao salvar lançamento");
+      return undefined;
     }
   }, [selectedMonth, selectedYear, selectedDate, createTransactionWithInstallments, syncGoalFromTransaction]);
 
