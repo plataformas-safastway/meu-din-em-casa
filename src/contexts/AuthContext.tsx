@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -21,12 +21,20 @@ interface FamilyMember {
   phone_country?: string | null;
 }
 
+// Bootstrap status to prevent flash/flicker
+export type BootstrapStatus = 'initializing' | 'ready';
+
+// Profile status for routing decisions
+export type ProfileStatus = 'unknown' | 'loading' | 'incomplete' | 'complete';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   family: Family | null;
   familyMember: FamilyMember | null;
-  loading: boolean;
+  loading: boolean; // Legacy: true during initial auth check
+  bootstrapStatus: BootstrapStatus; // New: 'initializing' until fully ready
+  profileStatus: ProfileStatus; // New: profile loading state
   signUp: (email: string, password: string) => Promise<{ error: Error | null; user?: User | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -54,9 +62,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [family, setFamily] = useState<Family | null>(null);
   const [familyMember, setFamilyMember] = useState<FamilyMember | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bootstrapStatus, setBootstrapStatus] = useState<BootstrapStatus>('initializing');
+  const [profileStatus, setProfileStatus] = useState<ProfileStatus>('unknown');
+  
+  // Refs to prevent race conditions
+  const currentUserIdRef = useRef<string | null>(null);
+  const fetchAbortControllerRef = useRef<AbortController | null>(null);
 
-  const fetchFamilyData = async (userId: string) => {
+  const fetchFamilyData = useCallback(async (userId: string): Promise<boolean> => {
+    // Cancel any pending fetch
+    if (fetchAbortControllerRef.current) {
+      fetchAbortControllerRef.current.abort();
+    }
+    
+    // Create new abort controller
+    const abortController = new AbortController();
+    fetchAbortControllerRef.current = abortController;
+    
+    // Verify this is still the current user
+    if (currentUserIdRef.current !== userId) {
+      console.log('[Auth] User changed during fetch, aborting');
+      return false;
+    }
+
     try {
+      setProfileStatus('loading');
+      
       // Get family member record - order by last_active_at to get the most recent active family
       const { data: memberData, error: memberError } = await supabase
         .from('family_members')
@@ -66,11 +97,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .limit(1)
         .maybeSingle();
 
+      // Check if aborted
+      if (abortController.signal.aborted || currentUserIdRef.current !== userId) {
+        console.log('[Auth] Fetch aborted or user changed');
+        return false;
+      }
+
       if (memberError) {
-        console.error('Error fetching family member:', memberError);
+        console.error('[Auth] Error fetching family member:', memberError);
         setFamilyMember(null);
         setFamily(null);
-        return;
+        setProfileStatus('incomplete');
+        return true;
       }
 
       if (memberData) {
@@ -83,64 +121,138 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('id', memberData.family_id)
           .single();
 
+        // Check if aborted again
+        if (abortController.signal.aborted || currentUserIdRef.current !== userId) {
+          return false;
+        }
+
         if (familyError) {
-          console.error('Error fetching family:', familyError);
+          console.error('[Auth] Error fetching family:', familyError);
           setFamily(null);
-          return;
+          setProfileStatus('incomplete');
+          return true;
         }
 
         setFamily(familyData as Family);
+        setProfileStatus('complete');
         
-        // Update last_active_at for this family (silently)
+        // Update last_active_at for this family (silently, non-blocking)
         supabase
           .from('family_members')
           .update({ last_active_at: new Date().toISOString() })
           .eq('id', memberData.id)
           .then(() => {});
+          
+        return true;
       } else {
         setFamilyMember(null);
         setFamily(null);
+        setProfileStatus('incomplete');
+        return true;
       }
     } catch (error) {
-      console.error('Error in fetchFamilyData:', error);
-      setFamilyMember(null);
-      setFamily(null);
+      if (currentUserIdRef.current === userId) {
+        console.error('[Auth] Error in fetchFamilyData:', error);
+        setFamilyMember(null);
+        setFamily(null);
+        setProfileStatus('incomplete');
+      }
+      return true;
     }
-  };
+  }, []);
+
+  const completeBootstrap = useCallback(() => {
+    setLoading(false);
+    setBootstrapStatus('ready');
+    console.log('[Auth] Bootstrap complete');
+  }, []);
 
   useEffect(() => {
-    // Set up auth state change listener BEFORE getting session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Use setTimeout to avoid potential deadlock with Supabase client
-          setTimeout(() => fetchFamilyData(session.user.id), 0);
-        } else {
-          setFamily(null);
-          setFamilyMember(null);
+    let mounted = true;
+    
+    const initializeAuth = async () => {
+      console.log('[Auth] Initializing...');
+      
+      // Set up auth state change listener
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, newSession) => {
+          if (!mounted) return;
+          
+          console.log('[Auth] Auth state change:', event);
+          
+          // Update session and user synchronously
+          setSession(newSession);
+          setUser(newSession?.user ?? null);
+          
+          // Track current user ID for race condition prevention
+          const newUserId = newSession?.user?.id ?? null;
+          currentUserIdRef.current = newUserId;
+          
+          if (newSession?.user) {
+            // Set profile to loading while we fetch
+            setProfileStatus('loading');
+            
+            // Fetch family data and complete bootstrap when done
+            // Use setTimeout(0) to avoid Supabase deadlock
+            setTimeout(async () => {
+              if (!mounted || currentUserIdRef.current !== newSession.user.id) return;
+              
+              await fetchFamilyData(newSession.user.id);
+              
+              if (mounted && currentUserIdRef.current === newSession.user.id) {
+                completeBootstrap();
+              }
+            }, 0);
+          } else {
+            // No user - reset everything
+            setFamily(null);
+            setFamilyMember(null);
+            setProfileStatus('unknown');
+            completeBootstrap();
+          }
         }
-        
-        setLoading(false);
-      }
-    );
+      );
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+      // Get initial session
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
       
-      if (session?.user) {
-        fetchFamilyData(session.user.id);
+      if (!mounted) {
+        subscription.unsubscribe();
+        return;
       }
       
-      setLoading(false);
-    });
+      console.log('[Auth] Initial session:', initialSession ? 'exists' : 'none');
+      
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
+      currentUserIdRef.current = initialSession?.user?.id ?? null;
+      
+      if (initialSession?.user) {
+        setProfileStatus('loading');
+        await fetchFamilyData(initialSession.user.id);
+      } else {
+        setProfileStatus('unknown');
+      }
+      
+      if (mounted) {
+        completeBootstrap();
+      }
+      
+      return () => {
+        subscription.unsubscribe();
+      };
+    };
 
-    return () => subscription.unsubscribe();
-  }, []);
+    initializeAuth();
+
+    return () => {
+      mounted = false;
+      // Cancel any pending fetches
+      if (fetchAbortControllerRef.current) {
+        fetchAbortControllerRef.current.abort();
+      }
+    };
+  }, [fetchFamilyData, completeBootstrap]);
 
   const signUp = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signUp({
@@ -154,17 +266,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
+    // Reset profile status before sign in
+    setProfileStatus('loading');
+    setBootstrapStatus('initializing');
+    
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    if (error) {
+      setProfileStatus('unknown');
+      setBootstrapStatus('ready');
+    }
+    // On success, onAuthStateChange will handle the rest
+    
     return { error: error as Error | null };
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Cancel any pending fetches
+    if (fetchAbortControllerRef.current) {
+      fetchAbortControllerRef.current.abort();
+    }
+    
+    // Reset state before signing out
+    currentUserIdRef.current = null;
     setFamily(null);
     setFamilyMember(null);
+    setProfileStatus('unknown');
+    
+    await supabase.auth.signOut();
   };
 
   const resetPassword = async (email: string) => {
@@ -278,11 +410,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: error as Error };
       }
 
+      // Cancel pending fetches
+      if (fetchAbortControllerRef.current) {
+        fetchAbortControllerRef.current.abort();
+      }
+      
+      currentUserIdRef.current = null;
       await supabase.auth.signOut();
       setFamily(null);
       setFamilyMember(null);
       setUser(null);
       setSession(null);
+      setProfileStatus('unknown');
 
       return { error: null };
     } catch (error) {
@@ -305,6 +444,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         family,
         familyMember,
         loading,
+        bootstrapStatus,
+        profileStatus,
         signUp,
         signIn,
         signOut,
