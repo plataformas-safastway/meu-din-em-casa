@@ -82,33 +82,40 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const pluggyWebhookSecret = Deno.env.get("PLUGGY_WEBHOOK_SECRET") || "";
+    const pluggyWebhookSecret = Deno.env.get("PLUGGY_WEBHOOK_SECRET");
+
+    // SECURITY: Require webhook secret to be configured
+    if (!pluggyWebhookSecret) {
+      console.error("[pluggy-webhook] PLUGGY_WEBHOOK_SECRET not configured - rejecting request");
+      return new Response(
+        JSON.stringify({ error: "Webhook security not configured" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 503,
+        }
+      );
+    }
 
     // Get raw body for signature verification
     const rawBody = await req.text();
     
-    // Verify signature if secret is configured
-    if (pluggyWebhookSecret) {
-      const signature = req.headers.get("x-pluggy-signature") || 
-                        req.headers.get("x-webhook-signature");
-      
-      const isValid = await verifyPluggySignature(rawBody, signature, pluggyWebhookSecret);
-      
-      if (!isValid) {
-        console.error("[pluggy-webhook] Invalid signature - rejecting request");
-        return new Response(
-          JSON.stringify({ error: "Invalid webhook signature" }),
-          {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 401,
-          }
-        );
-      }
-      console.log("[pluggy-webhook] Signature verified successfully");
-    } else {
-      // Log warning but allow in development
-      console.warn("[pluggy-webhook] PLUGGY_WEBHOOK_SECRET not configured - accepting without signature verification");
+    // SECURITY: Always verify signature (mandatory)
+    const signature = req.headers.get("x-pluggy-signature") || 
+                      req.headers.get("x-webhook-signature");
+    
+    const isValid = await verifyPluggySignature(rawBody, signature, pluggyWebhookSecret);
+    
+    if (!isValid) {
+      console.error("[pluggy-webhook] Invalid signature - rejecting request");
+      return new Response(
+        JSON.stringify({ error: "Invalid webhook signature" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        }
+      );
     }
+    console.log("[pluggy-webhook] Signature verified successfully");
 
     // Parse payload
     let payload: { event?: string; data?: Record<string, unknown> };
