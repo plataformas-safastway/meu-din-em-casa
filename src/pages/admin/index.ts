@@ -4,3 +4,4 @@ export { AdminUsersPage } from './AdminUsersPage';
 export { AdminEbooksPage } from './AdminEbooksPage';
 export { AdminMetricsPage } from './AdminMetricsPage';
 export { AdminOpenFinancePage } from './AdminOpenFinancePage';
+export * from './lgpd';

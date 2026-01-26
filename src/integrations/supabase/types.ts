@@ -1094,6 +1094,42 @@ export type Database = {
           },
         ]
       }
+      dashboard_audit_logs: {
+        Row: {
+          actor_admin_id: string
+          actor_role: string
+          created_at: string
+          event_type: string
+          family_ref: string | null
+          id: string
+          ip_ref: string | null
+          metadata_safe: Json | null
+          target_user_ref: string | null
+        }
+        Insert: {
+          actor_admin_id: string
+          actor_role: string
+          created_at?: string
+          event_type: string
+          family_ref?: string | null
+          id?: string
+          ip_ref?: string | null
+          metadata_safe?: Json | null
+          target_user_ref?: string | null
+        }
+        Update: {
+          actor_admin_id?: string
+          actor_role?: string
+          created_at?: string
+          event_type?: string
+          family_ref?: string | null
+          id?: string
+          ip_ref?: string | null
+          metadata_safe?: Json | null
+          target_user_ref?: string | null
+        }
+        Relationships: []
+      }
       ebook_ctas: {
         Row: {
           cover_url: string | null
@@ -2395,6 +2431,90 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      legal_access_grants: {
+        Row: {
+          approved_by: string | null
+          created_at: string
+          expires_at: string
+          family_id: string | null
+          id: string
+          mfa_verified: boolean | null
+          reason_code: string
+          reason_text: string
+          requested_by: string
+          scope: string
+          status: string
+          target_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_by?: string | null
+          created_at?: string
+          expires_at: string
+          family_id?: string | null
+          id?: string
+          mfa_verified?: boolean | null
+          reason_code: string
+          reason_text: string
+          requested_by: string
+          scope: string
+          status?: string
+          target_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_by?: string | null
+          created_at?: string
+          expires_at?: string
+          family_id?: string | null
+          id?: string
+          mfa_verified?: boolean | null
+          reason_code?: string
+          reason_text?: string
+          requested_by?: string
+          scope?: string
+          status?: string
+          target_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      legal_vault: {
+        Row: {
+          created_at: string
+          created_by: string
+          data_type: string
+          family_id: string
+          id: string
+          payload: Json
+          retention_until: string
+          sealed: boolean | null
+          target_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          data_type: string
+          family_id: string
+          id?: string
+          payload?: Json
+          retention_until: string
+          sealed?: boolean | null
+          target_user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          data_type?: string
+          family_id?: string
+          id?: string
+          payload?: Json
+          retention_until?: string
+          sealed?: boolean | null
+          target_user_id?: string
+        }
+        Relationships: []
       }
       lgpd_deletion_requests: {
         Row: {
@@ -4790,10 +4910,15 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      has_active_breakglass: {
+        Args: { _family_id?: string; _scope: string; _user_id: string }
+        Returns: boolean
+      }
       has_any_admin: { Args: never; Returns: boolean }
       has_cs_access: { Args: { _user_id: string }; Returns: boolean }
       has_executive_access: { Args: { _user_id: string }; Returns: boolean }
       has_financial_access: { Args: { _user_id: string }; Returns: boolean }
+      has_legal_access: { Args: { _user_id: string }; Returns: boolean }
       has_pending_lgpd_request: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
@@ -4804,6 +4929,8 @@ export type Database = {
       }
       has_support_access: { Args: { _user_id: string }; Returns: boolean }
       has_tech_access: { Args: { _user_id: string }; Returns: boolean }
+      hash_identifier: { Args: { identifier: string }; Returns: string }
+      is_admin_master: { Args: { _user_id: string }; Returns: boolean }
       is_family_member: { Args: { f_id: string }; Returns: boolean }
       is_family_owner: { Args: { f_id: string }; Returns: boolean }
       is_transaction_private_for_user: {
@@ -4811,6 +4938,18 @@ export type Database = {
         Returns: boolean
       }
       is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
+      log_dashboard_access: {
+        Args: {
+          _actor_id: string
+          _actor_role: string
+          _event_type: string
+          _family_id?: string
+          _ip_address?: string
+          _metadata?: Json
+          _target_user_id?: string
+        }
+        Returns: string
+      }
       reconcile_installment: {
         Args: { p_planned_id: string; p_transaction_id: string }
         Returns: boolean

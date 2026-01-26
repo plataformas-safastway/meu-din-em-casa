@@ -25,6 +25,8 @@ import {
   Key,
   Flag,
   Activity,
+  Scale,
+  Vault,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,14 +70,22 @@ import {
   TechFeatureFlagsPage,
   TechAuditPage,
 } from "./tech";
+import {
+  LGPDOverviewPage,
+  LegalVaultPage,
+  BreakglassApprovalsPage,
+  LGPDAuditPage,
+} from "./lgpd";
 import ExecutiveReportsPage from "./executive/ExecutiveReportsPage";
 import { useExecutiveAccess } from "@/hooks/useExecutiveReports";
+import { useLegalAccess } from "@/hooks/useLegalAccess";
 
 type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings" 
   | "fin-overview" | "fin-users" | "fin-payments" | "fin-invoices" | "fin-reports" | "fin-audit"
   | "sup-errors" | "sup-users" | "sup-audit"
   | "cs-overview" | "cs-users" | "cs-automation" | "cs-health" | "cs-audit" | "cs-lgpd"
   | "tech-health" | "tech-logs" | "tech-integrations" | "tech-keys" | "tech-flags" | "tech-audit"
+  | "lgpd-overview" | "lgpd-dsar" | "lgpd-vault" | "lgpd-breakglass" | "lgpd-audit"
   | "exec-reports";
 
 export function AdminDashboard() {
@@ -89,6 +99,7 @@ export function AdminDashboard() {
   const { data: hasCSAccess } = useCSAccess();
   const { data: hasTechAccess } = useTechAccess();
   const { data: hasExecutiveAccess } = useExecutiveAccess();
+  const { data: hasLegalAccess } = useLegalAccess();
   const { data: userAccess } = useUserAccess();
 
   const handleSignOut = async () => {
@@ -147,6 +158,15 @@ export function AdminDashboard() {
     { id: "tech-audit" as AdminTab, label: "Auditoria Tech", icon: ClipboardList },
   ] : [];
 
+  // LGPD & Privacy module menu - only for users with legal access
+  const lgpdMenuItems = hasLegalAccess ? [
+    { id: "lgpd-overview" as AdminTab, label: "Visão Geral", icon: Shield },
+    { id: "lgpd-dsar" as AdminTab, label: "Solicitações DSAR", icon: FileText },
+    { id: "lgpd-vault" as AdminTab, label: "Cofre Legal", icon: Vault },
+    { id: "lgpd-breakglass" as AdminTab, label: "Acesso Excepcional", icon: Scale },
+    { id: "lgpd-audit" as AdminTab, label: "Auditoria", icon: ClipboardList },
+  ] : [];
+
   const renderContent = () => {
     // Check financial access for financial tabs
     if (activeTab.startsWith('fin-') && !hasFinancialAccess) {
@@ -171,6 +191,11 @@ export function AdminDashboard() {
     // Check Executive access for Executive tabs
     if (activeTab.startsWith('exec-') && !hasExecutiveAccess) {
       return <AccessDenied message="Este módulo requer perfil ADMIN_MASTER, DIRETORIA ou GESTÃO ESTRATÉGICA" />;
+    }
+
+    // Check Legal access for LGPD tabs
+    if (activeTab.startsWith('lgpd-') && !hasLegalAccess) {
+      return <AccessDenied message="Este módulo requer perfil LEGAL ou ADMIN_MASTER" />;
     }
 
     switch (activeTab) {
@@ -228,8 +253,18 @@ export function AdminDashboard() {
         return <TechAuditPage />;
       case "exec-reports":
         return <ExecutiveReportsPage />;
+      case "lgpd-overview":
+        return <LGPDOverviewPage />;
+      case "lgpd-dsar":
+        return <LGPDRequestsPage />;
+      case "lgpd-vault":
+        return <LegalVaultPage />;
+      case "lgpd-breakglass":
+        return <BreakglassApprovalsPage />;
+      case "lgpd-audit":
+        return <LGPDAuditPage />;
       default:
-        return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} hasSupportAccess={!!hasSupportAccess} hasCSAccess={!!hasCSAccess} hasTechAccess={!!hasTechAccess} hasExecutiveAccess={!!hasExecutiveAccess} />;
+        return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} hasSupportAccess={!!hasSupportAccess} hasCSAccess={!!hasCSAccess} hasTechAccess={!!hasTechAccess} hasExecutiveAccess={!!hasExecutiveAccess} hasLegalAccess={!!hasLegalAccess} />;
     }
   };
 
@@ -385,6 +420,30 @@ export function AdminDashboard() {
               })}
             </>
           )}
+          {lgpdMenuItems.length > 0 && (
+            <>
+              <div className="pt-4 pb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">LGPD & Privacidade</p>
+              </div>
+              {lgpdMenuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      activeTab === item.id
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
@@ -425,7 +484,7 @@ export function AdminDashboard() {
   );
 }
 
-function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCSAccess, hasTechAccess, hasExecutiveAccess }: { onNavigate: (tab: AdminTab) => void; hasFinancialAccess: boolean; hasSupportAccess: boolean; hasCSAccess: boolean; hasTechAccess: boolean; hasExecutiveAccess: boolean }) {
+function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCSAccess, hasTechAccess, hasExecutiveAccess, hasLegalAccess }: { onNavigate: (tab: AdminTab) => void; hasFinancialAccess: boolean; hasSupportAccess: boolean; hasCSAccess: boolean; hasTechAccess: boolean; hasExecutiveAccess: boolean; hasLegalAccess: boolean }) {
   const stats = [
     { label: "Total de Usuários", value: "—", icon: Users, color: "text-blue-500" },
     { label: "Famílias Ativas", value: "—", icon: Home, color: "text-green-500" },
@@ -452,6 +511,9 @@ function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCS
     ] : []),
     ...(hasExecutiveAccess ? [
       { label: "Relatórios Executivos", icon: BarChart3, action: () => onNavigate("exec-reports") },
+    ] : []),
+    ...(hasLegalAccess ? [
+      { label: "LGPD & Privacidade", icon: Shield, action: () => onNavigate("lgpd-overview") },
     ] : []),
   ];
 
