@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-export type AppRole = 'user' | 'admin' | 'cs';
+export type AppRole = 'user' | 'admin' | 'cs' | 'admin_master' | 'financeiro' | 'tecnologia' | 'suporte' | 'diretoria' | 'gestao_estrategica' | 'customer_success';
 
 interface UserRole {
   id: string;
@@ -153,10 +153,11 @@ export function useRemoveRole() {
 
 export function useIsAdmin() {
   const { data: role, isLoading } = useUserRole();
+  const isAdminRole = role === 'admin' || role === 'cs' || role === 'admin_master';
   return {
-    isAdmin: role === 'admin',
+    isAdmin: role === 'admin' || role === 'admin_master',
     isCS: role === 'cs',
-    isAdminOrCS: role === 'admin' || role === 'cs',
+    isAdminOrCS: isAdminRole,
     isLoading,
     role,
   };

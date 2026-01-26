@@ -75,7 +75,7 @@ function ProtectedRoute({
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, family, loading } = useAuth();
+  const { user, loading } = useAuth();
   const { data: role, isLoading: roleLoading } = useUserRole();
   const location = useLocation();
 
@@ -90,11 +90,11 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
         state={{ from: { pathname: location.pathname, search: location.search } }}
       />
     );
-  if (!family)
-    return <Navigate to="/signup" replace state={{ from: { pathname: location.pathname, search: location.search } }} />;
 
-  // Check if user has admin or CS role
-  if (role !== "admin" && role !== "cs") {
+  // Admin users (admin, cs, admin_master) don't need a family - they access dashboard directly
+  const isAdminRole = role === "admin" || role === "cs" || role === "admin_master";
+  
+  if (!isAdminRole) {
     return <Navigate to="/app" replace />;
   }
 
@@ -108,11 +108,14 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   
   if (loading || roleLoading || checkingAdmin) return <LoadingSpinner />;
   
+  // Admin users go directly to dashboard (no family required)
+  const isAdminRole = role === 'admin' || role === 'cs' || role === 'admin_master';
+  
+  if (user && isAdminRole) {
+    return <Navigate to="/admin" replace />;
+  }
+  
   if (user && family) {
-    // If admin/CS, redirect to admin dashboard
-    if (role === 'admin' || role === 'cs') {
-      return <Navigate to="/admin" replace />;
-    }
     return <Navigate to="/app" replace />;
   }
   
