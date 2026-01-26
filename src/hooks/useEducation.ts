@@ -18,10 +18,15 @@ export function useEducation() {
   const queryClient = useQueryClient();
   const { state: onboardingState } = useOnboarding();
 
-  // Fetch all education content
+  // Fetch all education content - ONLY when authenticated
   const { data: allTips = [] } = useQuery({
-    queryKey: ["education-content"],
+    queryKey: ["education-content", user?.id],
     queryFn: async () => {
+      // Security: Only fetch if user is authenticated
+      if (!user?.id) {
+        return [];
+      }
+
       const { data, error } = await supabase
         .from("education_content")
         .select("*")
@@ -43,13 +48,15 @@ export function useEducation() {
         triggerCondition: tip.trigger_condition,
       })) as EducationTip[];
     },
+    enabled: !!user?.id, // Only run query when user is authenticated
     staleTime: 1000 * 60 * 30, // 30 minutes
   });
 
-  // Fetch shown tips for this user
+  // Fetch shown tips for this user - ONLY when authenticated
   const { data: shownTips = [] } = useQuery({
     queryKey: ["education-tips-shown", user?.id],
     queryFn: async () => {
+      // Security: Require authenticated user
       if (!user?.id) return [];
 
       const { data, error } = await supabase
@@ -62,9 +69,9 @@ export function useEducation() {
         return [];
       }
 
-      return data;
+      return data ?? [];
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id, // Only run when authenticated
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
