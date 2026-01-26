@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { ArrowLeft, Search, Loader2, Filter, CheckSquare } from "lucide-react";
+import { ArrowLeft, Search, Loader2, Filter, CheckSquare, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getCategoryById } from "@/data/categories";
@@ -11,7 +11,9 @@ import {
   useBulkDeleteTransactions,
   useBulkUpdateCategory,
 } from "@/hooks/useTransactionsPaginated";
+import { useCreateTransactionWithInstallments } from "@/hooks/useTransactionWithInstallments";
 import { EditTransactionSheet } from "@/components/EditTransactionSheet";
+import { AddTransactionSheet } from "@/components/AddTransactionSheet";
 import { TransactionDetailSheet, TransactionDetail } from "@/components/TransactionDetailSheet";
 import { 
   TransactionFiltersSheet, 
@@ -33,6 +35,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { formatFullDate } from "@/lib/formatters";
 import { toast } from "sonner";
+import { useCTADestination } from "@/hooks/useCTARouter";
+import { CTADefaultMode, parseMonthRef } from "@/types/navigation";
+import { TransactionType } from "@/types/finance";
 
 interface TransactionsPageProps {
   onBack: () => void;
@@ -48,6 +53,10 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [transactionToEdit, setTransactionToEdit] = useState<TransactionDetail | null>(null);
   
+  // Add transaction sheet state (for CTA routing)
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
+  const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
+  
   // Selection mode
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -55,6 +64,50 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   // Bulk category change
   const [categoryChangeOpen, setCategoryChangeOpen] = useState(false);
   
+  // CTA Router - consume incoming CTA state
+  const { consumeCTA, hasPendingCTA, defaultMode, monthRef } = useCTADestination();
+  
+  // Handle CTA routing on mount
+  useEffect(() => {
+    if (hasPendingCTA) {
+      const ctaRequest = consumeCTA();
+      if (ctaRequest) {
+        // Handle different modes
+        switch (ctaRequest.defaultMode) {
+          case CTADefaultMode.ADD_EXPENSE:
+            setDefaultTransactionType("expense");
+            setAddSheetOpen(true);
+            break;
+          case CTADefaultMode.ADD_INCOME:
+            setDefaultTransactionType("income");
+            setAddSheetOpen(true);
+            break;
+          case CTADefaultMode.CREATE:
+            setDefaultTransactionType("expense");
+            setAddSheetOpen(true);
+            break;
+          case CTADefaultMode.EDIT:
+            // Would need transaction ID from payload
+            if (ctaRequest.payload?.transactionId) {
+              // Find and open edit sheet
+              // For now, just log
+              console.log('[TransactionsPage] Edit mode requested for:', ctaRequest.payload.transactionId);
+            }
+            break;
+          case CTADefaultMode.DETAILS:
+          default:
+            // Just show the list
+            break;
+        }
+        
+        // Apply month filter if provided
+        if (ctaRequest.sourceContext.monthRef) {
+          const { year, month } = parseMonthRef(ctaRequest.sourceContext.monthRef);
+          // Could set date filter here if needed
+        }
+      }
+    }
+  }, []); // Only run on mount
   // Use paginated query with filters
   const { 
     data: paginatedData, 
@@ -67,6 +120,31 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   const deleteTransaction = useDeleteTransaction();
   const bulkDelete = useBulkDeleteTransactions();
   const bulkUpdateCategory = useBulkUpdateCategory();
+  const createTransaction = useCreateTransactionWithInstallments();
+
+  // Handle transaction submission from add sheet
+  const handleSubmitTransaction = useCallback(async (transaction: any) => {
+    try {
+      await createTransaction.mutateAsync({
+        type: transaction.type,
+        amount: transaction.amount,
+        category_id: transaction.category,
+        subcategory_id: transaction.subcategory,
+        description: transaction.description,
+        date: transaction.date,
+        payment_method: transaction.paymentMethod,
+        bank_account_id: transaction.bankAccountId,
+        credit_card_id: transaction.creditCardId,
+        goal_id: transaction.goalId,
+        cardChargeType: transaction.cardChargeType,
+        installmentsTotal: transaction.installmentsTotal,
+      });
+      toast.success(transaction.type === "income" ? "Receita registrada!" : "Despesa registrada!");
+      setAddSheetOpen(false);
+    } catch (error) {
+      toast.error("Erro ao salvar lançamento");
+    }
+  }, [createTransaction]);
 
   // Calculate active filter count
   const activeFilterCount = useMemo(() => {
@@ -480,6 +558,26 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
           source: transactionToEdit.source,
         } : null}
       />
+
+      {/* Add Transaction Sheet - for CTA routing */}
+      <AddTransactionSheet
+        open={addSheetOpen}
+        onOpenChange={setAddSheetOpen}
+        onSubmit={handleSubmitTransaction}
+        defaultType={defaultTransactionType}
+      />
+
+      {/* FAB for quick add */}
+      <Button
+        onClick={() => {
+          setDefaultTransactionType("expense");
+          setAddSheetOpen(true);
+        }}
+        className="fixed right-4 bottom-20 z-50 w-14 h-14 rounded-full shadow-xl shadow-primary/30"
+        size="icon"
+      >
+        <Plus className="w-6 h-6" />
+      </Button>
     </div>
   );
 }

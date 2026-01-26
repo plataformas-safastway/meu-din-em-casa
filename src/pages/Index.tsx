@@ -6,6 +6,7 @@ import { LocationContextBanner } from "@/components/family";
 import { CSInAppMessage } from "@/components/cs/CSInAppMessage";
 import { ScreenLoader } from "@/components/ui/money-loader";
 import { NavigationProvider, NavigationSource, getBackDestinationForSource } from "@/hooks/useNavigationContext";
+import { CTARouterProvider } from "@/hooks/useCTARouter";
 
 // Lazy load heavy modules - these won't be in initial bundle
 const TransactionsPage = lazy(() => import("./TransactionsPage").then(m => ({ default: m.TransactionsPage })));
@@ -174,13 +175,15 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <LocationContextBanner />
-      {renderPage()}
-      <WhatsAppCTA />
-      <CSInAppMessage />
-      <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-    </div>
+    <CTARouterProvider>
+      <div className="min-h-screen bg-background">
+        <LocationContextBanner />
+        {renderPage()}
+        <WhatsAppCTA />
+        <CSInAppMessage />
+        <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+      </div>
+    </CTARouterProvider>
   );
 };
 
