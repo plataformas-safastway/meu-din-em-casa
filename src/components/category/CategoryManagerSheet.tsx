@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { IconPicker, CategoryIcon } from "@/components/category";
+import { DuplicateCategorySheet } from "./DuplicateCategorySheet";
 import {
   useUserCategories,
   useCreateUserCategory,
@@ -47,7 +48,7 @@ interface CategoryManagerSheetProps {
   onCategorySelect?: (categoryId: string, subcategoryId?: string) => void;
 }
 
-type ViewMode = 'list' | 'create' | 'edit' | 'duplicate' | 'subcategories';
+type ViewMode = 'list' | 'create' | 'edit' | 'subcategories';
 
 export function CategoryManagerSheet({
   open,
@@ -70,8 +71,9 @@ export function CategoryManagerSheet({
   const [renameTransactionCount, setRenameTransactionCount] = useState(0);
   const [pendingRename, setPendingRename] = useState<{ categoryId: string; newName: string } | null>(null);
   
-  // Bulk reclassify dialog
-  const [showReclassifyDialog, setShowReclassifyDialog] = useState(false);
+  // Duplicate sheet
+  const [showDuplicateSheet, setShowDuplicateSheet] = useState(false);
+  const [categoryToDuplicate, setCategoryToDuplicate] = useState<UserCategory | null>(null);
 
   // Queries and mutations
   const { data: userCategories = [], isLoading } = useUserCategories(showArchived);
@@ -144,17 +146,22 @@ export function CategoryManagerSheet({
     setViewMode('list');
   };
 
-  const handleDuplicate = async () => {
-    if (!selectedCategory || !categoryName.trim()) return;
+  const handleDuplicateConfirm = async (data: {
+    newName: string;
+    newIconKey: string;
+    includeArchivedSubcategories: boolean;
+  }) => {
+    if (!categoryToDuplicate) return;
     
     await duplicateCategory.mutateAsync({
-      categoryId: selectedCategory.id,
-      newName: categoryName.trim(),
-      newIconKey: categoryIcon,
+      categoryId: categoryToDuplicate.id,
+      newName: data.newName,
+      newIconKey: data.newIconKey,
+      includeArchivedSubcategories: data.includeArchivedSubcategories,
     });
     
-    resetForm();
-    setViewMode('list');
+    setShowDuplicateSheet(false);
+    setCategoryToDuplicate(null);
   };
 
   const handleAddSubcategory = async () => {
@@ -182,11 +189,9 @@ export function CategoryManagerSheet({
     setViewMode('edit');
   };
 
-  const openDuplicateMode = (category: UserCategory) => {
-    setSelectedCategory(category);
-    setCategoryName(`${category.name} (cópia)`);
-    setCategoryIcon(category.icon_key);
-    setViewMode('duplicate');
+  const openDuplicateSheet = (category: UserCategory) => {
+    setCategoryToDuplicate(category);
+    setShowDuplicateSheet(true);
   };
 
   const openSubcategoriesMode = (category: UserCategory) => {
@@ -245,7 +250,7 @@ export function CategoryManagerSheet({
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={() => openDuplicateMode(category)}
+              onClick={() => openDuplicateSheet(category)}
             >
               <Copy className="w-4 h-4" />
             </Button>
@@ -291,7 +296,6 @@ export function CategoryManagerSheet({
               )}
               {viewMode === 'create' && "Nova Categoria"}
               {viewMode === 'edit' && "Editar Categoria"}
-              {viewMode === 'duplicate' && "Duplicar Categoria"}
               {viewMode === 'subcategories' && selectedCategory?.name}
             </SheetTitle>
           </SheetHeader>
@@ -363,8 +367,8 @@ export function CategoryManagerSheet({
                 </div>
               )}
 
-              {/* Create/Edit/Duplicate Form */}
-              {(viewMode === 'create' || viewMode === 'edit' || viewMode === 'duplicate') && (
+              {/* Create/Edit Form */}
+              {(viewMode === 'create' || viewMode === 'edit') && (
                 <div className="space-y-6 pb-4">
                   <div className="space-y-2">
                     <Label>Nome da Categoria</Label>
@@ -466,20 +470,18 @@ export function CategoryManagerSheet({
               </div>
             )}
 
-            {viewMode === 'duplicate' && (
-              <div className="pt-4 border-t">
-                <Button
-                  className="w-full h-12"
-                  onClick={handleDuplicate}
-                  disabled={!categoryName.trim() || duplicateCategory.isPending}
-                >
-                  Duplicar Categoria
-                </Button>
-              </div>
-            )}
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Duplicate Category Sheet */}
+      <DuplicateCategorySheet
+        open={showDuplicateSheet}
+        onOpenChange={setShowDuplicateSheet}
+        category={categoryToDuplicate}
+        onConfirm={handleDuplicateConfirm}
+        isLoading={duplicateCategory.isPending}
+      />
 
       {/* Rename Alert Dialog */}
       <AlertDialog open={showRenameAlert} onOpenChange={setShowRenameAlert}>
@@ -504,51 +506,8 @@ export function CategoryManagerSheet({
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowRenameAlert(false);
-                setShowReclassifyDialog(true);
-              }}
-            >
-              Reclassificar Antigas
-            </Button>
             <AlertDialogAction onClick={() => handleConfirmRename(true)}>
               Criar Nova Versão
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Bulk Reclassify Dialog */}
-      <AlertDialog open={showReclassifyDialog} onOpenChange={setShowReclassifyDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reclassificar Transações</AlertDialogTitle>
-            <AlertDialogDescription>
-              Deseja reclassificar as {renameTransactionCount} transações antigas para a nova categoria?
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setShowReclassifyDialog(false);
-              handleConfirmRename(true);
-            }}>
-              Não, apenas renomear
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                if (pendingRename) {
-                  // First create new version
-                  await handleConfirmRename(true);
-                  // Then reclassify (this would need the new category ID)
-                  // For simplicity, showing success - full implementation would chain these
-                }
-                setShowReclassifyDialog(false);
-              }}
-            >
-              Sim, reclassificar todas
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -344,10 +344,12 @@ export function useDuplicateUserCategory() {
       categoryId,
       newName,
       newIconKey,
+      includeArchivedSubcategories = false,
     }: {
       categoryId: string;
       newName: string;
       newIconKey: string;
+      includeArchivedSubcategories?: boolean;
     }) => {
       if (!family) throw new Error("No family");
 
@@ -377,14 +379,20 @@ export function useDuplicateUserCategory() {
 
       if (createError) throw createError;
 
+      // Filter subcategories based on includeArchivedSubcategories
+      const subcategoriesToCopy = (original.user_subcategories || []).filter(
+        (sub: any) => includeArchivedSubcategories || sub.status === 'ACTIVE'
+      );
+
       // Duplicate subcategories
-      if (original.user_subcategories?.length > 0) {
-        const subcategoriesToCreate = original.user_subcategories.map((sub: any) => ({
+      if (subcategoriesToCopy.length > 0) {
+        const subcategoriesToCreate = subcategoriesToCopy.map((sub: any) => ({
           category_id: newCategory.id,
           family_id: family.id,
           name: sub.name,
           display_order: sub.display_order,
           created_by_user_id: user?.id,
+          status: 'ACTIVE', // New copies are always active
         }));
 
         await supabase.from("user_subcategories").insert(subcategoriesToCreate);
@@ -399,7 +407,12 @@ export function useDuplicateUserCategory() {
         old_category_id: categoryId,
         new_category_id: newCategory.id,
         performed_by_user_id: user?.id,
-        metadata: { subcategories_count: original.user_subcategories?.length || 0 },
+        metadata: { 
+          subcategories_count: subcategoriesToCopy.length,
+          included_archived: includeArchivedSubcategories,
+          original_icon: original.icon_key,
+          new_icon: newIconKey,
+        },
       });
 
       return newCategory as UserCategory;
