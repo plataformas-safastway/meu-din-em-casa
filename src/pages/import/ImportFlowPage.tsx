@@ -16,11 +16,9 @@ interface ImportFlowPageProps {
 export function ImportFlowPage({ onBack, onComplete }: ImportFlowPageProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState<ImportStep>('upload');
-  const [passwordRequired, setPasswordRequired] = useState(false);
   const [pendingFile, setPendingFile] = useState<{
     file: File;
     importType: 'bank_statement' | 'credit_card';
-    sourceId: string;
     invoiceMonth?: string;
   } | null>(null);
 
@@ -44,13 +42,11 @@ export function ImportFlowPage({ onBack, onComplete }: ImportFlowPageProps) {
       setPendingFile({
         file: data.file,
         importType: data.importType!,
-        sourceId: data.sourceId!,
         invoiceMonth: data.invoiceMonth,
       });
-      setPasswordRequired(true);
       setStep('password');
     } else {
-      // ✅ Regra de ouro: revisão sempre via rota com ID (reidratável)
+      // ✅ Navigate to review page with ID (rehydratable)
       navigate(`/app/import/${data.importId}/review`, { replace: true });
     }
   };
@@ -63,16 +59,12 @@ export function ImportFlowPage({ onBack, onComplete }: ImportFlowPageProps) {
       setStep('upload');
       return;
     }
-    setPasswordRequired(false);
     setPendingFile(null);
-    // ✅ Regra de ouro: revisão sempre via rota com ID (reidratável)
     navigate(`/app/import/${newImportId}/review`, { replace: true });
   };
 
   const handlePasswordCancel = () => {
-    // Delete the failed import if exists
     setPendingFile(null);
-    setPasswordRequired(false);
     setStep('upload');
   };
 
@@ -98,6 +90,9 @@ export function ImportFlowPage({ onBack, onComplete }: ImportFlowPageProps) {
             )}
             <div>
               <h1 className="text-lg font-semibold">{getTitle()}</h1>
+              <p className="text-sm text-muted-foreground">
+                Detecção automática de banco
+              </p>
             </div>
           </div>
         </div>
@@ -112,7 +107,7 @@ export function ImportFlowPage({ onBack, onComplete }: ImportFlowPageProps) {
           <ImportPasswordStep
             file={pendingFile.file}
             importType={pendingFile.importType}
-            sourceId={pendingFile.sourceId}
+            sourceId="" // No longer required - auto-detected
             invoiceMonth={pendingFile.invoiceMonth}
             onSuccess={handlePasswordSuccess}
             onCancel={handlePasswordCancel}
