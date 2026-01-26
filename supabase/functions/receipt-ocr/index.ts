@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,9 +16,63 @@ interface ExtractedData {
   confidence: number;
 }
 
+// Rate limiting
+const OCR_RATE_LIMIT = { limit: 10, windowSec: 60 }; // 10 req/min
+
+async function checkRateLimit(
+  supabaseAdmin: any,
+  key: string,
+  limit: number,
+  windowSec: number
+): Promise<{ allowed: boolean; retryAfterSec: number }> {
+  const now = new Date();
+  const resetAt = new Date(now.getTime() + windowSec * 1000);
+  try {
+    const { data } = await supabaseAdmin
+      .from("rate_limits")
+      .select("count, reset_at")
+      .eq("key", key)
+      .maybeSingle();
+
+    if (!data || new Date(data.reset_at) <= now) {
+      await supabaseAdmin.from("rate_limits").upsert({ key, count: 1, reset_at: resetAt.toISOString() });
+      return { allowed: true, retryAfterSec: 0 };
+    }
+    if (data.count >= limit) {
+      const retryAfterSec = Math.ceil((new Date(data.reset_at).getTime() - now.getTime()) / 1000);
+      return { allowed: false, retryAfterSec: Math.max(1, retryAfterSec) };
+    }
+    await supabaseAdmin.from("rate_limits").update({ count: data.count + 1 }).eq("key", key);
+    return { allowed: true, retryAfterSec: 0 };
+  } catch {
+    return { allowed: true, retryAfterSec: 0 };
+  }
+}
+
+function getClientIP(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
+  // Rate limit check
+  const clientIP = getClientIP(req);
+  const rateLimitKey = `ip:${clientIP}:receipt-ocr`;
+  const rateResult = await checkRateLimit(supabaseAdmin, rateLimitKey, OCR_RATE_LIMIT.limit, OCR_RATE_LIMIT.windowSec);
+  
+  if (!rateResult.allowed) {
+    console.log(`[receipt-ocr] Rate limited IP: ${clientIP}`);
+    return new Response(
+      JSON.stringify({ error: "rate_limited", message: "Muitas tentativas. Aguarde.", retry_after_sec: rateResult.retryAfterSec }),
+      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(rateResult.retryAfterSec) } }
+    );
   }
 
   try {

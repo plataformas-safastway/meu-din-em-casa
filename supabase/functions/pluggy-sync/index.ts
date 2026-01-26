@@ -35,6 +35,34 @@ async function getPluggyApiKey(): Promise<string> {
   return data.apiKey;
 }
 
+// Rate limiting
+const SYNC_RATE_LIMIT = { limit: 6, windowSec: 60 }; // 6 req/min
+
+async function checkRateLimit(
+  supabaseAdmin: any,
+  key: string,
+  limit: number,
+  windowSec: number
+): Promise<{ allowed: boolean; retryAfterSec: number }> {
+  const now = new Date();
+  const resetAt = new Date(now.getTime() + windowSec * 1000);
+  try {
+    const { data } = await supabaseAdmin.from("rate_limits").select("count, reset_at").eq("key", key).maybeSingle();
+    if (!data || new Date(data.reset_at) <= now) {
+      await supabaseAdmin.from("rate_limits").upsert({ key, count: 1, reset_at: resetAt.toISOString() });
+      return { allowed: true, retryAfterSec: 0 };
+    }
+    if (data.count >= limit) {
+      const retryAfterSec = Math.ceil((new Date(data.reset_at).getTime() - now.getTime()) / 1000);
+      return { allowed: false, retryAfterSec: Math.max(1, retryAfterSec) };
+    }
+    await supabaseAdmin.from("rate_limits").update({ count: data.count + 1 }).eq("key", key);
+    return { allowed: true, retryAfterSec: 0 };
+  } catch {
+    return { allowed: true, retryAfterSec: 0 };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -55,6 +83,17 @@ serve(async (req) => {
     );
     if (userError || !user) {
       throw new Error("Unauthorized");
+    }
+
+    // Rate limit check by user
+    const rateLimitKey = `user:${user.id}:pluggy-sync`;
+    const rateResult = await checkRateLimit(supabase, rateLimitKey, SYNC_RATE_LIMIT.limit, SYNC_RATE_LIMIT.windowSec);
+    if (!rateResult.allowed) {
+      console.log(`[pluggy-sync] Rate limited user: ${user.id}`);
+      return new Response(
+        JSON.stringify({ error: "rate_limited", message: "Muitas sincronizações. Aguarde.", retry_after_sec: rateResult.retryAfterSec }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(rateResult.retryAfterSec) } }
+      );
     }
 
     const { connectionId } = await req.json();
