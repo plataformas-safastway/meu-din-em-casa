@@ -9,3 +9,4 @@ export { QuickBankAccountSheet } from './QuickBankAccountSheet';
 export { QuickCreditCardSheet } from './QuickCreditCardSheet';
 export { InstallmentInput } from './InstallmentInput';
 export { InstallmentConfirmationModal } from './InstallmentConfirmationModal';
+export { BetterCardSuggestionToast } from './BetterCardSuggestionToast';
