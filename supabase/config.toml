@@ -59,3 +59,9 @@ verify_jwt = false
 
 [functions.spreadsheet-import]
 verify_jwt = false
+
+[functions.import-review]
+verify_jwt = false
+
+[functions.receipt-ocr]
+verify_jwt = false
