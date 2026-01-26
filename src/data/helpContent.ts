@@ -776,6 +776,78 @@ export const helpArticles: HelpArticle[] = [
     keywords: ["lgpd", "exclusão", "dados", "anonimização", "privacidade", "direito", "titular", "solicitar", "30 dias", "prazo"],
     deepLink: "settings",
   },
+  {
+    id: "lgpd-staff-access",
+    title: "Acesso de colaboradores aos seus dados",
+    category: "privacy",
+    icon: "👥",
+    summary: "Como a equipe do Oik acessa seus dados e quais controles existem",
+    steps: [
+      {
+        title: "Quem pode acessar?",
+        description: "Apenas colaboradores autorizados (consultores financeiros e equipe de suporte) podem visualizar seus dados para prestar o serviço contratado.",
+      },
+      {
+        title: "Base legal",
+        description: "O acesso é fundamentado na execução do contrato de consultoria e legítimo interesse para prestação do serviço financeiro.",
+      },
+      {
+        title: "O que eles veem",
+        description: "Consultores acessam: contas, transações, orçamentos, metas, categorias e relatórios financeiros necessários para a consultoria.",
+      },
+      {
+        title: "O que eles NÃO veem",
+        description: "Colaboradores não têm acesso a: logs técnicos, tokens de autenticação, IPs, senhas ou dados de auditoria interna.",
+      },
+      {
+        title: "Rastreabilidade",
+        description: "Todo acesso de colaborador aos seus dados é registrado automaticamente em log de auditoria, sem exceção.",
+        tip: "Os logs são pseudonimizados (sem dados pessoais expostos).",
+      },
+      {
+        title: "Acesso excepcional (Break-glass)",
+        description: "Para situações como ordens judiciais ou incidentes de segurança, existem controles rigorosos com aprovação, MFA e tempo limitado.",
+      },
+    ],
+    keywords: ["colaborador", "acesso", "equipe", "consultoria", "suporte", "rastreabilidade", "auditoria", "breakglass"],
+    deepLink: "settings",
+  },
+  {
+    id: "lgpd-data-protection",
+    title: "Como protegemos seus dados",
+    category: "privacy",
+    icon: "🔒",
+    summary: "Medidas de segurança e privacidade implementadas no Oik",
+    steps: [
+      {
+        title: "Criptografia",
+        description: "Todos os dados são criptografados em trânsito (HTTPS/TLS) e em repouso no banco de dados.",
+      },
+      {
+        title: "Row Level Security (RLS)",
+        description: "Cada família só vê seus próprios dados. Regras de segurança são aplicadas diretamente no banco de dados.",
+      },
+      {
+        title: "Separação de papéis",
+        description: "Colaboradores têm diferentes níveis de acesso conforme sua função: Consultoria, Suporte, Tecnologia, Financeiro, Jurídico.",
+      },
+      {
+        title: "Auditoria completa",
+        description: "Todas as ações sensíveis são registradas: quem fez, quando fez, o que mudou. Logs são imutáveis.",
+      },
+      {
+        title: "Cofre Legal isolado",
+        description: "Evidências para fins legais são armazenadas em ambiente separado, com acesso extremamente restrito e temporário.",
+      },
+      {
+        title: "Política de retenção",
+        description: "Dados são mantidos apenas pelo tempo necessário. Após exclusão, dados pessoais são removidos ou anonimizados irreversivelmente.",
+        tip: "Dados anonimizados são mantidos por até 10 anos para fins estatísticos.",
+      },
+    ],
+    keywords: ["segurança", "proteção", "criptografia", "rls", "auditoria", "cofre", "retenção", "privacidade"],
+    deepLink: "settings",
+  },
 
   // ===== FAMÍLIA =====
   {
