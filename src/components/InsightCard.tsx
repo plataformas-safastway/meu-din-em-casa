@@ -67,22 +67,34 @@ export function InsightCard({ insight }: InsightCardProps) {
 
 interface InsightListProps {
   insights: Insight[];
+  onViewAll?: () => void;
+  onInsightClick?: (insightId: string) => void;
 }
 
-export function InsightList({ insights }: InsightListProps) {
+export function InsightList({ insights, onViewAll, onInsightClick }: InsightListProps) {
   const sortedInsights = [...insights].sort((a, b) => a.priority - b.priority);
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-foreground">Insights da Família</h3>
-        <button className="text-sm text-primary hover:text-primary/80 font-medium transition-colors">
-          Ver todos
-        </button>
+        {onViewAll && (
+          <button 
+            onClick={onViewAll}
+            className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
+          >
+            Ver todos
+          </button>
+        )}
       </div>
       <div className="space-y-3">
         {sortedInsights.slice(0, 3).map((insight, index) => (
-          <div key={insight.id} style={{ animationDelay: `${index * 100}ms` }}>
+          <div 
+            key={insight.id} 
+            style={{ animationDelay: `${index * 100}ms` }}
+            onClick={() => onInsightClick?.(insight.id)}
+            className={onInsightClick ? "cursor-pointer" : ""}
+          >
             <InsightCard insight={insight} />
           </div>
         ))}
