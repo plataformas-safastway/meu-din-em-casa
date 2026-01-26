@@ -14,6 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_user_access_scopes: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          created_by: string | null
+          family_id: string | null
+          id: string
+          scope_type: string
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          created_by?: string | null
+          family_id?: string | null
+          id?: string
+          scope_type?: string
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          created_by?: string | null
+          family_id?: string | null
+          id?: string
+          scope_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_user_access_scopes_admin_user_id_fkey"
+            columns: ["admin_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_user_access_scopes_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_users: {
+        Row: {
+          admin_role: Database["public"]["Enums"]["admin_role"]
+          created_at: string
+          created_by: string | null
+          display_name: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          last_login_at: string | null
+          mfa_required: boolean
+          mfa_verified: boolean
+          must_change_password: boolean
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_role?: Database["public"]["Enums"]["admin_role"]
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          mfa_required?: boolean
+          mfa_verified?: boolean
+          must_change_password?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_role?: Database["public"]["Enums"]["admin_role"]
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          mfa_required?: boolean
+          mfa_verified?: boolean
+          must_change_password?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       alerts: {
         Row: {
           action_url: string | null
@@ -4871,6 +4964,7 @@ export type Database = {
         }
         Returns: number
       }
+      can_manage_admins: { Args: { _user_id: string }; Returns: boolean }
       change_user_account_status: {
         Args: {
           _new_status: Database["public"]["Enums"]["user_account_status"]
@@ -4904,6 +4998,7 @@ export type Database = {
         Returns: undefined
       }
       expire_old_imports: { Args: never; Returns: undefined }
+      get_admin_role: { Args: { _user_id: string }; Returns: string }
       get_category_transaction_count: {
         Args: { p_category_id: string; p_family_id: string }
         Returns: number
@@ -4944,6 +5039,10 @@ export type Database = {
         Args: { _family_id?: string; _scope: string; _user_id: string }
         Returns: boolean
       }
+      has_admin_role: {
+        Args: { _role: string; _user_id: string }
+        Returns: boolean
+      }
       has_any_admin: { Args: never; Returns: boolean }
       has_cs_access: { Args: { _user_id: string }; Returns: boolean }
       has_executive_access: { Args: { _user_id: string }; Returns: boolean }
@@ -4961,6 +5060,7 @@ export type Database = {
       has_tech_access: { Args: { _user_id: string }; Returns: boolean }
       hash_identifier: { Args: { identifier: string }; Returns: string }
       is_admin_master: { Args: { _user_id: string }; Returns: boolean }
+      is_admin_user: { Args: { _user_id: string }; Returns: boolean }
       is_family_member: { Args: { f_id: string }; Returns: boolean }
       is_family_owner: { Args: { f_id: string }; Returns: boolean }
       is_transaction_private_for_user: {
@@ -5029,6 +5129,7 @@ export type Database = {
       }
     }
     Enums: {
+      admin_role: "CS" | "ADMIN" | "LEGAL" | "MASTER"
       app_role:
         | "user"
         | "admin"
@@ -5195,6 +5296,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_role: ["CS", "ADMIN", "LEGAL", "MASTER"],
       app_role: [
         "user",
         "admin",
