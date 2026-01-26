@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { DetectedSourceHandler } from "@/components/import/DetectedSourceHandler";
 import { TransactionReviewItem } from "@/components/import/TransactionReviewItem";
+import { DocumentIntelligenceCard } from "@/components/import/DocumentIntelligenceCard";
 import { toast } from "sonner";
 
 // ============================================
@@ -820,6 +821,20 @@ export function ImportReviewPage() {
             </section>
           )}
 
+          {/* Document Intelligence Card */}
+          {batch.detected_bank && (
+            <DocumentIntelligenceCard
+              detected={{
+                bankName: batch.detected_bank,
+                documentType: batch.detected_document_type || batch.import_type,
+                agency: batch.detected_agency,
+                accountNumber: batch.detected_account,
+                last4: batch.detected_last4,
+              }}
+              confidenceLevel={batch.confidence_level || "HIGH"}
+            />
+          )}
+
           {/* Detected Sources Handler */}
           <DetectedSourceHandler importId={importId} />
           
@@ -840,9 +855,9 @@ export function ImportReviewPage() {
               </div>
             )}
             {needsReviewCount > 0 && (
-              <div className="flex-shrink-0 px-3 py-2 rounded-lg bg-orange-500/10">
+              <div className="flex-shrink-0 px-3 py-2 rounded-lg bg-secondary/20">
                 <p className="text-xs text-muted-foreground">Revisar</p>
-                <p className="font-semibold text-orange-500">{needsReviewCount}</p>
+                <p className="font-semibold text-secondary-foreground">{needsReviewCount}</p>
               </div>
             )}
           </div>

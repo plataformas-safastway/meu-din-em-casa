@@ -7,3 +7,4 @@ export { ClassificationSelector, getClassificationLabel, getClassificationColor 
 export { CategoryDecisionModal } from "./CategoryDecisionModal";
 export { CategoryMergeSheet } from "./CategoryMergeSheet";
 export { CategoryReclassificationSheet } from "./CategoryReclassificationSheet";
+export { DocumentIntelligenceCard } from "./DocumentIntelligenceCard";

@@ -96,25 +96,31 @@ serve(async (req) => {
     }
 
     const authHeader = req.headers.get("Authorization") ?? "";
-
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-      auth: { persistSession: false },
-    });
-
-    const { data: userData, error: userError } = await userClient.auth.getUser();
-
-    if (userError || !userData?.user) {
+    if (!authHeader.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
+    // Admin client for database operations AND auth validation
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
     });
 
+    // Validate JWT using admin.auth.getUser with the token
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await adminClient.auth.getUser(token);
+
+    if (userError || !userData?.user?.id) {
+      console.error("[import-confirm] auth.getUser failed:", userError?.message);
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // adminClient already defined above, continue using it for DB operations
     // Get user's family
     const { data: memberData, error: memberError } = await adminClient
       .from("family_members")
