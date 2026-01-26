@@ -1,8 +1,11 @@
-import { Check, ChevronRight } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Check, ChevronRight, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Category, Subcategory, TransactionClassification } from "@/types/finance";
 import { defaultCategories, getCategoryById } from "@/data/categories";
-import { useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { CategoryManagerSheet, CategoryIcon } from "@/components/category";
+import { useUserCategories, UserCategory } from "@/hooks/useUserCategories";
 
 interface CategorySelectorProps {
   value: string;
@@ -17,12 +20,38 @@ export function CategorySelector({
   classification,
   recentCategories = [],
 }: CategorySelectorProps) {
+  const [showManager, setShowManager] = useState(false);
+  
   // Map classification to transaction type for filtering
   const transactionType = classification === 'income' ? 'income' : 'expense';
   
-  const filteredCategories = useMemo(() => {
-    const allCategories = defaultCategories.filter((cat) => cat.type === transactionType);
+  // Get user custom categories
+  const { data: userCategories = [] } = useUserCategories(false);
+  
+  // Merge default and user categories
+  const allCategories = useMemo(() => {
+    const defaults = defaultCategories.filter((cat) => cat.type === transactionType);
+    const customs = userCategories
+      .filter(cat => cat.type === transactionType && cat.status === 'ACTIVE')
+      .map(cat => ({
+        id: cat.id,
+        name: cat.name,
+        code: cat.name.substring(0, 3).toUpperCase(),
+        icon: '', // Will use CategoryIcon component
+        iconKey: cat.icon_key,
+        color: cat.color || 'hsl(var(--primary))',
+        type: cat.type,
+        isDefault: false,
+        subcategories: (cat.subcategories || []).map(sub => ({
+          id: sub.id,
+          name: sub.name,
+        })),
+      }));
     
+    return [...customs, ...defaults];
+  }, [transactionType, userCategories]);
+  
+  const filteredCategories = useMemo(() => {
     // Sort: recent categories first
     if (recentCategories.length > 0) {
       const recentSet = new Set(recentCategories);
@@ -33,57 +62,82 @@ export function CategorySelector({
     }
     
     return allCategories;
-  }, [transactionType, recentCategories]);
+  }, [allCategories, recentCategories]);
 
   const selectedCategory = value ? getCategoryById(value) : null;
 
   return (
-    <div className="space-y-2">
-      <label className="text-base font-medium">Categoria</label>
-      
-      {/* Recent categories hint */}
-      {recentCategories.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          ⭐ Suas categorias mais usadas aparecem primeiro
-        </p>
-      )}
-      
-      <div className="grid grid-cols-3 gap-2">
-        {filteredCategories.map((cat, index) => {
-          const isRecent = recentCategories.includes(cat.id);
-          
-          return (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => onChange(cat.id)}
-              className={cn(
-                "relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all min-h-[72px] active:scale-[0.97]",
-                value === cat.id
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/50",
-                isRecent && index < 3 && "ring-2 ring-primary/20"
-              )}
-            >
-              <span className="text-2xl">{cat.icon}</span>
-              <span className="text-[11px] text-center leading-tight text-muted-foreground font-medium line-clamp-2">
-                {cat.name}
-              </span>
-              {value === cat.id && (
-                <div className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
-                  <Check className="w-3.5 h-3.5 text-primary-foreground" />
-                </div>
-              )}
-              {cat.subcategories.length > 0 && (
-                <div className="absolute bottom-1.5 right-1.5">
-                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
-                </div>
-              )}
-            </button>
-          );
-        })}
+    <>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-base font-medium">Categoria</label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs text-muted-foreground"
+            onClick={() => setShowManager(true)}
+          >
+            <Settings className="w-3.5 h-3.5 mr-1" />
+            Gerenciar
+          </Button>
+        </div>
+        
+        {/* Recent categories hint */}
+        {recentCategories.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            ⭐ Suas categorias mais usadas aparecem primeiro
+          </p>
+        )}
+        
+        <div className="grid grid-cols-3 gap-2">
+          {filteredCategories.map((cat, index) => {
+            const isRecent = recentCategories.includes(cat.id);
+            const isCustom = 'iconKey' in cat;
+            
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => onChange(cat.id)}
+                className={cn(
+                  "relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all min-h-[72px] active:scale-[0.97]",
+                  value === cat.id
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50",
+                  isRecent && index < 3 && "ring-2 ring-primary/20"
+                )}
+              >
+                {isCustom ? (
+                  <CategoryIcon iconKey={(cat as any).iconKey} className="w-6 h-6 text-primary" />
+                ) : (
+                  <span className="text-2xl">{cat.icon}</span>
+                )}
+                <span className="text-[11px] text-center leading-tight text-muted-foreground font-medium line-clamp-2">
+                  {cat.name}
+                </span>
+                {value === cat.id && (
+                  <div className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
+                    <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                  </div>
+                )}
+                {cat.subcategories.length > 0 && (
+                  <div className="absolute bottom-1.5 right-1.5">
+                    <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </div>
+      
+      <CategoryManagerSheet
+        open={showManager}
+        onOpenChange={setShowManager}
+        defaultType={transactionType}
+      />
+    </>
   );
 }
 

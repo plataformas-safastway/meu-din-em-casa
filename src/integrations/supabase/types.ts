@@ -284,6 +284,76 @@ export type Database = {
           },
         ]
       }
+      category_change_logs: {
+        Row: {
+          action: string
+          affected_transaction_count: number | null
+          category_id: string | null
+          family_id: string
+          id: string
+          metadata: Json | null
+          new_category_id: string | null
+          new_name: string | null
+          old_category_id: string | null
+          old_name: string | null
+          performed_at: string
+          performed_by_user_id: string | null
+          subcategory_id: string | null
+        }
+        Insert: {
+          action: string
+          affected_transaction_count?: number | null
+          category_id?: string | null
+          family_id: string
+          id?: string
+          metadata?: Json | null
+          new_category_id?: string | null
+          new_name?: string | null
+          old_category_id?: string | null
+          old_name?: string | null
+          performed_at?: string
+          performed_by_user_id?: string | null
+          subcategory_id?: string | null
+        }
+        Update: {
+          action?: string
+          affected_transaction_count?: number | null
+          category_id?: string | null
+          family_id?: string
+          id?: string
+          metadata?: Json | null
+          new_category_id?: string | null
+          new_name?: string | null
+          old_category_id?: string | null
+          old_name?: string | null
+          performed_at?: string
+          performed_by_user_id?: string | null
+          subcategory_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_change_logs_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "user_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_change_logs_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_change_logs_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "user_subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       category_import_mappings: {
         Row: {
           created_at: string
@@ -4127,6 +4197,75 @@ export type Database = {
         }
         Relationships: []
       }
+      user_categories: {
+        Row: {
+          archived_at: string | null
+          archived_by_user_id: string | null
+          color: string | null
+          created_at: string
+          created_by_user_id: string | null
+          display_order: number | null
+          family_id: string
+          icon_key: string
+          id: string
+          name: string
+          replaced_by_category_id: string | null
+          source: string
+          status: string
+          transaction_count: number | null
+          type: string
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by_user_id?: string | null
+          color?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          display_order?: number | null
+          family_id: string
+          icon_key: string
+          id?: string
+          name: string
+          replaced_by_category_id?: string | null
+          source?: string
+          status?: string
+          transaction_count?: number | null
+          type: string
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by_user_id?: string | null
+          color?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          display_order?: number | null
+          family_id?: string
+          icon_key?: string
+          id?: string
+          name?: string
+          replaced_by_category_id?: string | null
+          source?: string
+          status?: string
+          transaction_count?: number | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_categories_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_categories_replaced_by_category_id_fkey"
+            columns: ["replaced_by_category_id"]
+            isOneToOne: false
+            referencedRelation: "user_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_onboarding: {
         Row: {
           contextual_hints_enabled: boolean
@@ -4249,6 +4388,73 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subcategories: {
+        Row: {
+          archived_at: string | null
+          archived_by_user_id: string | null
+          category_id: string
+          created_at: string
+          created_by_user_id: string | null
+          display_order: number | null
+          family_id: string
+          id: string
+          name: string
+          replaced_by_subcategory_id: string | null
+          status: string
+          transaction_count: number | null
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by_user_id?: string | null
+          category_id: string
+          created_at?: string
+          created_by_user_id?: string | null
+          display_order?: number | null
+          family_id: string
+          id?: string
+          name: string
+          replaced_by_subcategory_id?: string | null
+          status?: string
+          transaction_count?: number | null
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by_user_id?: string | null
+          category_id?: string
+          created_at?: string
+          created_by_user_id?: string | null
+          display_order?: number | null
+          family_id?: string
+          id?: string
+          name?: string
+          replaced_by_subcategory_id?: string | null
+          status?: string
+          transaction_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "user_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_subcategories_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_subcategories_replaced_by_subcategory_id_fkey"
+            columns: ["replaced_by_subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "user_subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_subscriptions: {
         Row: {
           cancellation_reason: string | null
@@ -4340,6 +4546,17 @@ export type Database = {
         }[]
       }
       auto_reveal_expired_privacy: { Args: never; Returns: undefined }
+      bulk_reclassify_transactions: {
+        Args: {
+          p_family_id: string
+          p_new_category_id: string
+          p_new_subcategory_id?: string
+          p_old_category_id: string
+          p_old_subcategory_id?: string
+          p_performed_by?: string
+        }
+        Returns: number
+      }
       calculate_cs_signals: { Args: { _family_id: string }; Returns: Json }
       calculate_onboarding_progress: {
         Args: {
@@ -4378,6 +4595,10 @@ export type Database = {
         Returns: undefined
       }
       expire_old_imports: { Args: never; Returns: undefined }
+      get_category_transaction_count: {
+        Args: { p_category_id: string; p_family_id: string }
+        Returns: number
+      }
       get_engagement_metrics_report: { Args: never; Returns: Json }
       get_executive_metrics: {
         Args: { _period_end?: string; _period_start?: string }
