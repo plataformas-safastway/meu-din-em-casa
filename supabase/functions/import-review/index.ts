@@ -30,32 +30,38 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    const admin = createClient(supabaseUrl, serviceKey, {
-      auth: { persistSession: false },
-      global: {
-        headers: {
-          Authorization: req.headers.get("Authorization") ?? "",
-        },
-      },
-    });
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     const authHeader = req.headers.get("Authorization") ?? "";
-    const jwt = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (!jwt) {
+    if (!authHeader.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    const { data: userRes, error: userErr } = await admin.auth.getUser(jwt);
-    if (userErr || !userRes?.user) {
+    // Create client with user's auth for getClaims
+    const userClient = createClient(supabaseUrl, anonKey, {
+      auth: { persistSession: false },
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims?.sub) {
+      console.error("[import-review] getClaims failed:", claimsErr);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
+
+    const userId = claimsData.claims.sub as string;
+
+    // Admin client for database operations
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false },
+    });
 
     const body = (await req.json()) as ReviewRequest;
     if (!body?.import_id || !isUuid(body.import_id)) {
@@ -71,7 +77,7 @@ serve(async (req) => {
     const { data: member, error: memberErr } = await admin
       .from("family_members")
       .select("family_id")
-      .eq("user_id", userRes.user.id)
+      .eq("user_id", userId)
       .maybeSingle();
 
     if (memberErr || !member?.family_id) {
