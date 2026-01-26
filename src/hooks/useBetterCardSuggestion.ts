@@ -20,7 +20,7 @@ interface BetterCardSuggestion {
   extraDaysDue: number;
 }
 
-const MIN_DAYS_DIFFERENCE = 7; // Minimum difference to show suggestion
+const MIN_DAYS_DIFFERENCE = 2; // Minimum difference to show suggestion
 const RATE_LIMIT_KEY = "better_card_suggestion_last_shown";
 
 /**
