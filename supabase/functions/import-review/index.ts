@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.90.1";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,6 +14,13 @@ function isUuid(v: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
 }
 
+function jsonResponse(status: number, body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
+}
+
 serve(async (req) => {
   // CORS preflight
   if (req.method === "OPTIONS") {
@@ -21,51 +28,63 @@ serve(async (req) => {
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    return jsonResponse(405, { error: "Method not allowed" });
   }
+
+  const startTime = Date.now();
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const authHeader = req.headers.get("Authorization") ?? "";
+    
     if (!authHeader.startsWith("Bearer ")) {
       console.error("[import-review] Missing or invalid Authorization header");
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+      return jsonResponse(401, { 
+        error: "Unauthorized", 
+        detail: "Missing Bearer token",
+        code: "AUTH_NO_TOKEN"
       });
     }
 
-    // Admin client for database operations AND auth validation
-    const admin = createClient(supabaseUrl, serviceKey, {
+    const token = authHeader.replace("Bearer ", "");
+
+    // ✅ Método 1: Criar client com o token do usuário para validar
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
       auth: { persistSession: false },
     });
 
-    // Validate JWT using admin.auth.getUser with the token
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await admin.auth.getUser(token);
+    const { data: userData, error: userError } = await supabaseAuth.auth.getUser();
 
     if (userError || !userData?.user?.id) {
       console.error("[import-review] auth.getUser failed:", userError?.message);
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+      return jsonResponse(401, { 
+        error: "Unauthorized", 
+        detail: userError?.message || "Invalid token",
+        code: "AUTH_INVALID_TOKEN"
       });
     }
 
     const userId = userData.user.id;
     console.log("[import-review] Authenticated user:", userId);
 
-    const body = (await req.json()) as ReviewRequest;
+    // Service role client para operações de banco
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false },
+    });
+
+    let body: ReviewRequest;
+    try {
+      body = await req.json() as ReviewRequest;
+    } catch (e) {
+      return jsonResponse(400, { error: "Invalid JSON body" });
+    }
+
     if (!body?.import_id || !isUuid(body.import_id)) {
-      return new Response(JSON.stringify({ error: "Invalid import_id" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      return jsonResponse(400, { error: "Invalid import_id" });
     }
 
     const importId = body.import_id;
@@ -74,16 +93,18 @@ serve(async (req) => {
     // Get the most recently active family, or fallback to any family
     const { data: members, error: memberErr } = await admin
       .from("family_members")
-      .select("family_id, last_active_at")
+      .select("family_id, last_active_at, status")
       .eq("user_id", userId)
+      .eq("status", "ACTIVE")
       .order("last_active_at", { ascending: false, nullsFirst: false })
       .limit(10);
 
     if (memberErr || !members || members.length === 0) {
       console.error("[import-review] Member lookup failed:", memberErr?.message || "No memberships found");
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+      return jsonResponse(403, { 
+        error: "Forbidden", 
+        detail: "User not in any family",
+        code: "AUTH_NO_FAMILY"
       });
     }
 
@@ -111,7 +132,7 @@ serve(async (req) => {
       familyId = members[0].family_id;
     }
 
-    console.log("[import-review] Using Family ID:", familyId);
+    console.log("[import-review] Using Family ID:", familyId, "Duration:", Date.now() - startTime, "ms");
 
     // If we didn't find the batch during family search, try to fetch it now
     if (!batch) {
@@ -124,10 +145,7 @@ serve(async (req) => {
 
       if (batchErr) {
         console.error("[OIK Import][Review] batch query error", { importId, message: batchErr.message });
-        return new Response(JSON.stringify({ error: "Failed to fetch import" }), {
-          status: 500,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        });
+        return jsonResponse(500, { error: "Failed to fetch import", code: "DB_ERROR" });
       }
 
       batch = fetchedBatch;
@@ -135,10 +153,7 @@ serve(async (req) => {
 
     if (!batch) {
       console.log("[import-review] No batch found for import", importId);
-      return new Response(JSON.stringify({ batch: null, items: [], summary: null }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      return jsonResponse(200, { batch: null, items: [], summary: null });
     }
 
     // Items (no filters by status; no pagination surprises)
@@ -154,10 +169,7 @@ serve(async (req) => {
 
     if (itemsErr) {
       console.error("[OIK Import][Review] items query error", { importId, message: itemsErr.message });
-      return new Response(JSON.stringify({ error: "Failed to fetch items" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      return jsonResponse(500, { error: "Failed to fetch items", code: "DB_ITEMS_ERROR" });
     }
 
     const safeItems = items ?? [];
@@ -230,21 +242,17 @@ serve(async (req) => {
         .reduce((sum: number, i: any) => sum + (Number(i.amount) || 0), 0),
     };
 
+    const duration = Date.now() - startTime;
     console.log("[OIK Import][Review]", {
       importBatchId: importId,
       status: (batch as any).status,
       itemsCount: safeItems.length,
+      durationMs: duration,
     });
 
-    return new Response(JSON.stringify({ batch, items: safeItems, summary }), {
-      status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    return jsonResponse(200, { batch, items: safeItems, summary });
   } catch (e) {
     console.error("[OIK Import][Review] unexpected", { message: (e as Error).message, stack: (e as Error).stack });
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    return jsonResponse(500, { error: "Internal server error", code: "UNEXPECTED_ERROR" });
   }
 });

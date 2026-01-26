@@ -191,12 +191,63 @@ export function useImportBatch(importId: string | null) {
         return null as null | { batch: ImportBatch | null; items: ImportItem[]; summary: any };
       }
 
+      // ✅ Garantir sessão ativa e token JWT
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !sessionData?.session?.access_token) {
+        console.error('[OIK Import] No active session:', sessionError?.message);
+        
+        // Tentar refresh da sessão
+        console.log('[OIK Import] Attempting session refresh...');
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError || !refreshData?.session?.access_token) {
+          console.error('[OIK Import] Session refresh failed:', refreshError?.message);
+          throw new Error('Sessão expirada. Faça login novamente.');
+        }
+        
+        console.log('[OIK Import] Session refreshed successfully');
+      }
+
+      // Buscar sessão atualizada após possível refresh
+      const { data: currentSession } = await supabase.auth.getSession();
+      const token = currentSession?.session?.access_token;
+      
+      if (!token) {
+        throw new Error('Não foi possível obter token de autenticação');
+      }
+
+      console.log('[OIK Import] Calling import-review with valid token');
+      
       const { data, error } = await supabase.functions.invoke('import-review', {
         body: { import_id: importId },
       });
 
       if (error) {
         console.error('[OIK Import] import-review function error:', error);
+        
+        // Se for 401, tentar refresh e retry uma vez
+        if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+          console.log('[OIK Import] Got 401, attempting session refresh and retry...');
+          const { error: retryRefreshError } = await supabase.auth.refreshSession();
+          
+          if (!retryRefreshError) {
+            // Retry the request
+            const { data: retryData, error: retryError } = await supabase.functions.invoke('import-review', {
+              body: { import_id: importId },
+            });
+            
+            if (!retryError) {
+              const payload = (retryData ?? null) as any;
+              return {
+                batch: (payload?.batch ?? null) as ImportBatch | null,
+                items: (payload?.items ?? []) as ImportItem[],
+                summary: payload?.summary ?? null,
+              };
+            }
+          }
+        }
+        
         throw error;
       }
 
@@ -219,6 +270,13 @@ export function useImportBatch(importId: string | null) {
     gcTime: 5000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+    retry: (failureCount, error) => {
+      // Não fazer retry automático em erros de autenticação
+      if (error?.message?.includes('401') || error?.message?.includes('Sessão')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 
   const batch = reviewQuery.data?.batch ?? null;

@@ -357,6 +357,65 @@ function NotFoundState({
 }
 
 // ============================================
+// AUTH ERROR STATE (401/403)
+// ============================================
+
+function AuthErrorState({
+  error,
+  onRetry,
+  errorCode,
+  importId
+}: {
+  error: Error | null;
+  onRetry: () => void;
+  errorCode: string | null;
+  importId: string | null;
+}) {
+  const navigate = useNavigate();
+  
+  const handleLogin = () => {
+    // Save current URL to return after login
+    sessionStorage.setItem('returnTo', `/app/import/review/${importId}`);
+    navigate('/login');
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      <div className="w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center mb-4">
+        <AlertCircle className="w-8 h-8 text-warning" />
+      </div>
+      <h2 className="text-lg font-semibold text-foreground mb-2">
+        Sessão expirada
+      </h2>
+      <p className="text-sm text-muted-foreground mb-2 max-w-sm">
+        Sua sessão expirou ou você não tem permissão para acessar esta importação.
+      </p>
+      
+      {errorCode && (
+        <button
+          onClick={() => copyErrorCode(errorCode, importId)}
+          className="flex items-center gap-2 text-xs text-muted-foreground mb-6 hover:text-foreground transition-colors bg-muted/50 px-3 py-1.5 rounded-full"
+        >
+          <span className="font-mono">{errorCode}</span>
+          <Copy className="w-3 h-3" />
+        </button>
+      )}
+      
+      <div className="flex flex-col gap-2 w-full max-w-xs">
+        <Button onClick={onRetry}>
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Tentar novamente
+        </Button>
+        
+        <Button variant="outline" onClick={handleLogin}>
+          Fazer login novamente
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // NETWORK ERROR STATE
 // ============================================
 
@@ -384,6 +443,12 @@ function NetworkErrorState({
       <p className="text-sm text-muted-foreground mb-2 max-w-sm">
         Não foi possível carregar os dados. Verifique sua conexão e tente novamente.
       </p>
+      
+      {error?.message && (
+        <p className="text-xs text-muted-foreground mb-2 max-w-sm italic">
+          {error.message}
+        </p>
+      )}
       
       {errorCode && (
         <button
@@ -559,7 +624,35 @@ export function ImportReviewPage() {
     return <ScreenLoader label="Carregando importação..." />;
   }
 
-  // 3. NETWORK ERROR - Show error with retry
+  // Check if it's an auth error
+  const isAuthError = error?.message?.includes('401') || 
+                      error?.message?.includes('Sessão') || 
+                      error?.message?.includes('Unauthorized') ||
+                      errorCode === IMPORT_ERROR_CODES.UNAUTHORIZED;
+
+  // 3. AUTH ERROR - Show auth error with login option
+  if (isError && isAuthError) {
+    return (
+      <div className="min-h-screen bg-background">
+        <PageHeader 
+          title="Revisar Importação" 
+          onBack={handleBack}
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing}
+        />
+        <main className="container px-4 py-6">
+          <AuthErrorState 
+            error={error} 
+            onRetry={handleRefresh}
+            errorCode={errorCode || IMPORT_ERROR_CODES.UNAUTHORIZED}
+            importId={importId}
+          />
+        </main>
+      </div>
+    );
+  }
+
+  // 4. NETWORK ERROR - Show error with retry
   if (isError && !batch) {
     return (
       <div className="min-h-screen bg-background">
