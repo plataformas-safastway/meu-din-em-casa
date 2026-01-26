@@ -28,6 +28,10 @@ export interface ImportBatch {
   created_by: string | null;
   detected_bank: string | null;
   detected_document_type: string | null;
+  detected_agency?: string | null;
+  detected_account?: string | null;
+  detected_last4?: string | null;
+  confidence_level?: "HIGH" | "MEDIUM" | "LOW" | null;
 }
 
 export interface ImportItem {

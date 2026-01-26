@@ -30,38 +30,35 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     const authHeader = req.headers.get("Authorization") ?? "";
     if (!authHeader.startsWith("Bearer ")) {
+      console.error("[import-review] Missing or invalid Authorization header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    // Create client with user's auth for getClaims
-    const userClient = createClient(supabaseUrl, anonKey, {
-      auth: { persistSession: false },
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
-    if (claimsErr || !claimsData?.claims?.sub) {
-      console.error("[import-review] getClaims failed:", claimsErr);
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
-    const userId = claimsData.claims.sub as string;
-
-    // Admin client for database operations
+    // Admin client for database operations AND auth validation
     const admin = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false },
     });
+
+    // Validate JWT using admin.auth.getUser with the token
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await admin.auth.getUser(token);
+
+    if (userError || !userData?.user?.id) {
+      console.error("[import-review] auth.getUser failed:", userError?.message);
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const userId = userData.user.id;
+    console.log("[import-review] Authenticated user:", userId);
 
     const body = (await req.json()) as ReviewRequest;
     if (!body?.import_id || !isUuid(body.import_id)) {
@@ -81,6 +78,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (memberErr || !member?.family_id) {
+      console.error("[import-review] Member lookup failed:", memberErr?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -88,6 +86,7 @@ serve(async (req) => {
     }
 
     const familyId = member.family_id as string;
+    console.log("[import-review] Family ID:", familyId);
 
     // Batch
     const { data: batch, error: batchErr } = await admin
@@ -106,6 +105,7 @@ serve(async (req) => {
     }
 
     if (!batch) {
+      console.log("[import-review] No batch found for import", importId);
       return new Response(JSON.stringify({ batch: null, items: [], summary: null }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -212,7 +212,7 @@ serve(async (req) => {
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (e) {
-    console.error("[OIK Import][Review] unexpected", { message: (e as Error).message });
+    console.error("[OIK Import][Review] unexpected", { message: (e as Error).message, stack: (e as Error).stack });
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },
