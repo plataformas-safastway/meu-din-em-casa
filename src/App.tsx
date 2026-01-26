@@ -47,6 +47,27 @@ function LoadingSpinner() {
   return <ScreenLoader label="Carregando..." />
 }
 
+/**
+ * AuthGate - Bootstrap guard that prevents routing until auth is fully resolved
+ * This prevents the "flash" of signup/onboarding screens during login
+ */
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { bootstrapStatus, profileStatus } = useAuth();
+  
+  // Wait until bootstrap is complete (auth + profile data loaded)
+  if (bootstrapStatus === 'initializing') {
+    return <ScreenLoader label="Iniciando..." />;
+  }
+  
+  // If we're still loading profile after bootstrap, show loader
+  // This handles edge cases during rapid navigation
+  if (profileStatus === 'loading') {
+    return <ScreenLoader label="Carregando perfil..." />;
+  }
+  
+  return <>{children}</>;
+}
+
 function ProtectedRoute({
   children,
   requireFamily = true,
@@ -54,13 +75,13 @@ function ProtectedRoute({
   children: React.ReactNode;
   requireFamily?: boolean;
 }) {
-  const { user, family, loading } = useAuth();
+  const { user, family, profileStatus } = useAuth();
   const location = useLocation();
 
   const next = encodeURIComponent(`${location.pathname}${location.search ?? ""}`);
 
-  if (loading) return <LoadingSpinner />;
-  if (!user)
+  // No user - redirect to login
+  if (!user) {
     return (
       <Navigate
         to={`/login?next=${next}`}
@@ -68,21 +89,35 @@ function ProtectedRoute({
         state={{ from: { pathname: location.pathname, search: location.search } }}
       />
     );
-  if (requireFamily && !family)
+  }
+  
+  // Profile still loading - show loader (shouldn't happen often due to AuthGate)
+  if (profileStatus === 'loading' || profileStatus === 'unknown') {
+    return <LoadingSpinner />;
+  }
+  
+  // Need family but don't have one - redirect to signup
+  if (requireFamily && !family) {
     return <Navigate to="/signup" replace state={{ from: { pathname: location.pathname, search: location.search } }} />;
+  }
 
   return <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, profileStatus } = useAuth();
   const { data: role, isLoading: roleLoading } = useUserRole();
   const location = useLocation();
 
   const next = encodeURIComponent(`${location.pathname}${location.search ?? ""}`);
 
-  if (loading || roleLoading) return <LoadingSpinner />;
-  if (!user)
+  // Still loading role
+  if (roleLoading || profileStatus === 'loading') {
+    return <LoadingSpinner />;
+  }
+  
+  // No user - redirect to login
+  if (!user) {
     return (
       <Navigate
         to={`/login?next=${next}`}
@@ -90,6 +125,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
         state={{ from: { pathname: location.pathname, search: location.search } }}
       />
     );
+  }
 
   // Admin users (admin, cs, admin_master) don't need a family - they access dashboard directly
   const isAdminRole = role === "admin" || role === "cs" || role === "admin_master";
@@ -102,11 +138,14 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, family, loading } = useAuth();
+  const { user, family, profileStatus } = useAuth();
   const { data: role, isLoading: roleLoading } = useUserRole();
-  const { data: hasAdmin, isLoading: checkingAdmin } = useHasAnyAdmin();
+  const { isLoading: checkingAdmin } = useHasAnyAdmin();
   
-  if (loading || roleLoading || checkingAdmin) return <LoadingSpinner />;
+  // Still loading - don't render anything (AuthGate handles this)
+  if (roleLoading || checkingAdmin || profileStatus === 'loading') {
+    return <LoadingSpinner />;
+  }
   
   // Admin users go directly to dashboard (no family required)
   const isAdminRole = role === 'admin' || role === 'cs' || role === 'admin_master';
@@ -115,9 +154,14 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/admin" replace />;
   }
   
+  // User with family - go to app
   if (user && family) {
     return <Navigate to="/app" replace />;
   }
+  
+  // User without family but not admin - will be handled by signup flow
+  // Don't redirect here to avoid flash - let them stay on public route
+  // The signup page will handle the redirect properly
   
   return <>{children}</>;
 }
@@ -130,62 +174,64 @@ function AppLifecycleHandler({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/" element={<PublicRoute><LoginPage /></PublicRoute>} />
-      <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-      <Route path="/signup" element={<SignupPage />} />
-      <Route path="/select-context" element={<ProtectedRoute requireFamily={false}><SelectContextPage /></ProtectedRoute>} />
-      <Route path="/select-family" element={<ProtectedRoute requireFamily={false}><SelectFamilyPage /></ProtectedRoute>} />
-      <Route path="/termos" element={<TermosPage />} />
-      <Route path="/privacidade" element={<PrivacidadePage />} />
-      <Route path="/qa-report" element={<QAReportPage />} />
-      <Route path="/invite" element={<InviteAcceptPage />} />
-      
-      {/* User app routes */}
-      <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-      <Route path="/app/import" element={<ProtectedRoute><ImportUploadPage /></ProtectedRoute>} />
-      <Route path="/app/import/spreadsheet" element={<ProtectedRoute><SpreadsheetImportPage /></ProtectedRoute>} />
-      <Route
-        path="/app/import/:importId/review"
-        element={
-          <ProtectedRoute>
-            <ErrorBoundary logContext={{ page: "import-review" }}>
-              <ImportReviewPage />
-            </ErrorBoundary>
-          </ProtectedRoute>
-        }
-      />
-      
-      {/* Admin routes */}
-      <Route
-        path="/admin/setup"
-        element={
-          <ProtectedRoute requireFamily={false}>
-            <AdminSetupPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin"
-        element={
-          <AdminRoute>
-            <AdminDashboard />
-          </AdminRoute>
-        }
-      />
-      <Route
-        path="/admin/*"
-        element={
-          <AdminRoute>
-            <AdminDashboard />
-          </AdminRoute>
-        }
-      />
-      
-      {/* 404 */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <AuthGate>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/select-context" element={<ProtectedRoute requireFamily={false}><SelectContextPage /></ProtectedRoute>} />
+        <Route path="/select-family" element={<ProtectedRoute requireFamily={false}><SelectFamilyPage /></ProtectedRoute>} />
+        <Route path="/termos" element={<TermosPage />} />
+        <Route path="/privacidade" element={<PrivacidadePage />} />
+        <Route path="/qa-report" element={<QAReportPage />} />
+        <Route path="/invite" element={<InviteAcceptPage />} />
+        
+        {/* User app routes */}
+        <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+        <Route path="/app/import" element={<ProtectedRoute><ImportUploadPage /></ProtectedRoute>} />
+        <Route path="/app/import/spreadsheet" element={<ProtectedRoute><SpreadsheetImportPage /></ProtectedRoute>} />
+        <Route
+          path="/app/import/:importId/review"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary logContext={{ page: "import-review" }}>
+                <ImportReviewPage />
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Admin routes */}
+        <Route
+          path="/admin/setup"
+          element={
+            <ProtectedRoute requireFamily={false}>
+              <AdminSetupPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/*"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+        
+        {/* 404 */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </AuthGate>
   );
 }
 
