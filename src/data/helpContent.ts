@@ -736,6 +736,47 @@ export const helpArticles: HelpArticle[] = [
     deepLink: "settings",
   },
 
+  {
+    id: "lgpd-data-deletion",
+    title: "Como funciona a exclusão de dados (LGPD)",
+    category: "privacy",
+    icon: "🗑️",
+    summary: "Entenda o processo de exclusão de dados conforme a LGPD",
+    steps: [
+      {
+        title: "O que é a LGPD?",
+        description: "A Lei Geral de Proteção de Dados (Lei nº 13.709/2018) garante seu direito de solicitar a exclusão dos seus dados pessoais.",
+      },
+      {
+        title: "Exclusão vs Anonimização",
+        description: "Exclusão remove dados definitivamente. Anonimização desvincula dados financeiros de você, mantendo apenas estatísticas agregadas.",
+        tip: "Dados anonimizados não são mais considerados dados pessoais pela LGPD.",
+      },
+      {
+        title: "O que é excluído",
+        description: "Nome, e-mail, telefone, foto de perfil, preferências pessoais, tokens de autenticação e integrações são removidos permanentemente.",
+      },
+      {
+        title: "O que é anonimizado",
+        description: "Histórico financeiro e comportamental perde o vínculo com você, mantido apenas para métricas agregadas do produto.",
+      },
+      {
+        title: "Retenção legal",
+        description: "Alguns registros de auditoria são mantidos por obrigação legal (segurança, fraude, defesa jurídica) por até 10 anos, isolados e sem uso operacional.",
+      },
+      {
+        title: "Prazo de processamento",
+        description: "A solicitação é processada em até 30 dias conforme LGPD. Você pode cancelar a qualquer momento enquanto estiver pendente.",
+      },
+      {
+        title: "Como solicitar",
+        description: "Vá em Meus Dados > Privacidade (LGPD) > 'Solicitar Exclusão de Dados'. Um código de verificação será enviado para seu e-mail.",
+      },
+    ],
+    keywords: ["lgpd", "exclusão", "dados", "anonimização", "privacidade", "direito", "titular", "solicitar", "30 dias", "prazo"],
+    deepLink: "settings",
+  },
+
   // ===== FAMÍLIA =====
   {
     id: "family-members",

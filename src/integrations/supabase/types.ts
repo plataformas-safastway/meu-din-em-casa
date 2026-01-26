@@ -2396,6 +2396,92 @@ export type Database = {
           },
         ]
       }
+      lgpd_deletion_requests: {
+        Row: {
+          anonymized_data_hash: string | null
+          completed_at: string | null
+          completion_notes: string | null
+          created_at: string
+          deadline_at: string
+          family_id: string | null
+          id: string
+          processed_at: string | null
+          processed_by: string | null
+          requested_at: string
+          status: Database["public"]["Enums"]["lgpd_request_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          anonymized_data_hash?: string | null
+          completed_at?: string | null
+          completion_notes?: string | null
+          created_at?: string
+          deadline_at?: string
+          family_id?: string | null
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string
+          status?: Database["public"]["Enums"]["lgpd_request_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          anonymized_data_hash?: string | null
+          completed_at?: string | null
+          completion_notes?: string | null
+          created_at?: string
+          deadline_at?: string
+          family_id?: string | null
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string
+          status?: Database["public"]["Enums"]["lgpd_request_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lgpd_deletion_requests_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lgpd_verification_codes: {
+        Row: {
+          code: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       member_notification_preferences: {
         Row: {
           created_at: string | null
@@ -4647,6 +4733,7 @@ export type Database = {
         Args: { _family_id: string; _permission: string; _user_id: string }
         Returns: boolean
       }
+      cleanup_expired_lgpd_codes: { Args: never; Returns: undefined }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
       create_family_invite: {
         Args: {
@@ -4707,6 +4794,7 @@ export type Database = {
       has_cs_access: { Args: { _user_id: string }; Returns: boolean }
       has_executive_access: { Args: { _user_id: string }; Returns: boolean }
       has_financial_access: { Args: { _user_id: string }; Returns: boolean }
+      has_pending_lgpd_request: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -4787,6 +4875,7 @@ export type Database = {
       import_file_type: "ofx" | "xls" | "xlsx" | "pdf"
       import_status: "pending" | "processing" | "completed" | "failed"
       installment_status: "POSTED" | "PLANNED" | "RECONCILED" | "CANCELLED"
+      lgpd_request_status: "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED"
       member_status: "INVITED" | "ACTIVE" | "REMOVED" | "DISABLED" | "BLOCKED"
       payment_method:
         | "cash"
@@ -4952,6 +5041,7 @@ export const Constants = {
       import_file_type: ["ofx", "xls", "xlsx", "pdf"],
       import_status: ["pending", "processing", "completed", "failed"],
       installment_status: ["POSTED", "PLANNED", "RECONCILED", "CANCELLED"],
+      lgpd_request_status: ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"],
       member_status: ["INVITED", "ACTIVE", "REMOVED", "DISABLED", "BLOCKED"],
       payment_method: ["cash", "debit", "credit", "pix", "transfer", "cheque"],
       transaction_classification: [
