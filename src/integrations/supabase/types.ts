@@ -1991,10 +1991,14 @@ export type Database = {
       imports: {
         Row: {
           auto_detected: boolean | null
+          confidence_level: string | null
           created_at: string
           created_by: string | null
+          detected_account: string | null
+          detected_agency: string | null
           detected_bank: string | null
           detected_document_type: string | null
+          detected_last4: string | null
           error_code: string | null
           error_message: string | null
           expires_at: string | null
@@ -2013,10 +2017,14 @@ export type Database = {
         }
         Insert: {
           auto_detected?: boolean | null
+          confidence_level?: string | null
           created_at?: string
           created_by?: string | null
+          detected_account?: string | null
+          detected_agency?: string | null
           detected_bank?: string | null
           detected_document_type?: string | null
+          detected_last4?: string | null
           error_code?: string | null
           error_message?: string | null
           expires_at?: string | null
@@ -2035,10 +2043,14 @@ export type Database = {
         }
         Update: {
           auto_detected?: boolean | null
+          confidence_level?: string | null
           created_at?: string
           created_by?: string | null
+          detected_account?: string | null
+          detected_agency?: string | null
           detected_bank?: string | null
           detected_document_type?: string | null
+          detected_last4?: string | null
           error_code?: string | null
           error_message?: string | null
           expires_at?: string | null

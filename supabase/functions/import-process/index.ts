@@ -2897,6 +2897,12 @@ serve(async (req) => {
       transactions_count: null,
       created_by: userData.user.id,
       detected_bank: detectedBankName,
+      detected_document_type: import_type,
+      detected_agency: detectedSourceInfo?.agency || null,
+      detected_account: detectedSourceInfo?.accountNumber || null,
+      detected_last4: detectedSourceInfo?.last4 || null,
+      confidence_level: "HIGH",
+      auto_detected: autoDetect,
       error_message: null,
       error_code: null,
     });

@@ -70,38 +70,67 @@ serve(async (req) => {
 
     const importId = body.import_id;
 
-    // Resolve family_id from membership
-    const { data: member, error: memberErr } = await admin
+    // Resolve family_id from membership (user may belong to multiple families)
+    // Get the most recently active family, or fallback to any family
+    const { data: members, error: memberErr } = await admin
       .from("family_members")
-      .select("family_id")
+      .select("family_id, last_active_at")
       .eq("user_id", userId)
-      .maybeSingle();
+      .order("last_active_at", { ascending: false, nullsFirst: false })
+      .limit(10);
 
-    if (memberErr || !member?.family_id) {
-      console.error("[import-review] Member lookup failed:", memberErr?.message);
+    if (memberErr || !members || members.length === 0) {
+      console.error("[import-review] Member lookup failed:", memberErr?.message || "No memberships found");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    const familyId = member.family_id as string;
-    console.log("[import-review] Family ID:", familyId);
+    // Try to find the import in any of the user's families
+    let familyId: string | null = null;
+    let batch: any = null;
+    
+    for (const member of members) {
+      const { data: importBatch, error: batchCheckErr } = await admin
+        .from("imports")
+        .select("*")
+        .eq("id", importId)
+        .eq("family_id", member.family_id)
+        .maybeSingle();
+      
+      if (!batchCheckErr && importBatch) {
+        familyId = member.family_id;
+        batch = importBatch;
+        break;
+      }
+    }
 
-    // Batch
-    const { data: batch, error: batchErr } = await admin
-      .from("imports")
-      .select("*")
-      .eq("id", importId)
-      .eq("family_id", familyId)
-      .maybeSingle();
+    // Fallback: use first family if no import found (for error display purposes)
+    if (!familyId) {
+      familyId = members[0].family_id;
+    }
 
-    if (batchErr) {
-      console.error("[OIK Import][Review] batch query error", { importId, message: batchErr.message });
-      return new Response(JSON.stringify({ error: "Failed to fetch import" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    console.log("[import-review] Using Family ID:", familyId);
+
+    // If we didn't find the batch during family search, try to fetch it now
+    if (!batch) {
+      const { data: fetchedBatch, error: batchErr } = await admin
+        .from("imports")
+        .select("*")
+        .eq("id", importId)
+        .eq("family_id", familyId)
+        .maybeSingle();
+
+      if (batchErr) {
+        console.error("[OIK Import][Review] batch query error", { importId, message: batchErr.message });
+        return new Response(JSON.stringify({ error: "Failed to fetch import" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      batch = fetchedBatch;
     }
 
     if (!batch) {
