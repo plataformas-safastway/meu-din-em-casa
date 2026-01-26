@@ -258,7 +258,112 @@ export function useBulkDeleteTransactions() {
   });
 }
 
-// Get filtered transaction count (for "select all" confirmation)
+// Bulk update category mutation
+export function useBulkUpdateCategory() {
+  const queryClient = useQueryClient();
+  const { family } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      transactionIds,
+      categoryId,
+      subcategoryId,
+    }: {
+      transactionIds: string[];
+      categoryId: string;
+      subcategoryId: string | null;
+    }) => {
+      if (!family?.id) throw new Error("No family");
+      if (transactionIds.length === 0) throw new Error("No transactions to update");
+
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      const now = new Date().toISOString();
+      const BATCH_SIZE = 100;
+      let updatedCount = 0;
+
+      for (let i = 0; i < transactionIds.length; i += BATCH_SIZE) {
+        const batch = transactionIds.slice(i, i + BATCH_SIZE);
+
+        // Get old values for audit
+        const { data: oldTransactions } = await supabase
+          .from("transactions")
+          .select("id, category_id, subcategory_id")
+          .eq("family_id", family.id)
+          .in("id", batch);
+
+        // Update transactions
+        const { error } = await supabase
+          .from("transactions")
+          .update({
+            category_id: categoryId,
+            subcategory_id: subcategoryId,
+            last_edited_by_user_id: userId,
+            last_edited_at: now,
+          })
+          .eq("family_id", family.id)
+          .in("id", batch);
+
+        if (error) throw error;
+
+        // Log individual changes to transaction_change_logs
+        if (oldTransactions) {
+          const changeLogs = oldTransactions.flatMap(old => {
+            const logs: any[] = [];
+            if (old.category_id !== categoryId) {
+              logs.push({
+                transaction_id: old.id,
+                family_id: family.id,
+                field_name: 'category_id',
+                old_value: old.category_id,
+                new_value: categoryId,
+                changed_by_user_id: userId,
+                change_source: 'BULK_UPDATE',
+              });
+            }
+            if (old.subcategory_id !== subcategoryId) {
+              logs.push({
+                transaction_id: old.id,
+                family_id: family.id,
+                field_name: 'subcategory_id',
+                old_value: old.subcategory_id,
+                new_value: subcategoryId,
+                changed_by_user_id: userId,
+                change_source: 'BULK_UPDATE',
+              });
+            }
+            return logs;
+          });
+
+          if (changeLogs.length > 0) {
+            await supabase.from("transaction_change_logs").insert(changeLogs);
+          }
+        }
+
+        updatedCount += batch.length;
+      }
+
+      // Log batch audit entry
+      await supabase.from("audit_logs").insert({
+        action: "bulk_update_category",
+        entity_type: "transaction",
+        user_id: userId || "",
+        family_id: family.id,
+        metadata: {
+          updated_count: updatedCount,
+          new_category_id: categoryId,
+          new_subcategory_id: subcategoryId,
+          transaction_ids_sample: transactionIds.slice(0, 5),
+        },
+      });
+
+      return { updatedCount };
+    },
+    onSuccess: () => {
+      invalidateQueryGroup(queryClient, 'transactionMutation');
+    },
+  });
+}
+
 export function useFilteredTransactionCount(filters?: TransactionFilters) {
   const { family } = useAuth();
 

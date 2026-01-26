@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { X, Trash2, Tag, CheckSquare, Square, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +23,9 @@ interface BulkActionsBarProps {
   onDeselectAll: () => void;
   onCancel: () => void;
   onDelete: () => void;
+  onChangeCategory: () => void;
   isDeleting?: boolean;
+  isChangingCategory?: boolean;
 }
 
 export function BulkActionsBar({
@@ -36,7 +37,9 @@ export function BulkActionsBar({
   onDeselectAll,
   onCancel,
   onDelete,
+  onChangeCategory,
   isDeleting = false,
+  isChangingCategory = false,
 }: BulkActionsBarProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -48,6 +51,8 @@ export function BulkActionsBar({
     setDeleteConfirmOpen(false);
     onDelete();
   };
+
+  const isProcessing = isDeleting || isChangingCategory;
 
   return (
     <>
@@ -61,6 +66,7 @@ export function BulkActionsBar({
                 size="icon"
                 onClick={onCancel}
                 className="h-8 w-8"
+                disabled={isProcessing}
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -78,7 +84,11 @@ export function BulkActionsBar({
             <div className="flex items-center gap-2">
               <button
                 onClick={isAllSelected ? onDeselectAll : onSelectAll}
-                className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                disabled={isProcessing}
+                className={cn(
+                  "flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors",
+                  isProcessing && "opacity-50 cursor-not-allowed"
+                )}
               >
                 {isAllSelected ? (
                   <>
@@ -97,11 +107,27 @@ export function BulkActionsBar({
 
           {/* Action buttons */}
           <div className="flex gap-2">
+            {/* Change Category Button */}
+            <Button
+              variant="outline"
+              className="flex-1 h-11 rounded-xl"
+              onClick={onChangeCategory}
+              disabled={selectedCount === 0 || isProcessing}
+            >
+              {isChangingCategory ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Tag className="w-4 h-4 mr-2" />
+              )}
+              {isChangingCategory ? 'Alterando...' : 'Categoria'}
+            </Button>
+
+            {/* Delete Button */}
             <Button
               variant="destructive"
               className="flex-1 h-11 rounded-xl"
               onClick={handleDeleteClick}
-              disabled={selectedCount === 0 || isDeleting}
+              disabled={selectedCount === 0 || isProcessing}
             >
               {isDeleting ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />

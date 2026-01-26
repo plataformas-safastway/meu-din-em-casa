@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { ArrowLeft, Search, Loader2, Filter, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { getCategoryById } from "@/data/categories";
 import { cn } from "@/lib/utils";
@@ -10,6 +9,7 @@ import {
   useTransactionsPaginated, 
   flattenPaginatedTransactions,
   useBulkDeleteTransactions,
+  useBulkUpdateCategory,
 } from "@/hooks/useTransactionsPaginated";
 import { EditTransactionSheet } from "@/components/EditTransactionSheet";
 import { TransactionDetailSheet, TransactionDetail } from "@/components/TransactionDetailSheet";
@@ -18,6 +18,7 @@ import {
   defaultFilters, 
   TransactionFilters,
   BulkActionsBar,
+  BulkCategoryChangeSheet,
   SelectableTransactionItem,
 } from "@/components/extrato";
 import {
@@ -51,6 +52,9 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   
+  // Bulk category change
+  const [categoryChangeOpen, setCategoryChangeOpen] = useState(false);
+  
   // Use paginated query with filters
   const { 
     data: paginatedData, 
@@ -62,6 +66,7 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   
   const deleteTransaction = useDeleteTransaction();
   const bulkDelete = useBulkDeleteTransactions();
+  const bulkUpdateCategory = useBulkUpdateCategory();
 
   // Calculate active filter count
   const activeFilterCount = useMemo(() => {
@@ -174,6 +179,23 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
       toast.error("Erro ao excluir transações");
     }
   }, [selectedIds, bulkDelete, handleCancelSelection]);
+
+  // Handle bulk category change
+  const handleBulkCategoryChange = useCallback(async (categoryId: string, subcategoryId: string | null) => {
+    const idsToUpdate = Array.from(selectedIds);
+    try {
+      await bulkUpdateCategory.mutateAsync({
+        transactionIds: idsToUpdate,
+        categoryId,
+        subcategoryId,
+      });
+      toast.success(`Categoria atualizada em ${idsToUpdate.length} transações`);
+      setCategoryChangeOpen(false);
+      handleCancelSelection();
+    } catch (error) {
+      toast.error("Erro ao alterar categoria");
+    }
+  }, [selectedIds, bulkUpdateCategory, handleCancelSelection]);
 
   // Exit selection mode if no items selected
   useEffect(() => {
@@ -391,9 +413,20 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
           onDeselectAll={handleDeselectAll}
           onCancel={handleCancelSelection}
           onDelete={handleBulkDelete}
+          onChangeCategory={() => setCategoryChangeOpen(true)}
           isDeleting={bulkDelete.isPending}
+          isChangingCategory={bulkUpdateCategory.isPending}
         />
       )}
+
+      {/* Bulk Category Change Sheet */}
+      <BulkCategoryChangeSheet
+        open={categoryChangeOpen}
+        onOpenChange={setCategoryChangeOpen}
+        selectedCount={selectedIds.size}
+        onConfirm={handleBulkCategoryChange}
+        isLoading={bulkUpdateCategory.isPending}
+      />
 
       {/* Filters Sheet */}
       <TransactionFiltersSheet
