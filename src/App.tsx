@@ -11,6 +11,8 @@ import { useStableAuth } from "@/hooks/useStableAuth";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { STALE_TIMES, GC_TIMES } from "@/lib/queryConfig";
 import { clearExpiredDrafts } from "@/hooks/useDraftPersistence";
+import { installNavigationAudit } from "@/lib/navigationAudit";
+import { setAuthDebugSnapshot } from "@/lib/devDiagnostics";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { TermosPage } from "./pages/TermosPage";
@@ -27,7 +29,7 @@ import { SelectContextPage } from "./pages/SelectContextPage";
 import { SelectFamilyPage } from "./pages/SelectFamilyPage";
 import { InviteAcceptPage } from "./pages/InviteAcceptPage";
 import { OnboardingFlowPage } from "./pages/OnboardingFlowPage";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 // Clear expired drafts on app init
 clearExpiredDrafts();
@@ -78,7 +80,22 @@ function LoadingSpinner() {
  * CRITICAL: Uses useStableAuth to handle tab-switch transitions gracefully
  */
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { isLoading, isAuthTransition } = useStableAuth();
+  const { isLoading, isAuthTransition, session, user, bootstrapStatus, profileStatus, shouldRedirectToLogin } = useStableAuth();
+  const location = useLocation();
+  const lastRouteRef = useRef<string | null>(null);
+
+  // Keep an always-up-to-date snapshot for diagnostics
+  setAuthDebugSnapshot({
+    ts: Date.now(),
+    path: `${location.pathname}${location.search ?? ""}${location.hash ?? ""}`,
+    bootstrapStatus,
+    profileStatus,
+    isLoading,
+    isAuthTransition,
+    shouldRedirectToLogin,
+    hasSession: !!session,
+    hasUser: !!user,
+  });
   
   // Log transition state for debugging
   useEffect(() => {
@@ -86,6 +103,32 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       console.log('[AuthGate] In auth transition - holding render');
     }
   }, [isAuthTransition]);
+
+  // Router-level route change logging (closest thing to routeChangeStart/Complete)
+  useEffect(() => {
+    const current = `${location.pathname}${location.search ?? ""}${location.hash ?? ""}`;
+    const prev = lastRouteRef.current;
+    lastRouteRef.current = current;
+
+    if (prev && prev !== current) {
+      console.log("[Router] Route changed", { from: prev, to: current });
+    }
+
+    // CRITICAL: if we ever land on '/', capture a trace immediately
+    if (current === "/" && prev !== "/") {
+      console.error("[Router] UNEXPECTED_HOME_ROUTE", {
+        from: prev,
+        to: current,
+        isLoading,
+        isAuthTransition,
+        bootstrapStatus,
+        profileStatus,
+        hasSession: !!session,
+        hasUser: !!user,
+      });
+      console.trace("[Router] stack");
+    }
+  }, [location.pathname, location.search, location.hash, isLoading, isAuthTransition, bootstrapStatus, profileStatus, session, user]);
   
   // Wait until auth is fully stable (not loading AND not in transition)
   if (isLoading) {
@@ -163,6 +206,20 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, profileStatus, shouldRedirectToLogin, isAuthTransition, session, bootstrapStatus } = useStableAuth();
   const { data: role, isLoading: roleLoading } = useUserRole();
   const location = useLocation();
+
+  // Keep snapshot enriched with role when available
+  setAuthDebugSnapshot({
+    ts: Date.now(),
+    path: `${location.pathname}${location.search ?? ""}${location.hash ?? ""}`,
+    bootstrapStatus,
+    profileStatus,
+    isLoading: roleLoading || profileStatus === 'loading',
+    isAuthTransition,
+    shouldRedirectToLogin,
+    hasSession: !!session,
+    hasUser: !!user,
+    role: role ?? null,
+  });
 
   const next = encodeURIComponent(`${location.pathname}${location.search ?? ""}`);
 
@@ -260,6 +317,23 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 // Component to handle app lifecycle events
 function AppLifecycleHandler({ children }: { children: React.ReactNode }) {
   useAppLifecycle();
+
+  // One-time install: logs stack traces if URL flips to '/' unexpectedly.
+  useEffect(() => {
+    installNavigationAudit();
+
+    // App mount/unmount diagnostics to detect real reload vs remount
+    const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    console.log('[App] Mounted', {
+      path: `${window.location.pathname}${window.location.search ?? ''}${window.location.hash ?? ''}`,
+      navType: nav?.type,
+    });
+
+    return () => {
+      console.log('[App] Unmounted');
+    };
+  }, []);
+
   return <>{children}</>;
 }
 

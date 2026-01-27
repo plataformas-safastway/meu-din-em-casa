@@ -180,6 +180,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!mounted) return;
           
           console.log('[Auth] Auth state change:', event, 'inFocusTransition:', isInFocusTransition());
+
+          // Instrumentation: if we ever transition to a null session, capture full context.
+          if (!newSession) {
+            console.warn('[Auth] onAuthStateChange received null session', {
+              event,
+              path: `${window.location.pathname}${window.location.search ?? ''}${window.location.hash ?? ''}`,
+              inFocusTransition: isInFocusTransition(),
+              bootstrapStatus,
+              profileStatus,
+              currentUserIdRef: currentUserIdRef.current,
+            });
+          }
           
           // CRITICAL: If we're in a focus transition and receive a null session,
           // this is likely a temporary state during token refresh. Don't reset state.
@@ -215,6 +227,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // No user - reset everything
             // Only do this if we're NOT in a focus transition
             console.log('[Auth] Session is null, resetting state');
+
+            // CRITICAL instrumentation: this reset is the usual precursor to any logout redirect.
+            console.error('[Auth] RESET_STATE_DUE_TO_NULL_SESSION', {
+              event,
+              path: `${window.location.pathname}${window.location.search ?? ''}${window.location.hash ?? ''}`,
+              inFocusTransition: isInFocusTransition(),
+              bootstrapStatus,
+              profileStatus,
+              currentUserIdRef: currentUserIdRef.current,
+            });
+            console.trace('[Auth] reset stack');
+
             setFamily(null);
             setFamilyMember(null);
             setProfileStatus('unknown');
