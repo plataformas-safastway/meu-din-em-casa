@@ -13,7 +13,7 @@ import { STALE_TIMES, GC_TIMES } from "@/lib/queryConfig";
 import { clearExpiredDrafts } from "@/hooks/useDraftPersistence";
 import { installNavigationAudit } from "@/lib/navigationAudit";
 import { setAuthDebugSnapshot } from "@/lib/devDiagnostics";
-import { installRouteResumeGuard, tryInitialRouteRestore } from "@/lib/routeResumeGuard";
+import { installRouteResumeGuard, tryInitialRouteRestore, isRouteRestoreInProgress } from "@/lib/routeResumeGuard";
 import { installDevNavigationInstrumentation, installDevNavigationInstrumentationV2, logNavigationAttempt } from "@/lib/devNavigationInstrumentation";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
@@ -176,8 +176,9 @@ function ProtectedRoute({
   }, [location.pathname, isAuthTransition, shouldRedirectToLogin, session, user, profileStatus, bootstrapStatus]);
 
   // CRITICAL: Never redirect during auth transition (tab switch, token refresh)
-  if (isAuthTransition) {
-    console.log('[ProtectedRoute] In transition - showing loader, NOT redirecting');
+  // Also never redirect during route restoration
+  if (isAuthTransition || isRouteRestoreInProgress()) {
+    console.log('[ProtectedRoute] In transition/restore - showing loader, NOT redirecting');
     return <LoadingSpinner />;
   }
 
@@ -259,9 +260,9 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     });
   }, [location.pathname, isAuthTransition, shouldRedirectToLogin, session, user, profileStatus, bootstrapStatus, role, roleLoading]);
 
-  // CRITICAL: Never redirect during auth transition
-  if (isAuthTransition) {
-    console.log('[AdminRoute] In transition - showing loader, NOT redirecting');
+  // CRITICAL: Never redirect during auth transition or route restoration
+  if (isAuthTransition || isRouteRestoreInProgress()) {
+    console.log('[AdminRoute] In transition/restore - showing loader, NOT redirecting');
     return <LoadingSpinner />;
   }
 
@@ -316,8 +317,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   const { data: role, isLoading: roleLoading } = useUserRole();
   const { isLoading: checkingAdmin } = useHasAnyAdmin();
   
-  // CRITICAL: Never redirect during auth transition
-  if (isAuthTransition) {
+  // CRITICAL: Never redirect during auth transition or route restoration
+  if (isAuthTransition || isRouteRestoreInProgress()) {
     return <LoadingSpinner />;
   }
   
