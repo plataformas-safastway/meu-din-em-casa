@@ -5,17 +5,19 @@ import { QUERY_INVALIDATION_GROUPS } from '@/lib/queryConfig';
 /**
  * Hook to handle app lifecycle events for cache revalidation
  * 
- * CRITICAL: This hook is carefully tuned to NOT cause UI flicker on tab switch.
- * - Uses longer debounce periods
- * - Only invalidates queries when document is FULLY visible
- * - Doesn't force immediate refetch
+ * CRITICAL: This hook is carefully tuned to:
+ * - NEVER cause page reloads on tab switch
+ * - NEVER cause UI flicker on visibility change
+ * - Only do background data invalidation (mark stale, don't refetch immediately)
+ * 
+ * NO RELOAD TRIGGERS HERE - just cache management
  */
 export function useAppLifecycle() {
   const queryClient = useQueryClient();
   const lastRefreshRef = useRef<number>(Date.now());
   const visibilityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  // Minimum 60s between auto-refreshes (increased from 30s)
+  // Minimum 60s between auto-refreshes
   const MIN_REFRESH_INTERVAL = 60 * 1000;
   
   // Delay before refreshing after visibility change (prevents flash)
@@ -30,22 +32,22 @@ export function useAppLifecycle() {
     
     lastRefreshRef.current = now;
     
-    console.log('[Lifecycle] Refreshing critical data in background');
+    console.log('[Lifecycle] Marking data as stale (background, no refetch)');
     
-    // Invalidate critical queries on app resume
-    // Using 'none' refetchType to NOT trigger immediate refetch
-    // Data will be refetched on next access
+    // CRITICAL: Only INVALIDATE, never refetch immediately
+    // This marks data as stale so it's refreshed on next access
+    // NO PAGE RELOAD, NO HARD NAVIGATION
     QUERY_INVALIDATION_GROUPS.appResume.forEach((key) => {
       queryClient.invalidateQueries({ 
         queryKey: [key],
-        refetchType: 'none', // Mark as stale but don't refetch
+        refetchType: 'none', // Mark as stale but DON'T refetch
       });
     });
   }, [queryClient]);
 
   useEffect(() => {
     // Handle visibility change (tab focus/blur)
-    // CRITICAL: Debounced to prevent flash during quick tab switches
+    // CRITICAL: This ONLY invalidates cache, it NEVER reloads the page
     const handleVisibilityChange = () => {
       // Clear any pending refresh
       if (visibilityTimeoutRef.current) {
@@ -54,9 +56,9 @@ export function useAppLifecycle() {
       }
       
       if (document.visibilityState === 'visible') {
-        console.log('[Lifecycle] Tab became visible - scheduling refresh');
+        console.log('[Lifecycle] Tab became visible - scheduling cache invalidation (no reload)');
         
-        // Wait before refreshing to let auth stabilize
+        // Wait before invalidating to let auth stabilize
         visibilityTimeoutRef.current = setTimeout(() => {
           // Double-check we're still visible
           if (document.visibilityState === 'visible') {
@@ -67,8 +69,9 @@ export function useAppLifecycle() {
     };
 
     // Handle online/offline - but with debounce
+    // CRITICAL: This ONLY invalidates cache, it NEVER reloads the page
     const handleOnline = () => {
-      console.log('[Lifecycle] Network reconnected');
+      console.log('[Lifecycle] Network reconnected - invalidating cache (no reload)');
       // Wait a moment for auth to stabilize
       setTimeout(() => {
         // Only invalidate, don't force refetch
@@ -77,9 +80,10 @@ export function useAppLifecycle() {
     };
 
     // Handle page show (back/forward cache)
+    // CRITICAL: This ONLY invalidates cache, it NEVER reloads the page
     const handlePageShow = (event: PageTransitionEvent) => {
       if (event.persisted) {
-        console.log('[Lifecycle] Page restored from bfcache');
+        console.log('[Lifecycle] Page restored from bfcache - invalidating cache (no reload)');
         // Page was restored from bfcache - give time for auth
         setTimeout(() => {
           refreshCriticalData();
