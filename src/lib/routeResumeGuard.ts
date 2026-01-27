@@ -33,18 +33,28 @@ function writeState(path: string) {
   }
 }
 
-function isHomeLike(path: string) {
-  // Treat both '/' and '/login' as “public home surfaces”; still, we want to preserve
-  // query params such as ?next=...
-  return path === "/" || path.startsWith("/login");
+/**
+ * Determines if a path is "home-like" (a public surface with no navigation context).
+ * 
+ * CRITICAL: '/login?next=...' is NOT home-like because it has navigation context we want to preserve.
+ * Only exact '/' and '/login' (without query) are considered home-like.
+ */
+function isHomeLike(path: string): boolean {
+  // '/' is always home-like - no context to preserve.
+  if (path === "/") return true;
+
+  // '/login' without query params is home-like.
+  if (path === "/login") return true;
+
+  // Everything else, including '/login?next=...' and '/admin', is NOT home-like.
+  return false;
 }
 
 function reportIfUnexpectedHome(nextPath: string, source: string) {
   const saved = readState();
   const current = getFullPath();
 
-  // We care when navigation *lands* on '/' (or /login without query) from a non-home route.
-  // The user bug is: /login?next=... -> '/' on tab return.
+  // We care when navigation *lands* on a home-like surface from a non-home route.
   if (isHomeLike(nextPath) && saved?.path && !isHomeLike(saved.path)) {
     console.error("[RouteResume] HOME_LIKE_NAV_DETECTED", {
       fromSaved: saved.path,
@@ -123,7 +133,7 @@ export function installRouteResumeGuard() {
     const current = getFullPath();
     const saved = readState();
 
-    // Restore when we land on '/' or '/login' but we had a more specific route saved.
+    // Restore when we land on a home-like surface but we had a non-home route saved.
     if (isHomeLike(current) && saved?.path && !isHomeLike(saved.path)) {
       const MAX_AGE_MS = 10 * 60 * 1000;
       const age = Date.now() - saved.ts;
@@ -145,7 +155,7 @@ export function installRouteResumeGuard() {
   const onVisibilityChange = () => {
     if (document.visibilityState === "hidden") {
       const current = getFullPath();
-      // Only store non-home routes as "resume" targets.
+      // Always store the current path (except pure home-like) as resume target.
       if (!isHomeLike(current)) {
         writeState(current);
       }
