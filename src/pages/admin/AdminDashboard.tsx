@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Users, 
@@ -21,8 +21,6 @@ import {
   Headphones,
   Heart,
   Cpu,
-  Server,
-  Key,
   Flag,
   Activity,
   Scale,
@@ -31,69 +29,70 @@ import {
   Plug,
   Mail,
   CreditCard,
+  Key,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { useUserAccess } from "@/hooks/useUserAccess";
-import { useFinancialAccess } from "@/hooks/useFinancialAccess";
-import { useSupportAccess } from "@/hooks/useSupportAccess";
-import { useCSAccess } from "@/hooks/useCSAccess";
-import { useTechAccess } from "@/hooks/useTechAccess";
+import { useUserAccessProfile } from "@/hooks/useUserAccessProfile";
 import { useMustChangePassword } from "@/hooks/useMasterUserSetup";
-import { AdminUsersPage } from "./AdminUsersPage";
-import { AdminEbooksPage } from "./AdminEbooksPage";
-import { AdminMetricsPage } from "./AdminMetricsPage";
-import { AdminOpenFinancePage } from "./AdminOpenFinancePage";
-import {
-  FinancialOverviewPage,
-  FinancialUsersPage,
-  FinancialPaymentsPage,
-  FinancialInvoicesPage,
-  FinancialReportsPage,
-  FinancialAuditPage
-} from "./finance";
-import {
-  SupportErrorsPage,
-  SupportUsersPage,
-  SupportAuditPage,
-} from "./support";
-import {
-  CSOverviewPage,
-  CSUsersListPage,
-  CSAuditPage,
-  CSAutomationPage,
-  CSHealthPage,
-  LGPDRequestsPage,
-} from "./cs";
-import {
-  TechHealthPage,
-  TechLogsPage,
-  TechIntegrationsPage,
-  TechApiKeysPage,
-  TechFeatureFlagsPage,
-  TechAuditPage,
-} from "./tech";
-import {
-  LGPDOverviewPage,
-  LegalVaultPage,
-  BreakglassApprovalsPage,
-  LGPDAuditPage,
-} from "./lgpd";
-import {
-  IntegrationsOverviewPage,
-  IntegrationOpenFinancePage,
-  IntegrationAcquirerPage,
-  IntegrationResendPage,
-  IntegrationEnotasPage,
-} from "./integrations";
-import ExecutiveReportsPage from "./executive/ExecutiveReportsPage";
-import { useExecutiveAccess } from "@/hooks/useExecutiveReports";
-import { useLegalAccess } from "@/hooks/useLegalAccess";
 import { ForcePasswordChangeModal } from "@/components/auth/ForcePasswordChangeModal";
 import { CreateMasterUserSheet } from "@/components/admin/CreateMasterUserSheet";
 import { type IntegrationProvider } from "@/hooks/useIntegrationsConfig";
+
+// Lazy load all admin sub-pages for better initial bundle size
+const AdminUsersPage = lazy(() => import("./AdminUsersPage").then(m => ({ default: m.AdminUsersPage })));
+const AdminEbooksPage = lazy(() => import("./AdminEbooksPage").then(m => ({ default: m.AdminEbooksPage })));
+const AdminMetricsPage = lazy(() => import("./AdminMetricsPage").then(m => ({ default: m.AdminMetricsPage })));
+const AdminOpenFinancePage = lazy(() => import("./AdminOpenFinancePage").then(m => ({ default: m.AdminOpenFinancePage })));
+
+// Financial module - lazy loaded
+const FinancialOverviewPage = lazy(() => import("./finance/FinancialOverviewPage").then(m => ({ default: m.FinancialOverviewPage })));
+const FinancialUsersPage = lazy(() => import("./finance/FinancialUsersPage").then(m => ({ default: m.FinancialUsersPage })));
+const FinancialPaymentsPage = lazy(() => import("./finance/FinancialPaymentsPage").then(m => ({ default: m.FinancialPaymentsPage })));
+const FinancialInvoicesPage = lazy(() => import("./finance/FinancialInvoicesPage").then(m => ({ default: m.FinancialInvoicesPage })));
+const FinancialReportsPage = lazy(() => import("./finance/FinancialReportsPage").then(m => ({ default: m.FinancialReportsPage })));
+const FinancialAuditPage = lazy(() => import("./finance/FinancialAuditPage").then(m => ({ default: m.FinancialAuditPage })));
+
+// Support module - lazy loaded
+const SupportErrorsPage = lazy(() => import("./support/SupportErrorsPage").then(m => ({ default: m.SupportErrorsPage })));
+const SupportUsersPage = lazy(() => import("./support/SupportUsersPage").then(m => ({ default: m.SupportUsersPage })));
+const SupportAuditPage = lazy(() => import("./support/SupportAuditPage").then(m => ({ default: m.SupportAuditPage })));
+
+// CS module - lazy loaded
+const CSOverviewPage = lazy(() => import("./cs/CSOverviewPage").then(m => ({ default: m.CSOverviewPage })));
+const CSUsersListPage = lazy(() => import("./cs/CSUsersListPage").then(m => ({ default: m.CSUsersListPage })));
+const CSHealthPage = lazy(() => import("./cs/CSHealthPage").then(m => ({ default: m.CSHealthPage })));
+const CSAutomationPage = lazy(() => import("./cs/CSAutomationPage").then(m => ({ default: m.CSAutomationPage })));
+const CSAuditPage = lazy(() => import("./cs/CSAuditPage").then(m => ({ default: m.CSAuditPage })));
+const LGPDRequestsPage = lazy(() => import("./cs/LGPDRequestsPage").then(m => ({ default: m.LGPDRequestsPage })));
+
+// Tech module - lazy loaded
+const TechHealthPage = lazy(() => import("./tech/TechHealthPage").then(m => ({ default: m.TechHealthPage })));
+const TechLogsPage = lazy(() => import("./tech/TechLogsPage").then(m => ({ default: m.TechLogsPage })));
+const TechApiKeysPage = lazy(() => import("./tech/TechApiKeysPage").then(m => ({ default: m.TechApiKeysPage })));
+const TechFeatureFlagsPage = lazy(() => import("./tech/TechFeatureFlagsPage").then(m => ({ default: m.TechFeatureFlagsPage })));
+const TechAuditPage = lazy(() => import("./tech/TechAuditPage").then(m => ({ default: m.TechAuditPage })));
+const TechIntegrationsPage = lazy(() => import("./tech/TechIntegrationsPage").then(m => ({ default: m.TechIntegrationsPage })));
+
+// LGPD module - lazy loaded
+const LGPDOverviewPage = lazy(() => import("./lgpd/LGPDOverviewPage").then(m => ({ default: m.LGPDOverviewPage })));
+const LegalVaultPage = lazy(() => import("./lgpd/LegalVaultPage").then(m => ({ default: m.LegalVaultPage })));
+const BreakglassApprovalsPage = lazy(() => import("./lgpd/BreakglassApprovalsPage").then(m => ({ default: m.BreakglassApprovalsPage })));
+const LGPDAuditPage = lazy(() => import("./lgpd/LGPDAuditPage").then(m => ({ default: m.LGPDAuditPage })));
+
+// Integrations module - lazy loaded
+const IntegrationsOverviewPage = lazy(() => import("./integrations/IntegrationsOverviewPage").then(m => ({ default: m.IntegrationsOverviewPage })));
+const IntegrationOpenFinancePage = lazy(() => import("./integrations/IntegrationOpenFinancePage").then(m => ({ default: m.IntegrationOpenFinancePage })));
+const IntegrationAcquirerPage = lazy(() => import("./integrations/IntegrationAcquirerPage").then(m => ({ default: m.IntegrationAcquirerPage })));
+const IntegrationResendPage = lazy(() => import("./integrations/IntegrationResendPage").then(m => ({ default: m.IntegrationResendPage })));
+const IntegrationEnotasPage = lazy(() => import("./integrations/IntegrationEnotasPage").then(m => ({ default: m.IntegrationEnotasPage })));
+
+// Executive reports - lazy loaded
+const ExecutiveReportsPage = lazy(() => import("./executive/ExecutiveReportsPage"));
 
 type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings"
   | "fin-overview" | "fin-users" | "fin-payments" | "fin-invoices" | "fin-reports" | "fin-audit"
@@ -104,20 +103,33 @@ type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "s
   | "exec-reports"
   | "int-overview" | "int-openfinance" | "int-acquirer" | "int-resend" | "int-enotas";
 
+// Loading fallback for lazy loaded pages
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center py-12">
+      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
 export function AdminDashboard() {
   const navigate = useNavigate();
   const { user, familyMember, signOut } = useAuth();
   const { role, isAdmin, isCS } = useIsAdmin();
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
 
-  const { data: hasFinancialAccess } = useFinancialAccess();
-  const { data: hasSupportAccess } = useSupportAccess();
-  const { data: hasCSAccess } = useCSAccess();
-  const { data: hasTechAccess } = useTechAccess();
-  const { data: hasExecutiveAccess } = useExecutiveAccess();
-  const { data: hasLegalAccess } = useLegalAccess();
+  // Use consolidated access profile (1 RPC instead of 7)
+  const { data: accessProfile, isLoading: accessLoading } = useUserAccessProfile();
   const { data: userAccess } = useUserAccess();
   const { data: mustChangePassword, refetch: refetchPasswordCheck } = useMustChangePassword();
+
+  // Extract access flags from consolidated profile
+  const hasFinancialAccess = accessProfile?.has_financial_access ?? false;
+  const hasSupportAccess = accessProfile?.has_support_access ?? false;
+  const hasCSAccess = accessProfile?.has_cs_access ?? false;
+  const hasTechAccess = accessProfile?.has_tech_access ?? false;
+  const hasExecutiveAccess = accessProfile?.has_executive_access ?? false;
+  const hasLegalAccess = accessProfile?.has_legal_access ?? false;
 
   const handleSignOut = async () => {
     await signOut();
@@ -132,7 +144,7 @@ export function AdminDashboard() {
     ...(isAdmin ? [{ id: "settings" as AdminTab, label: "Configurações", icon: Settings }] : []),
   ];
 
-  // Financial module menu - only for users with financial access
+  // Financial module menu
   const financialMenuItems = hasFinancialAccess ? [
     { id: "fin-overview" as AdminTab, label: "Visão Financeira", icon: DollarSign },
     { id: "fin-users" as AdminTab, label: "Gestão Usuários", icon: UserCog },
@@ -142,14 +154,14 @@ export function AdminDashboard() {
     { id: "fin-audit" as AdminTab, label: "Auditoria", icon: ClipboardList },
   ] : [];
 
-  // Support module menu - only for users with support access
+  // Support module menu
   const supportMenuItems = hasSupportAccess ? [
     { id: "sup-errors" as AdminTab, label: "Painel de Erros", icon: AlertTriangle },
     { id: "sup-users" as AdminTab, label: "Usuários", icon: Headphones },
     { id: "sup-audit" as AdminTab, label: "Auditoria Suporte", icon: ClipboardList },
   ] : [];
 
-  // CS module menu - only for users with CS access
+  // CS module menu
   const csMenuItems = hasCSAccess ? [
     { id: "cs-overview" as AdminTab, label: "Visão CS", icon: Heart },
     { id: "cs-users" as AdminTab, label: "Base de Usuários", icon: Users },
@@ -159,12 +171,12 @@ export function AdminDashboard() {
     { id: "cs-audit" as AdminTab, label: "Auditoria CS", icon: ClipboardList },
   ] : [];
 
-  // Executive reports menu - only for users with executive access
+  // Executive reports menu
   const executiveMenuItems = hasExecutiveAccess ? [
     { id: "exec-reports" as AdminTab, label: "Relatórios Executivos", icon: BarChart3 },
   ] : [];
 
-  // Tech module menu - only for users with tech access
+  // Tech module menu
   const techMenuItems = hasTechAccess ? [
     { id: "tech-health" as AdminTab, label: "Saúde do Sistema", icon: Activity },
     { id: "tech-logs" as AdminTab, label: "Logs", icon: FileText },
@@ -172,7 +184,7 @@ export function AdminDashboard() {
     { id: "tech-audit" as AdminTab, label: "Auditoria Tech", icon: ClipboardList },
   ] : [];
 
-  // LGPD & Privacy module menu - only for users with legal access
+  // LGPD & Privacy module menu
   const lgpdMenuItems = hasLegalAccess ? [
     { id: "lgpd-overview" as AdminTab, label: "Visão Geral", icon: Shield },
     { id: "lgpd-dsar" as AdminTab, label: "Solicitações DSAR", icon: FileText },
@@ -181,7 +193,7 @@ export function AdminDashboard() {
     { id: "lgpd-audit" as AdminTab, label: "Auditoria", icon: ClipboardList },
   ] : [];
 
-  // Integrations menu - only for users with admin or tech access
+  // Integrations menu
   const integrationsMenuItems = (isAdmin || hasTechAccess) ? [
     { id: "int-overview" as AdminTab, label: "Visão Geral", icon: Plug },
     { id: "int-openfinance" as AdminTab, label: "Open Finance", icon: Building2 },
@@ -244,6 +256,14 @@ export function AdminDashboard() {
       return <AccessDenied message="Este módulo requer perfil ADMIN ou TECNOLOGIA" />;
     }
 
+    return (
+      <Suspense fallback={<PageLoader />}>
+        {renderPage()}
+      </Suspense>
+    );
+  };
+
+  const renderPage = () => {
     switch (activeTab) {
       case "users":
         return <AdminUsersPage />;
@@ -309,7 +329,6 @@ export function AdminDashboard() {
         return <BreakglassApprovalsPage />;
       case "lgpd-audit":
         return <LGPDAuditPage />;
-      // Integrations
       case "int-overview":
         return <IntegrationsOverviewPage onNavigate={handleIntegrationNavigate} />;
       case "int-openfinance":
@@ -321,13 +340,51 @@ export function AdminDashboard() {
       case "int-enotas":
         return <IntegrationEnotasPage />;
       default:
-        return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} hasSupportAccess={!!hasSupportAccess} hasCSAccess={!!hasCSAccess} hasTechAccess={!!hasTechAccess} hasExecutiveAccess={!!hasExecutiveAccess} hasLegalAccess={!!hasLegalAccess} />;
+        return (
+          <AdminOverview 
+            onNavigate={setActiveTab} 
+            hasFinancialAccess={hasFinancialAccess} 
+            hasSupportAccess={hasSupportAccess} 
+            hasCSAccess={hasCSAccess} 
+            hasTechAccess={hasTechAccess} 
+            hasExecutiveAccess={hasExecutiveAccess} 
+            hasLegalAccess={hasLegalAccess} 
+          />
+        );
     }
+  };
+
+  // Render menu section helper
+  const renderMenuSection = (title: string, items: typeof menuItems) => {
+    if (items.length === 0) return null;
+    return (
+      <>
+        <div className="pt-4 pb-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase px-3">{title}</p>
+        </div>
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                activeTab === item.id
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-muted"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {item.label}
+            </button>
+          );
+        })}
+      </>
+    );
   };
 
   return (
     <>
-      {/* Force password change modal for MASTER users */}
       <ForcePasswordChangeModal 
         open={!!mustChangePassword} 
         onSuccess={() => refetchPasswordCheck()}
@@ -337,230 +394,71 @@ export function AdminDashboard() {
         {/* Sidebar */}
         <aside className="w-64 bg-card border-r border-border flex flex-col">
           <div className="p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Shield className="w-8 h-8 text-primary" />
-            <div>
-              <h1 className="font-bold text-lg">Admin</h1>
-              <p className="text-xs text-muted-foreground capitalize">{role}</p>
+            <div className="flex items-center gap-2">
+              <Shield className="w-8 h-8 text-primary" />
+              <div>
+                <h1 className="font-bold text-lg">Admin</h1>
+                <p className="text-xs text-muted-foreground capitalize">{role}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <nav className="flex-1 p-4 space-y-1">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  activeTab === item.id
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted"
-                }`}
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+            {/* Main menu items */}
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    activeTab === item.id
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.label}
+                </button>
+              );
+            })}
+            
+            {renderMenuSection("Financeiro", financialMenuItems)}
+            {renderMenuSection("Suporte", supportMenuItems)}
+            {renderMenuSection("Customer Success", csMenuItems)}
+            {renderMenuSection("Tecnologia", techMenuItems)}
+            {renderMenuSection("Diretoria", executiveMenuItems)}
+            {renderMenuSection("Integrações", integrationsMenuItems)}
+            {renderMenuSection("LGPD & Privacidade", lgpdMenuItems)}
+          </nav>
+
+          <div className="p-4 border-t border-border space-y-2">
+            <div className="px-3 py-2">
+              <p className="text-sm font-medium truncate">{familyMember?.display_name}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+            </div>
+            
+            {userAccess?.hasAppAccess && (
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start gap-2"
+                onClick={() => navigate("/app")}
               >
-                <Icon className="w-4 h-4" />
-                {item.label}
-              </button>
-            );
-          })}
-          {financialMenuItems.length > 0 && (
-            <>
-              <div className="pt-4 pb-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Financeiro</p>
-              </div>
-              {financialMenuItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                      activeTab === item.id
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </>
-          )}
-          {supportMenuItems.length > 0 && (
-            <>
-              <div className="pt-4 pb-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Suporte</p>
-              </div>
-              {supportMenuItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                      activeTab === item.id
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </>
-          )}
-          {csMenuItems.length > 0 && (
-            <>
-              <div className="pt-4 pb-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Customer Success</p>
-              </div>
-              {csMenuItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                      activeTab === item.id
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </>
-          )}
-          {techMenuItems.length > 0 && (
-            <>
-              <div className="pt-4 pb-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Tecnologia</p>
-              </div>
-              {techMenuItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                      activeTab === item.id
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </>
-          )}
-          {executiveMenuItems.length > 0 && (
-            <>
-              <div className="pt-4 pb-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Diretoria</p>
-              </div>
-              {executiveMenuItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                      activeTab === item.id
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </>
-          )}
-          {integrationsMenuItems.length > 0 && (
-            <>
-              <div className="pt-4 pb-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Integrações</p>
-              </div>
-              {integrationsMenuItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                      activeTab === item.id
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </>
-          )}
-          {lgpdMenuItems.length > 0 && (
-            <>
-              <div className="pt-4 pb-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">LGPD & Privacidade</p>
-              </div>
-              {lgpdMenuItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                      activeTab === item.id
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </>
-          )}
-        </nav>
-
-        <div className="p-4 border-t border-border space-y-2">
-          <div className="px-3 py-2">
-            <p className="text-sm font-medium truncate">{familyMember?.display_name}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-          </div>
-          
-          {userAccess?.hasAppAccess && (
+                <Home className="w-4 h-4" />
+                Ir para App
+              </Button>
+            )}
+            
             <Button 
               variant="ghost" 
-              className="w-full justify-start gap-2"
-              onClick={() => navigate("/app")}
+              className="w-full justify-start gap-2 text-destructive hover:text-destructive"
+              onClick={handleSignOut}
             >
-              <Home className="w-4 h-4" />
-              Ir para App
+              <LogOut className="w-4 h-4" />
+              Sair
             </Button>
-          )}
-          
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start gap-2 text-destructive hover:text-destructive"
-            onClick={handleSignOut}
-          >
-            <LogOut className="w-4 h-4" />
-            Sair
-          </Button>
-        </div>
-      </aside>
+          </div>
+        </aside>
 
         {/* Main content */}
         <main className="flex-1 overflow-auto">
@@ -573,7 +471,23 @@ export function AdminDashboard() {
   );
 }
 
-function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCSAccess, hasTechAccess, hasExecutiveAccess, hasLegalAccess }: { onNavigate: (tab: AdminTab) => void; hasFinancialAccess: boolean; hasSupportAccess: boolean; hasCSAccess: boolean; hasTechAccess: boolean; hasExecutiveAccess: boolean; hasLegalAccess: boolean }) {
+function AdminOverview({ 
+  onNavigate, 
+  hasFinancialAccess, 
+  hasSupportAccess, 
+  hasCSAccess, 
+  hasTechAccess, 
+  hasExecutiveAccess, 
+  hasLegalAccess 
+}: { 
+  onNavigate: (tab: AdminTab) => void; 
+  hasFinancialAccess: boolean; 
+  hasSupportAccess: boolean; 
+  hasCSAccess: boolean; 
+  hasTechAccess: boolean; 
+  hasExecutiveAccess: boolean; 
+  hasLegalAccess: boolean;
+}) {
   const stats = [
     { label: "Total de Usuários", value: "—", icon: Users, color: "text-blue-500" },
     { label: "Famílias Ativas", value: "—", icon: Home, color: "text-green-500" },
@@ -586,27 +500,13 @@ function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCS
     { label: "Gerenciar eBooks", icon: BookOpen, action: () => onNavigate("ebooks") },
     { label: "Ver Métricas", icon: BarChart3, action: () => onNavigate("metrics") },
     { label: "Open Finance", icon: Building2, action: () => onNavigate("openfinance") },
-    ...(hasFinancialAccess ? [
-      { label: "Financeiro", icon: DollarSign, action: () => onNavigate("fin-overview") },
-    ] : []),
-    ...(hasSupportAccess ? [
-      { label: "Suporte", icon: Headphones, action: () => onNavigate("sup-errors") },
-    ] : []),
-    ...(hasCSAccess ? [
-      { label: "Customer Success", icon: Heart, action: () => onNavigate("cs-overview") },
-    ] : []),
-    ...(hasTechAccess ? [
-      { label: "Tecnologia", icon: Cpu, action: () => onNavigate("tech-health") },
-    ] : []),
-    ...(hasExecutiveAccess ? [
-      { label: "Relatórios Executivos", icon: BarChart3, action: () => onNavigate("exec-reports") },
-    ] : []),
-    ...(hasLegalAccess ? [
-      { label: "LGPD & Privacidade", icon: Shield, action: () => onNavigate("lgpd-overview") },
-    ] : []),
-    ...(hasTechAccess ? [
-      { label: "Integrações", icon: Plug, action: () => onNavigate("int-overview") },
-    ] : []),
+    ...(hasFinancialAccess ? [{ label: "Financeiro", icon: DollarSign, action: () => onNavigate("fin-overview") }] : []),
+    ...(hasSupportAccess ? [{ label: "Suporte", icon: Headphones, action: () => onNavigate("sup-errors") }] : []),
+    ...(hasCSAccess ? [{ label: "Customer Success", icon: Heart, action: () => onNavigate("cs-overview") }] : []),
+    ...(hasTechAccess ? [{ label: "Tecnologia", icon: Cpu, action: () => onNavigate("tech-health") }] : []),
+    ...(hasExecutiveAccess ? [{ label: "Relatórios Executivos", icon: BarChart3, action: () => onNavigate("exec-reports") }] : []),
+    ...(hasLegalAccess ? [{ label: "LGPD & Privacidade", icon: Shield, action: () => onNavigate("lgpd-overview") }] : []),
+    ...(hasTechAccess ? [{ label: "Integrações", icon: Plug, action: () => onNavigate("int-overview") }] : []),
   ];
 
   return (
@@ -616,7 +516,6 @@ function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCS
         <p className="text-muted-foreground">Bem-vindo ao painel de administração</p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -636,7 +535,6 @@ function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCS
         })}
       </div>
 
-      {/* Quick Actions */}
       <Card>
         <CardHeader>
           <CardTitle>Ações Rápidas</CardTitle>
@@ -673,7 +571,6 @@ function AdminSettingsPlaceholder() {
         <p className="text-muted-foreground">Configurações do sistema</p>
       </div>
 
-      {/* Create Master User Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
