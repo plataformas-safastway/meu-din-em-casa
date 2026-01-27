@@ -17,7 +17,9 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: "autoUpdate",
+      // CRITICAL: Use 'prompt' instead of 'autoUpdate' to prevent automatic reloads
+      // 'autoUpdate' can cause page reloads on tab switch when a new SW is detected
+      registerType: "prompt",
       includeAssets: ["favicon.ico", "icons/*.png"],
       manifest: false, // We use our own manifest.webmanifest
       workbox: {
@@ -65,6 +67,9 @@ export default defineConfig(({ mode }) => ({
         // Don't cache user-specific data
         navigateFallback: null,
         cleanupOutdatedCaches: true,
+        // CRITICAL: Don't skip waiting automatically - this prevents reload loops
+        skipWaiting: false,
+        clientsClaim: false,
       },
       devOptions: {
         enabled: false, // Disable in dev to avoid confusion
