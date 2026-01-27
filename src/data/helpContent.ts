@@ -1,7 +1,7 @@
 export interface HelpArticle {
   id: string;
   title: string;
-  category: "getting-started" | "home" | "transactions" | "categories" | "goals" | "objectives" | "budgets" | "projection" | "import" | "family" | "settings" | "privacy";
+  category: "getting-started" | "home" | "transactions" | "categories" | "goals" | "objectives" | "budgets" | "projection" | "import" | "family" | "settings" | "privacy" | "insights";
   icon: string;
   summary: string;
   steps: Array<{
@@ -1501,6 +1501,28 @@ export const adminFaqItems: FAQItem[] = [
     category: "admin",
     keywords: ["enotas", "nota fiscal", "nfse", "emissão", "fiscal", "prefeitura"],
   },
+  // ===== INSIGHTS E RELATÓRIOS =====
+  {
+    id: "insights-faq-1",
+    question: "Como funcionam os Insights?",
+    answer: "Os Insights são recomendações personalizadas geradas automaticamente com base nos seus dados financeiros. Eles analisam padrões de gastos, orçamentos, metas e categorias para oferecer dicas práticas como alertas de orçamento excedido, metas sem aporte ou concentração excessiva de gastos em uma categoria.",
+    category: "insights",
+    keywords: ["insights", "recomendações", "dicas", "alertas", "análise", "personalizado"],
+  },
+  {
+    id: "insights-faq-2",
+    question: "O que são os Relatórios Mensais e fechamento do mês?",
+    answer: "Os Relatórios Mensais permitem visualizar o resumo financeiro de cada mês (receitas, despesas, saldo, categorias principais) e identificar pendências como transações sem categoria. Você pode 'fechar' o mês para registrar que o período foi revisado. Meses fechados podem ser reabertos a qualquer momento.",
+    category: "insights",
+    keywords: ["relatório", "mensal", "fechamento", "mês", "resumo", "pendências"],
+  },
+  {
+    id: "insights-faq-3",
+    question: "Como baixar seu relatório em PDF?",
+    answer: "Acesse Insights > Relatórios, selecione o mês desejado e toque em 'Baixar PDF'. O PDF contém o resumo do mês, principais categorias e pendências identificadas. O arquivo é gerado sob demanda e o link expira em 24 horas por segurança. Nenhum dado sensível (CPF) é incluído.",
+    category: "insights",
+    keywords: ["pdf", "baixar", "download", "relatório", "exportar", "imprimir"],
+  },
 ];
 
 export const categoryLabels: Record<string, string> = {
@@ -1517,6 +1539,7 @@ export const categoryLabels: Record<string, string> = {
   "family": "Família",
   "settings": "Configurações",
   "privacy": "Privacidade e Segurança",
+  "insights": "Insights e Relatórios",
   "general": "Geral",
 };
 

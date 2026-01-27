@@ -27,6 +27,7 @@ const LearnMorePage = lazy(() => import("./LearnMorePage").then(m => ({ default:
 const EbooksAdminPage = lazy(() => import("./EbooksAdminPage"));
 const OpenFinancePage = lazy(() => import("./OpenFinancePage").then(m => ({ default: m.OpenFinancePage })));
 const FamilyPage = lazy(() => import("./FamilyPage").then(m => ({ default: m.FamilyPage })));
+const InsightsHubPage = lazy(() => import("./InsightsHubPage").then(m => ({ default: m.InsightsHubPage })));
 
 // Minimal loading component for lazy modules
 const PageLoader = memo(() => (
@@ -163,6 +164,8 @@ const Index = () => {
             onNavigate={setActiveTab}
           />
         );
+      case "insights":
+        return <InsightsHubPage />;
       default:
         return <Dashboard />;
     }
