@@ -140,33 +140,62 @@ export function initReloadDiagnostics() {
   });
   
   // ============= MONKEY PATCH HARD NAVIGATION =============
+  // Note: These may fail in some browsers due to security restrictions
+  // We wrap in try-catch to handle gracefully
   
-  // Patch location.reload
-  const originalReload = location.reload.bind(location);
-  (location as any).reload = function(...args: any[]) {
-    console.error('%c[HARD-NAV DETECTED] location.reload() called!', 'color: #ff0000; font-weight: bold; font-size: 14px');
-    console.trace('Stack trace for reload:');
-    logDiagnostic('HARD_NAV:reload', { args });
-    return originalReload(...args);
-  };
+  try {
+    // Patch location.reload
+    const originalReload = location.reload.bind(location);
+    Object.defineProperty(location, 'reload', {
+      value: function(...args: any[]) {
+        console.error('%c[HARD-NAV DETECTED] location.reload() called!', 'color: #ff0000; font-weight: bold; font-size: 14px');
+        console.trace('Stack trace for reload:');
+        logDiagnostic('HARD_NAV:reload', { args });
+        return originalReload(...args);
+      },
+      writable: true,
+      configurable: true,
+    });
+    console.log('[DIAG] location.reload patched');
+  } catch (e) {
+    console.log('[DIAG] Could not patch location.reload (security restriction)');
+  }
   
-  // Patch location.assign
-  const originalAssign = location.assign.bind(location);
-  (location as any).assign = function(url: string) {
-    console.error('%c[HARD-NAV DETECTED] location.assign() called!', 'color: #ff0000; font-weight: bold; font-size: 14px', { to: url });
-    console.trace('Stack trace for assign:');
-    logDiagnostic('HARD_NAV:assign', { to: url });
-    return originalAssign(url);
-  };
+  try {
+    // Patch location.assign
+    const originalAssign = location.assign.bind(location);
+    Object.defineProperty(location, 'assign', {
+      value: function(url: string) {
+        console.error('%c[HARD-NAV DETECTED] location.assign() called!', 'color: #ff0000; font-weight: bold; font-size: 14px', { to: url });
+        console.trace('Stack trace for assign:');
+        logDiagnostic('HARD_NAV:assign', { to: url });
+        return originalAssign(url);
+      },
+      writable: true,
+      configurable: true,
+    });
+    console.log('[DIAG] location.assign patched');
+  } catch (e) {
+    console.log('[DIAG] Could not patch location.assign (security restriction)');
+  }
   
-  // Patch location.replace
-  const originalReplace = location.replace.bind(location);
-  (location as any).replace = function(url: string) {
-    console.error('%c[HARD-NAV DETECTED] location.replace() called!', 'color: #ff0000; font-weight: bold; font-size: 14px', { to: url });
-    console.trace('Stack trace for replace:');
-    logDiagnostic('HARD_NAV:replace', { to: url });
-    return originalReplace(url);
-  };
+  try {
+    // Patch location.replace
+    const originalReplace = location.replace.bind(location);
+    Object.defineProperty(location, 'replace', {
+      value: function(url: string) {
+        console.error('%c[HARD-NAV DETECTED] location.replace() called!', 'color: #ff0000; font-weight: bold; font-size: 14px', { to: url });
+        console.trace('Stack trace for replace:');
+        logDiagnostic('HARD_NAV:replace', { to: url });
+        return originalReplace(url);
+      },
+      writable: true,
+      configurable: true,
+    });
+    console.log('[DIAG] location.replace patched');
+  } catch (e) {
+    console.log('[DIAG] Could not patch location.replace (security restriction)');
+  }
   
   // Try to intercept location.href setter
   try {
