@@ -5487,6 +5487,7 @@ export type Database = {
       }
       get_product_stability_metrics: { Args: never; Returns: Json }
       get_revenue_metrics: { Args: { _months?: number }; Returns: Json }
+      get_user_access_profile: { Args: { _user_id: string }; Returns: Json }
       get_user_account_status: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["user_account_status"]
