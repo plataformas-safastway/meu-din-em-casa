@@ -283,6 +283,59 @@ export type Database = {
         }
         Relationships: []
       }
+      budget_template_applications: {
+        Row: {
+          applied_at: string
+          applied_by: string | null
+          created_at: string
+          estimated_income_midpoint: number
+          family_id: string
+          has_dependents: boolean | null
+          has_pets: boolean | null
+          id: string
+          income_band: string
+          income_subband: string
+          month_ref: string
+          percentages_applied: Json
+        }
+        Insert: {
+          applied_at?: string
+          applied_by?: string | null
+          created_at?: string
+          estimated_income_midpoint: number
+          family_id: string
+          has_dependents?: boolean | null
+          has_pets?: boolean | null
+          id?: string
+          income_band: string
+          income_subband: string
+          month_ref: string
+          percentages_applied?: Json
+        }
+        Update: {
+          applied_at?: string
+          applied_by?: string | null
+          created_at?: string
+          estimated_income_midpoint?: number
+          family_id?: string
+          has_dependents?: boolean | null
+          has_pets?: boolean | null
+          id?: string
+          income_band?: string
+          income_subband?: string
+          month_ref?: string
+          percentages_applied?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_template_applications_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budgets: {
         Row: {
           average_spending: number | null
@@ -1420,8 +1473,11 @@ export type Database = {
           email_report_day: number | null
           email_report_enabled: boolean
           email_report_recipient: string | null
+          has_dependents: boolean | null
+          has_pets: boolean | null
           id: string
           income_range: string | null
+          income_subband: string | null
           members_count: number
           name: string
           primary_objective: string | null
@@ -1432,8 +1488,11 @@ export type Database = {
           email_report_day?: number | null
           email_report_enabled?: boolean
           email_report_recipient?: string | null
+          has_dependents?: boolean | null
+          has_pets?: boolean | null
           id?: string
           income_range?: string | null
+          income_subband?: string | null
           members_count?: number
           name: string
           primary_objective?: string | null
@@ -1444,8 +1503,11 @@ export type Database = {
           email_report_day?: number | null
           email_report_enabled?: boolean
           email_report_recipient?: string | null
+          has_dependents?: boolean | null
+          has_pets?: boolean | null
           id?: string
           income_range?: string | null
+          income_subband?: string | null
           members_count?: number
           name?: string
           primary_objective?: string | null

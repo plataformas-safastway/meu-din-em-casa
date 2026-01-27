@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, Wifi, BookOpen, LayoutDashboard } from "lucide-react";
+import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, Wifi, BookOpen, LayoutDashboard, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { toast } from "sonner";
 import { EducationPreferences } from "@/components/onboarding";
+import { BudgetSetupSheet } from "@/components/budget";
 
 type NavigationSource = 'home_onboarding' | 'settings' | 'dashboard' | 'default';
 
@@ -21,6 +22,7 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
   const { family, familyMember, signOut } = useAuth();
   const { data: userAccess } = useUserAccess();
   const [showEducationPrefs, setShowEducationPrefs] = useState(false);
+  const [showBudgetSetup, setShowBudgetSetup] = useState(false);
 
   // Navigate with 'settings' as the source context for proper back button behavior
   const navigateToTab = (tab: string) => {
@@ -54,6 +56,9 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
       case "help":
         onNavigate?.("help");
         break;
+      case "budget":
+        setShowBudgetSetup(true);
+        break;
       default:
         break;
     }
@@ -76,8 +81,9 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
       ],
     },
     {
-      title: "Dados",
+      title: "Finanças",
       items: [
+        { id: "budget", label: "Orçamento Inteligente", icon: Wallet, action: "sheet" },
         { id: "import", label: "Importar Extrato/Fatura", icon: Upload, action: "navigate" },
         { id: "export", label: "Exportar Dados (CSV)", icon: Download, action: "action" },
         { id: "backup", label: "Backup Automático", icon: Shield, action: "toggle", enabled: false },
@@ -196,6 +202,12 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
           OIK Finanças em Família v1.0.0
         </p>
       </main>
+
+      {/* Budget Setup Sheet */}
+      <BudgetSetupSheet 
+        open={showBudgetSetup} 
+        onOpenChange={setShowBudgetSetup} 
+      />
     </div>
   );
 }

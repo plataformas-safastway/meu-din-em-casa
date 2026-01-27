@@ -402,6 +402,45 @@ export const helpArticles: HelpArticle[] = [
     keywords: ["meta", "orçamento", "limite", "alerta", "objetivo", "controle", "80%", "100%", "excedido", "previsto", "realizado", "comparação"],
     deepLink: "goals",
   },
+  {
+    id: "smart-budget",
+    title: "Orçamento Inteligente por Faixa de Renda",
+    category: "budgets",
+    icon: "🧠",
+    summary: "Como o OIK gera um orçamento personalizado automaticamente",
+    steps: [
+      {
+        title: "Informe sua faixa de renda",
+        description: "Selecione a faixa de renda mensal da família (não armazenamos valores exatos, apenas a faixa).",
+        tip: "A faixa é usada apenas para calcular percentuais — sua privacidade está protegida.",
+      },
+      {
+        title: "Refine com a subfaixa",
+        description: "Dentro da faixa selecionada, escolha uma subfaixa (baixa, média ou alta) para ajustar ainda mais as proporções.",
+        tip: "Subfaixas mais baixas priorizam moradia e essenciais. Mais altas, investimentos e lazer.",
+      },
+      {
+        title: "Indique filhos ou pets",
+        description: "Se tiverem filhos ou pets, categorias específicas serão incluídas automaticamente no orçamento.",
+      },
+      {
+        title: "Visualize a prévia",
+        description: "Antes de confirmar, vocês verão exatamente quanto será alocado para cada categoria.",
+        tip: "Podem voltar e ajustar as opções a qualquer momento.",
+      },
+      {
+        title: "Crie o orçamento",
+        description: "Com um toque, todas as metas de orçamento do mês são criadas automaticamente baseadas nos percentuais.",
+        tip: "Isso não impede ajustes manuais posteriormente.",
+      },
+      {
+        title: "Acesse nas Configurações",
+        description: "Vocês podem reconfigurar o orçamento inteligente a qualquer momento em Configurações > Finanças > Orçamento Inteligente.",
+      },
+    ],
+    keywords: ["orçamento", "inteligente", "faixa", "renda", "automático", "personalizado", "template", "modelo"],
+    deepLink: "settings",
+  },
 
   // ===== PROJEÇÃO =====
   {
@@ -1012,6 +1051,20 @@ export const faqItems: FAQItem[] = [
     answer: "Quando vocês gastam 80% do limite definido para uma categoria, aparece um alerta amarelo. Ao atingir 100%, o alerta fica vermelho indicando que o limite foi excedido.",
     category: "budgets",
     keywords: ["alerta", "orçamento", "limite", "meta", "80%", "100%"],
+  },
+  {
+    id: "faq-smart-budget",
+    question: "O que é o Orçamento Inteligente?",
+    answer: "É um recurso que cria automaticamente metas de orçamento para cada categoria baseado na faixa de renda da família. Você seleciona a faixa (não o valor exato), e o OIK aplica percentuais recomendados para cada tipo de gasto como moradia, alimentação, transporte, etc.",
+    category: "budgets",
+    keywords: ["orçamento", "inteligente", "faixa", "renda", "automático", "template"],
+  },
+  {
+    id: "faq-smart-budget-privacy",
+    question: "O OIK armazena minha renda exata?",
+    answer: "Não! O OIK armazena apenas a faixa de renda selecionada (por exemplo, 'R$ 8.001 – R$ 15.000'), nunca o valor exato. Isso é usado apenas para calcular percentuais de orçamento adequados.",
+    category: "budgets",
+    keywords: ["privacidade", "renda", "faixa", "segurança", "dados"],
   },
   {
     id: "faq-4",

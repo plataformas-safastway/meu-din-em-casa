@@ -8,7 +8,10 @@
 export const TEST_FAMILY = {
   name: "Família QA",
   members_count: 2,
-  income_range: "10000-15000",
+  income_range: "band_8k_15k",
+  income_subband: "band_8k_15k_mid",
+  has_pets: false,
+  has_dependents: true,
   primary_objective: "equilibrar"
 };
 
