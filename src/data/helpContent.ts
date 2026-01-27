@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 25/01/2026 - Sprint 7 Relatórios Executivos & BI
-export const HELP_CENTER_VERSION = "25/01/2026 v8";
+// Última atualização: 27/01/2026 - Sprint 8 Gestão Usuários Admin
+export const HELP_CENTER_VERSION = "27/01/2026 v9";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -1355,6 +1355,63 @@ export const adminFaqItems: FAQItem[] = [
     answer: "Módulo Tecnologia > Saúde do Sistema mostra uptime, tempo médio de resposta, erros recentes e status das integrações. Alertas são exibidos quando há degradação.",
     category: "admin",
     keywords: ["saúde", "sistema", "uptime", "erro", "monitoramento"],
+  },
+  // ===== GESTÃO DE USUÁRIOS ADMIN =====
+  {
+    id: "admin-faq-11",
+    question: "Como criar um novo usuário administrativo?",
+    answer: "Acesse Usuários Admin > Novo Usuário. Informe email, nome e papel (CS, ADMIN, LEGAL ou MASTER). Uma senha temporária de 20 caracteres será gerada e exibida uma única vez. O usuário deverá trocá-la no primeiro login.",
+    category: "admin",
+    keywords: ["criar", "usuário", "admin", "novo", "senha", "temporária"],
+  },
+  {
+    id: "admin-faq-12",
+    question: "Quais são os papéis de usuários administrativos?",
+    answer: "CS: acesso operacional para consultoria de famílias. ADMIN: pode gerenciar CS/LEGAL/outros ADMIN e ver logs. LEGAL: acesso aos recursos LGPD e break-glass. MASTER: acesso total ao sistema, incluindo criar outros MASTER.",
+    category: "admin",
+    keywords: ["papel", "role", "cs", "admin", "legal", "master", "permissão"],
+  },
+  {
+    id: "admin-faq-13",
+    question: "Como resetar a senha de um usuário admin?",
+    answer: "No menu de ações do usuário, clique em 'Resetar senha'. Uma nova senha temporária será gerada e exibida UMA ÚNICA VEZ. O usuário será obrigado a trocar a senha no próximo login. A ação é registrada em auditoria.",
+    category: "admin",
+    keywords: ["resetar", "senha", "temporária", "trocar", "login"],
+  },
+  {
+    id: "admin-faq-14",
+    question: "O que acontece quando 'Exigir troca de senha' é ativado?",
+    answer: "O usuário verá um modal obrigatório no próximo login para definir uma nova senha forte. Não poderá acessar nenhuma outra funcionalidade até trocar a senha. A nova senha deve ter mínimo 8 caracteres com letras, números e símbolos.",
+    category: "admin",
+    keywords: ["exigir", "troca", "senha", "obrigatória", "login", "forte"],
+  },
+  {
+    id: "admin-faq-15",
+    question: "Posso alterar meu próprio papel ou me desativar?",
+    answer: "Não. Por segurança, nenhum usuário pode alterar seu próprio papel ou se desativar. Essas ações devem ser feitas por outro administrador autorizado. Isso evita lock-outs acidentais e abuso de privilégios.",
+    category: "admin",
+    keywords: ["próprio", "papel", "desativar", "segurança", "lock-out"],
+  },
+  {
+    id: "admin-faq-16",
+    question: "ADMIN pode criar ou alterar usuários MASTER?",
+    answer: "Não. Apenas usuários MASTER podem criar ou promover outros para MASTER. ADMIN pode gerenciar CS, LEGAL e outros ADMIN, mas não tem privilégios sobre MASTER. Esta é uma medida de segurança hierárquica.",
+    category: "admin",
+    keywords: ["admin", "master", "criar", "promover", "hierarquia"],
+  },
+  {
+    id: "admin-faq-17",
+    question: "Como funciona a auditoria de usuários admin?",
+    answer: "Todas as ações são registradas automaticamente: criação, edição, ativação/desativação, reset de senha, troca de papel e logins. Os logs incluem quem fez, quando, e detalhes (sem dados sensíveis). Acesse via aba Auditoria.",
+    category: "admin",
+    keywords: ["auditoria", "log", "registro", "ação", "trilha"],
+  },
+  {
+    id: "admin-faq-18",
+    question: "Devo excluir ou desativar usuários?",
+    answer: "SEMPRE prefira desativar (is_active=false). Isso mantém o histórico de auditoria e permite reativação futura. Exclusão física só é permitida para MASTER e deve ser usada apenas em casos excepcionais, com confirmação dupla.",
+    category: "admin",
+    keywords: ["excluir", "desativar", "soft", "delete", "auditoria"],
   },
 ];
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Users, History } from "lucide-react";
+import { ArrowLeft, Plus, Users, History, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
@@ -18,7 +18,9 @@ import {
   AdminUsersTable, 
   CreateAdminUserSheet, 
   EditAdminUserSheet,
-  AdminAuditLogsTable 
+  AdminAuditLogsTable,
+  ResetPasswordSheet,
+  AdminUserDetailSheet,
 } from "@/components/admin/users";
 import { 
   useAdminUsersList, 
@@ -27,6 +29,7 @@ import {
   useCanManageAdmins,
   AdminUser 
 } from "@/hooks/useAdminUsers";
+import { toast } from "sonner";
 
 export function AdminUsersManagementPage() {
   const navigate = useNavigate();
@@ -34,35 +37,54 @@ export function AdminUsersManagementPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<AdminUser | null>(null);
   const [deleteUser, setDeleteUser] = useState<AdminUser | null>(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState<AdminUser | null>(null);
+  const [detailUser, setDetailUser] = useState<AdminUser | null>(null);
   
-  const { data: users, isLoading } = useAdminUsersList();
+  const { data: users, isLoading, refetch } = useAdminUsersList();
   const { data: canManage, isLoading: checkingPermission } = useCanManageAdmins();
   const updateUser = useUpdateAdminUser();
   const deleteUserMutation = useDeleteAdminUser();
 
   const handleToggleActive = async (user: AdminUser) => {
-    await updateUser.mutateAsync({
-      id: user.id,
-      isActive: !user.is_active,
-    });
+    try {
+      await updateUser.mutateAsync({
+        id: user.id,
+        isActive: !user.is_active,
+      });
+    } catch (error) {
+      // Error handled by mutation
+    }
   };
 
   const handleRequirePasswordChange = async (user: AdminUser) => {
-    await updateUser.mutateAsync({
-      id: user.id,
-      mustChangePassword: true,
-    });
+    try {
+      await updateUser.mutateAsync({
+        id: user.id,
+        mustChangePassword: true,
+      });
+      toast.success("Troca de senha será exigida no próximo login");
+    } catch (error) {
+      // Error handled by mutation
+    }
   };
 
   const handleConfirmDelete = async () => {
     if (!deleteUser) return;
-    await deleteUserMutation.mutateAsync(deleteUser.id);
-    setDeleteUser(null);
+    try {
+      await deleteUserMutation.mutateAsync(deleteUser.id);
+      setDeleteUser(null);
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  const handleViewDetails = (user: AdminUser) => {
+    setDetailUser(user);
   };
 
   if (checkingPermission) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-96 w-full" />
       </div>
@@ -71,7 +93,7 @@ export function AdminUsersManagementPage() {
 
   if (!canManage) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <div className="text-center py-12">
           <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold mb-2">Acesso Restrito</h2>
@@ -88,21 +110,21 @@ export function AdminUsersManagementPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 space-y-6">
+      {/* Header - Mobile responsive */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Usuários Administrativos</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-xl md:text-2xl font-bold">Usuários Administrativos</h1>
+            <p className="text-sm text-muted-foreground hidden sm:block">
               Gerencie usuários com acesso ao dashboard
             </p>
           </div>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
+        <Button onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Novo Usuário
         </Button>
@@ -110,14 +132,14 @@ export function AdminUsersManagementPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="users" className="gap-2">
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="users" className="flex-1 sm:flex-none gap-2">
             <Users className="w-4 h-4" />
-            Usuários
+            <span className="hidden sm:inline">Usuários</span>
           </TabsTrigger>
-          <TabsTrigger value="audit" className="gap-2">
+          <TabsTrigger value="audit" className="flex-1 sm:flex-none gap-2">
             <History className="w-4 h-4" />
-            Auditoria
+            <span className="hidden sm:inline">Auditoria</span>
           </TabsTrigger>
         </TabsList>
 
@@ -135,6 +157,8 @@ export function AdminUsersManagementPage() {
               onToggleActive={handleToggleActive}
               onRequirePasswordChange={handleRequirePasswordChange}
               onDelete={setDeleteUser}
+              onView={handleViewDetails}
+              onResetPassword={setResetPasswordUser}
             />
           )}
         </TabsContent>
@@ -156,14 +180,34 @@ export function AdminUsersManagementPage() {
         onOpenChange={(open) => !open && setEditUser(null)}
       />
 
+      <ResetPasswordSheet
+        user={resetPasswordUser}
+        open={!!resetPasswordUser}
+        onOpenChange={(open) => !open && setResetPasswordUser(null)}
+        onSuccess={() => refetch()}
+      />
+
+      <AdminUserDetailSheet
+        user={detailUser}
+        open={!!detailUser}
+        onOpenChange={(open) => !open && setDetailUser(null)}
+        onEdit={setEditUser}
+        onResetPassword={setResetPasswordUser}
+        onToggleActive={handleToggleActive}
+        onRequirePasswordChange={handleRequirePasswordChange}
+      />
+
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteUser} onOpenChange={(open) => !open && setDeleteUser(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Usuário</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir {deleteUser?.display_name || deleteUser?.email}?
-              Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir <strong>{deleteUser?.display_name || deleteUser?.email}</strong>?
+              <br /><br />
+              <span className="text-amber-600">
+                Recomendamos desativar ao invés de excluir para manter o histórico de auditoria.
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -274,3 +274,43 @@ export function useAdminAuditLogs(options?: { limit?: number; eventType?: string
     },
   });
 }
+
+// Log admin login event
+export function useLogAdminLogin() {
+  return useMutation({
+    mutationFn: async (params: { success: boolean; blockedReason?: string }) => {
+      const { error } = await supabase.rpc('log_admin_login', {
+        _success: params.success,
+        _blocked_reason: params.blockedReason || null,
+      });
+      
+      if (error) {
+        console.error('[useLogAdminLogin] Error:', error);
+      }
+    },
+  });
+}
+
+// Validate if caller can change admin role
+export function useCanChangeAdminRole() {
+  const { user } = useAuth();
+  
+  return useMutation({
+    mutationFn: async (params: { targetId: string; newRole: AdminRole }): Promise<boolean> => {
+      if (!user) return false;
+      
+      const { data, error } = await supabase.rpc('can_change_admin_role', {
+        _caller_id: user.id,
+        _target_id: params.targetId,
+        _new_role: params.newRole,
+      });
+      
+      if (error) {
+        console.error('[useCanChangeAdminRole] Error:', error);
+        return false;
+      }
+      
+      return data ?? false;
+    },
+  });
+}

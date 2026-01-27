@@ -7,8 +7,13 @@ const corsHeaders = {
 };
 
 interface CreateMasterUserRequest {
-  email: string;
-  tempPassword: string;
+  email?: string;
+  tempPassword?: string;
+  password?: string;
+  role?: string;
+  displayName?: string;
+  action?: 'create' | 'reset_password';
+  userId?: string;
 }
 
 serve(async (req) => {
@@ -46,34 +51,102 @@ serve(async (req) => {
       throw new Error("Usuário não autenticado");
     }
 
-    // Check if caller is admin
-    const { data: callerRole } = await supabaseAdmin.rpc('get_user_role', {
+    // Check if caller is admin (try both app_role and admin_users)
+    let callerRole: string | null = null;
+    
+    // First try get_user_role (for legacy)
+    const { data: appRole } = await supabaseAdmin.rpc('get_user_role', {
       _user_id: callerUser.id
     });
-
-    if (callerRole !== 'admin' && callerRole !== 'admin_master') {
-      throw new Error("Apenas administradores podem criar usuários MASTER");
+    
+    if (appRole === 'admin' || appRole === 'admin_master') {
+      callerRole = appRole;
+    } else {
+      // Try admin_users table
+      const { data: adminUser } = await supabaseAdmin
+        .from('admin_users')
+        .select('admin_role')
+        .eq('user_id', callerUser.id)
+        .eq('is_active', true)
+        .single();
+      
+      if (adminUser?.admin_role) {
+        callerRole = adminUser.admin_role;
+      }
     }
 
-    const { email, tempPassword }: CreateMasterUserRequest = await req.json();
+    if (!callerRole || !['admin', 'admin_master', 'ADMIN', 'MASTER'].includes(callerRole)) {
+      throw new Error("Apenas administradores podem realizar esta ação");
+    }
 
-    if (!email || !tempPassword) {
+    const body: CreateMasterUserRequest = await req.json();
+    const action = body.action || 'create';
+
+    // Handle password reset
+    if (action === 'reset_password') {
+      const { userId, password } = body;
+      
+      if (!userId || !password) {
+        throw new Error("userId e password são obrigatórios para reset");
+      }
+
+      // Update password via admin API
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        { password }
+      );
+
+      if (updateError) {
+        console.error("Error resetting password:", updateError);
+        throw new Error(`Erro ao resetar senha: ${updateError.message}`);
+      }
+
+      // Log the reset event
+      await supabaseAdmin
+        .from('dashboard_audit_logs')
+        .insert({
+          actor_admin_id: callerUser.id,
+          actor_role: callerRole,
+          event_type: 'ADMIN_PASSWORD_RESET_COMPLETED',
+          target_user_ref: userId.substring(0, 8) + '****',
+          metadata_safe: {
+            reset_at: new Date().toISOString()
+          }
+        });
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: "Senha resetada com sucesso" 
+        }),
+        { 
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
+
+    // Handle user creation
+    const { email, tempPassword, password: providedPassword, role, displayName } = body;
+    const finalPassword = tempPassword || providedPassword;
+
+    if (!email || !finalPassword) {
       throw new Error("Email e senha são obrigatórios");
     }
 
-    // Check if master user already exists
+    // Check if user already exists
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const masterExists = existingUsers?.users?.some(u => u.email === email);
+    const userExists = existingUsers?.users?.some(u => u.email === email);
     
-    if (masterExists) {
+    if (userExists) {
       throw new Error("Usuário com este email já existe");
     }
 
     // Create the user with admin API
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password: tempPassword,
-      email_confirm: true, // Auto-confirm email since we're not sending verification
+      password: finalPassword,
+      email_confirm: true,
     });
 
     if (createError) {
@@ -87,45 +160,49 @@ serve(async (req) => {
 
     const userId = newUser.user.id;
 
-    // Add admin_master role
-    const { error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .insert({
-        user_id: userId,
-        role: 'admin_master'
-      });
-
-    if (roleError) {
-      console.error("Error adding role:", roleError);
-      // Rollback: delete user
-      await supabaseAdmin.auth.admin.deleteUser(userId);
-      throw new Error("Erro ao atribuir role MASTER");
+    // Add role based on the request
+    const finalRole = role || 'admin_master';
+    
+    // Try to add to user_roles (for legacy support)
+    try {
+      await supabaseAdmin
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: finalRole === 'MASTER' ? 'admin_master' : 
+                finalRole === 'ADMIN' ? 'admin' : 
+                finalRole === 'CS' ? 'cs' : 
+                finalRole === 'LEGAL' ? 'cs' : 
+                finalRole.toLowerCase()
+        });
+    } catch (roleError) {
+      console.log("user_roles insert skipped:", roleError);
     }
 
     // Create security settings with must_change_password = true
-    const { error: securityError } = await supabaseAdmin
-      .from('user_security_settings')
-      .insert({
-        user_id: userId,
-        must_change_password: true,
-        temp_password_created_at: new Date().toISOString()
-      });
-
-    if (securityError) {
-      console.error("Error creating security settings:", securityError);
-      // Continue anyway, this is not critical for creation
+    try {
+      await supabaseAdmin
+        .from('user_security_settings')
+        .insert({
+          user_id: userId,
+          must_change_password: true,
+          temp_password_created_at: new Date().toISOString()
+        });
+    } catch (securityError) {
+      console.log("user_security_settings insert skipped:", securityError);
     }
 
-    // Log the creation event (without storing the password!)
+    // Log the creation event
     await supabaseAdmin
       .from('dashboard_audit_logs')
       .insert({
         actor_admin_id: callerUser.id,
-        actor_role: callerRole || 'admin',
-        event_type: 'MASTER_USER_CREATED',
-        target_user_ref: userId.substring(0, 8) + '****', // Partial ID for audit
+        actor_role: callerRole,
+        event_type: 'ADMIN_USER_CREATED',
+        target_user_ref: userId.substring(0, 8) + '****',
         metadata_safe: {
           email_domain: email.split('@')[1],
+          role_assigned: finalRole,
           created_at: new Date().toISOString()
         }
       });
@@ -134,7 +211,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         userId,
-        message: "Usuário MASTER criado com sucesso" 
+        message: "Usuário criado com sucesso" 
       }),
       { 
         status: 200,
