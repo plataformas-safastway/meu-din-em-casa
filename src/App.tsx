@@ -27,7 +27,8 @@ import { SignupPage } from "./pages/SignupPage";
 import { TermosPage } from "./pages/TermosPage";
 import { PrivacidadePage } from "./pages/PrivacidadePage";
 import { QAReportPage } from "./pages/QAReportPage";
-import { AdminDashboard, AdminSetupPage } from "./pages/admin";
+import { AdminSetupPage } from "./pages/admin";
+import { AdminRoutes } from "./pages/admin/AdminRoutes";
 import { ImportUploadPage } from "./pages/import/ImportUploadPage";
 import { ImportReviewPage } from "./pages/import/ImportReviewPage";
 import { SpreadsheetImportPage } from "./pages/import/SpreadsheetImportPage";
@@ -449,19 +450,12 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          }
-        />
+        {/* Admin routes - using nested routes with real URLs */}
         <Route
           path="/admin/*"
           element={
             <AdminRoute>
-              <AdminDashboard />
+              <AdminRoutes />
             </AdminRoute>
           }
         />
