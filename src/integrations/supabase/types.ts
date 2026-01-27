@@ -2888,6 +2888,185 @@ export type Database = {
           },
         ]
       }
+      ocr_batches: {
+        Row: {
+          created_at: string
+          error_items: number | null
+          family_id: string
+          id: string
+          processed_items: number | null
+          ready_items: number | null
+          status: string
+          total_items: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_items?: number | null
+          family_id: string
+          id?: string
+          processed_items?: number | null
+          ready_items?: number | null
+          status?: string
+          total_items?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_items?: number | null
+          family_id?: string
+          id?: string
+          processed_items?: number | null
+          ready_items?: number | null
+          status?: string
+          total_items?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocr_batches_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ocr_items: {
+        Row: {
+          batch_id: string
+          confidence: number | null
+          created_at: string
+          duplicate_reason: string | null
+          error_message: string | null
+          extracted_data: Json | null
+          family_id: string
+          final_bank_account_id: string | null
+          final_category_id: string | null
+          final_credit_card_id: string | null
+          final_payment_method: string | null
+          final_subcategory_id: string | null
+          id: string
+          image_path: string | null
+          image_url: string
+          is_duplicate_suspect: boolean | null
+          is_recurring: boolean | null
+          normalized_amount: number | null
+          normalized_cnpj: string | null
+          normalized_date: string | null
+          normalized_description: string | null
+          normalized_merchant: string | null
+          normalized_payment_method: string | null
+          status: string
+          suggested_category_id: string | null
+          suggested_subcategory_id: string | null
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          batch_id: string
+          confidence?: number | null
+          created_at?: string
+          duplicate_reason?: string | null
+          error_message?: string | null
+          extracted_data?: Json | null
+          family_id: string
+          final_bank_account_id?: string | null
+          final_category_id?: string | null
+          final_credit_card_id?: string | null
+          final_payment_method?: string | null
+          final_subcategory_id?: string | null
+          id?: string
+          image_path?: string | null
+          image_url: string
+          is_duplicate_suspect?: boolean | null
+          is_recurring?: boolean | null
+          normalized_amount?: number | null
+          normalized_cnpj?: string | null
+          normalized_date?: string | null
+          normalized_description?: string | null
+          normalized_merchant?: string | null
+          normalized_payment_method?: string | null
+          status?: string
+          suggested_category_id?: string | null
+          suggested_subcategory_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          batch_id?: string
+          confidence?: number | null
+          created_at?: string
+          duplicate_reason?: string | null
+          error_message?: string | null
+          extracted_data?: Json | null
+          family_id?: string
+          final_bank_account_id?: string | null
+          final_category_id?: string | null
+          final_credit_card_id?: string | null
+          final_payment_method?: string | null
+          final_subcategory_id?: string | null
+          id?: string
+          image_path?: string | null
+          image_url?: string
+          is_duplicate_suspect?: boolean | null
+          is_recurring?: boolean | null
+          normalized_amount?: number | null
+          normalized_cnpj?: string | null
+          normalized_date?: string | null
+          normalized_description?: string | null
+          normalized_merchant?: string | null
+          normalized_payment_method?: string | null
+          status?: string
+          suggested_category_id?: string | null
+          suggested_subcategory_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocr_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "ocr_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_items_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_items_final_bank_account_id_fkey"
+            columns: ["final_bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_items_final_credit_card_id_fkey"
+            columns: ["final_credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ocr_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       openfinance_accounts: {
         Row: {
           account_type: string
