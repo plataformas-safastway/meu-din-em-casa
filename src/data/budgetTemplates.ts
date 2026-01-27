@@ -320,14 +320,15 @@ export const PREFIX_CONFIG: PrefixConfig[] = [
     },
   },
   { 
-    code: 'MB', 
-    name: 'Manutenção de Bens', 
-    categoryId: 'manutencao-bens', 
+    code: 'IF', 
+    name: 'Reserva / Investimentos', 
+    categoryId: 'investimentos', 
     isBudgetable: true,
     defaultSubcategoryWeights: {
-      'manutencao-bens-imovel-1': 50,
-      'manutencao-bens-imovel-2': 30,
-      'manutencao-bens-imovel-3': 20,
+      'investimentos-reserva-emergencia': 40,
+      'investimentos-previdencia': 25,
+      'investimentos-renda-fixa': 20,
+      'investimentos-renda-variavel': 15,
     },
   },
   // Non-budgetable prefixes (excluded from budget generation)
@@ -345,127 +346,135 @@ export interface BandPercentages {
 }
 
 // Percentages by income band (should sum to 1.0 or 100%)
+// Based on OIK official table - operates by prefix only
 export const BASE_PERCENTAGES: Record<string, BandPercentages> = {
-  // Lower income: more on essentials, less on savings
+  // Até R$ 5.000 - Perfil: organização básica / contenção
   band_0_5k: {
-    'C': 0.35,      // Casa - higher % for lower income
+    'C': 0.30,      // Casa/Moradia
     'A': 0.20,      // Alimentação
-    'T': 0.08,      // Transporte
-    'V & S': 0.08,  // Vida & Saúde
-    'E & F': 0.02,  // Educação
-    'L': 0.05,      // Lazer
-    'R & E': 0.03,  // Roupas
+    'T': 0.12,      // Transporte
+    'V & S': 0.06,  // Vida & Saúde
+    'E & F': 0.03,  // Educação & Formação
+    'L': 0.04,      // Lazer
+    'R & E': 0.03,  // Roupas & Estética
     'F': 0.05,      // Filhos (conditional)
     'PET': 0.02,    // Pets (conditional)
     'DF': 0.05,     // Despesas Financeiras
-    'DIV': 0.03,    // Diversos
-    'E': 0.02,      // Eventuais
-    'MB': 0.02,     // Manutenção Bens
+    'DIV': 0.04,    // Diversos
+    'E': 0.04,      // Eventuais / Provisões
+    'IF': 0.02,     // Reserva / Investimentos
   },
+  // R$ 5.001 – R$ 8.000 - Perfil: estabilização
   band_5k_8k: {
-    'C': 0.32,
+    'C': 0.28,
     'A': 0.18,
-    'T': 0.10,
-    'V & S': 0.08,
-    'E & F': 0.03,
+    'T': 0.12,
+    'V & S': 0.06,
+    'E & F': 0.04,
+    'L': 0.05,
+    'R & E': 0.04,
+    'F': 0.05,
+    'PET': 0.02,
+    'DF': 0.05,
+    'DIV': 0.04,
+    'E': 0.04,
+    'IF': 0.03,
+  },
+  // R$ 8.001 – R$ 15.000 - Perfil: estabilidade confortável
+  band_8k_15k: {
+    'C': 0.25,
+    'A': 0.16,
+    'T': 0.11,
+    'V & S': 0.07,
+    'E & F': 0.06,
     'L': 0.06,
     'R & E': 0.04,
     'F': 0.05,
     'PET': 0.02,
     'DF': 0.04,
     'DIV': 0.04,
-    'E': 0.02,
-    'MB': 0.02,
+    'E': 0.04,
+    'IF': 0.06,
   },
-  band_8k_15k: {
-    'C': 0.28,
-    'A': 0.15,
+  // R$ 15.001 – R$ 30.000 - Perfil: conforto + planejamento
+  band_15k_30k: {
+    'C': 0.23,
+    'A': 0.14,
     'T': 0.10,
-    'V & S': 0.10,
-    'E & F': 0.04,
-    'L': 0.08,
+    'V & S': 0.07,
+    'E & F': 0.08,
+    'L': 0.07,
     'R & E': 0.05,
+    'F': 0.06,
+    'PET': 0.02,
+    'DF': 0.04,
+    'DIV': 0.04,
+    'E': 0.04,
+    'IF': 0.06,
+  },
+  // R$ 30.001 – R$ 50.000 - Perfil: alto padrão
+  band_30k_50k: {
+    'C': 0.20,
+    'A': 0.13,
+    'T': 0.09,
+    'V & S': 0.08,
+    'E & F': 0.09,
+    'L': 0.08,
+    'R & E': 0.06,
     'F': 0.06,
     'PET': 0.02,
     'DF': 0.03,
     'DIV': 0.04,
-    'E': 0.03,
-    'MB': 0.02,
+    'E': 0.04,
+    'IF': 0.08,
   },
-  band_15k_30k: {
-    'C': 0.25,
+  // R$ 50.001 – R$ 80.000 - Perfil: patrimônio em formação
+  band_50k_80k: {
+    'C': 0.18,
     'A': 0.12,
-    'T': 0.10,
-    'V & S': 0.10,
-    'E & F': 0.05,
-    'L': 0.10,
-    'R & E': 0.05,
+    'T': 0.08,
+    'V & S': 0.08,
+    'E & F': 0.10,
+    'L': 0.09,
+    'R & E': 0.06,
     'F': 0.06,
     'PET': 0.02,
     'DF': 0.03,
-    'DIV': 0.05,
+    'DIV': 0.04,
     'E': 0.04,
-    'MB': 0.03,
+    'IF': 0.10,
   },
-  band_30k_50k: {
-    'C': 0.22,
-    'A': 0.10,
-    'T': 0.10,
-    'V & S': 0.10,
-    'E & F': 0.05,
-    'L': 0.12,
-    'R & E': 0.05,
-    'F': 0.06,
-    'PET': 0.02,
-    'DF': 0.02,
-    'DIV': 0.06,
-    'E': 0.05,
-    'MB': 0.05,
-  },
-  band_50k_80k: {
-    'C': 0.20,
-    'A': 0.08,
-    'T': 0.08,
-    'V & S': 0.10,
-    'E & F': 0.06,
-    'L': 0.14,
-    'R & E': 0.05,
-    'F': 0.06,
-    'PET': 0.02,
-    'DF': 0.02,
-    'DIV': 0.07,
-    'E': 0.06,
-    'MB': 0.06,
-  },
+  // R$ 80.001 – R$ 120.000 - Perfil: estratégia patrimonial
   band_80k_120k: {
-    'C': 0.18,
-    'A': 0.07,
+    'C': 0.16,
+    'A': 0.11,
     'T': 0.07,
-    'V & S': 0.10,
-    'E & F': 0.06,
-    'L': 0.15,
-    'R & E': 0.05,
+    'V & S': 0.08,
+    'E & F': 0.10,
+    'L': 0.10,
+    'R & E': 0.07,
     'F': 0.06,
     'PET': 0.02,
     'DF': 0.02,
-    'DIV': 0.08,
-    'E': 0.07,
-    'MB': 0.07,
+    'DIV': 0.04,
+    'E': 0.04,
+    'IF': 0.13,
   },
+  // Acima de R$ 120.000 - Perfil: preservação e crescimento
   band_120k_plus: {
-    'C': 0.15,
-    'A': 0.06,
+    'C': 0.14,
+    'A': 0.10,
     'T': 0.06,
     'V & S': 0.08,
-    'E & F': 0.06,
-    'L': 0.18,
-    'R & E': 0.05,
+    'E & F': 0.10,
+    'L': 0.12,
+    'R & E': 0.08,
     'F': 0.06,
     'PET': 0.02,
     'DF': 0.02,
-    'DIV': 0.10,
-    'E': 0.08,
-    'MB': 0.08,
+    'DIV': 0.04,
+    'E': 0.04,
+    'IF': 0.14,
   },
 };
 
