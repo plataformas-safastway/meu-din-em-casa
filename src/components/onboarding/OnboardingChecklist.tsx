@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useOnboarding, OnboardingStep } from "@/hooks/useOnboarding";
+import { BudgetSetupSheet } from "@/components/budget";
 
 type NavigationSource = 'home_onboarding' | 'settings' | 'dashboard' | 'default';
 
@@ -17,6 +18,7 @@ interface OnboardingChecklistProps {
 export function OnboardingChecklist({ onNavigate, onNavigateWithSource }: OnboardingChecklistProps) {
   const { state, isLoading } = useOnboarding();
   const [isExpanded, setIsExpanded] = useState(true);
+  const [showBudgetSetup, setShowBudgetSetup] = useState(false);
 
   // Don't show if all steps completed or still loading
   if (isLoading) return null;
@@ -46,7 +48,7 @@ export function OnboardingChecklist({ onNavigate, onNavigateWithSource }: Onboar
         navigate("import");
         break;
       case "budget":
-        navigate("goals"); // budgets page uses "goals" tab internally
+        setShowBudgetSetup(true); // Open the smart budget sheet
         break;
       case "goal":
         navigate("objectives"); // goals page uses "objectives" tab internally
@@ -166,6 +168,12 @@ export function OnboardingChecklist({ onNavigate, onNavigateWithSource }: Onboar
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Budget Setup Sheet */}
+      <BudgetSetupSheet 
+        open={showBudgetSetup} 
+        onOpenChange={setShowBudgetSetup} 
+      />
     </Card>
   );
 }
