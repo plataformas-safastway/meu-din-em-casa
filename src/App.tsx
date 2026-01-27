@@ -102,19 +102,41 @@ function ProtectedRoute({
   children: React.ReactNode;
   requireFamily?: boolean;
 }) {
-  const { user, family, profileStatus, shouldRedirectToLogin, isAuthTransition } = useStableAuth();
+  const { user, family, profileStatus, shouldRedirectToLogin, isAuthTransition, session, bootstrapStatus } = useStableAuth();
   const location = useLocation();
 
   const next = encodeURIComponent(`${location.pathname}${location.search ?? ""}`);
 
+  // DEBUG: Log all state on every render
+  useEffect(() => {
+    console.log('[ProtectedRoute] State:', {
+      path: location.pathname,
+      isAuthTransition,
+      shouldRedirectToLogin,
+      hasSession: !!session,
+      hasUser: !!user,
+      profileStatus,
+      bootstrapStatus,
+    });
+  }, [location.pathname, isAuthTransition, shouldRedirectToLogin, session, user, profileStatus, bootstrapStatus]);
+
   // CRITICAL: Never redirect during auth transition (tab switch, token refresh)
   if (isAuthTransition) {
+    console.log('[ProtectedRoute] In transition - showing loader, NOT redirecting');
     return <LoadingSpinner />;
   }
 
   // Only redirect when we're CERTAIN there's no session
   if (shouldRedirectToLogin) {
-    console.log('[ProtectedRoute] No valid session, redirecting to login');
+    console.error('[ProtectedRoute] REDIRECT TO LOGIN TRIGGERED', { 
+      currentPath: location.pathname, 
+      isAuthTransition,
+      user: !!user,
+      session: !!session,
+      profileStatus,
+      bootstrapStatus,
+    });
+    console.trace();
     return (
       <Navigate
         to={`/login?next=${next}`}
@@ -138,14 +160,30 @@ function ProtectedRoute({
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, profileStatus, shouldRedirectToLogin, isAuthTransition } = useStableAuth();
+  const { user, profileStatus, shouldRedirectToLogin, isAuthTransition, session, bootstrapStatus } = useStableAuth();
   const { data: role, isLoading: roleLoading } = useUserRole();
   const location = useLocation();
 
   const next = encodeURIComponent(`${location.pathname}${location.search ?? ""}`);
 
+  // DEBUG: Log all state on every render
+  useEffect(() => {
+    console.log('[AdminRoute] State:', {
+      path: location.pathname,
+      isAuthTransition,
+      shouldRedirectToLogin,
+      hasSession: !!session,
+      hasUser: !!user,
+      profileStatus,
+      bootstrapStatus,
+      role,
+      roleLoading,
+    });
+  }, [location.pathname, isAuthTransition, shouldRedirectToLogin, session, user, profileStatus, bootstrapStatus, role, roleLoading]);
+
   // CRITICAL: Never redirect during auth transition
   if (isAuthTransition) {
+    console.log('[AdminRoute] In transition - showing loader, NOT redirecting');
     return <LoadingSpinner />;
   }
 
@@ -156,7 +194,15 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   
   // Only redirect when we're CERTAIN there's no session
   if (shouldRedirectToLogin) {
-    console.log('[AdminRoute] No valid session, redirecting to login');
+    console.error('[AdminRoute] REDIRECT TO LOGIN TRIGGERED', {
+      currentPath: location.pathname,
+      isAuthTransition,
+      user: !!user,
+      session: !!session,
+      profileStatus,
+      bootstrapStatus,
+    });
+    console.trace();
     return (
       <Navigate
         to={`/login?next=${next}`}
@@ -170,6 +216,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   const isAdminRole = role === "admin" || role === "cs" || role === "admin_master";
   
   if (!isAdminRole && user) {
+    console.log('[AdminRoute] User is not admin, redirecting to /app');
     return <Navigate to="/app" replace />;
   }
 
