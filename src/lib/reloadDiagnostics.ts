@@ -5,10 +5,11 @@
  * indesejados durante troca de aba do navegador.
  */
 
-const isDev = import.meta.env.DEV;
+import { isNavDebugEnabled } from "@/lib/navDebug";
 
 // Track boot timestamp
 let bootTimestamp: number | null = null;
+let installed = false;
 
 interface DiagnosticEvent {
   type: string;
@@ -31,7 +32,7 @@ function getNavigationType(): string | null {
 }
 
 function logDiagnostic(type: string, details?: Record<string, unknown>) {
-  if (!isDev) return;
+  if (!isNavDebugEnabled()) return;
   
   const event: DiagnosticEvent = {
     type,
@@ -61,6 +62,7 @@ function logDiagnostic(type: string, details?: Record<string, unknown>) {
  * Log app boot - called from main.tsx
  */
 export function logAppBoot() {
+  if (!isNavDebugEnabled()) return;
   bootTimestamp = Date.now();
   const navType = getNavigationType();
   
@@ -91,10 +93,9 @@ export function getTimeSinceBoot(): number | null {
  * Initialize all diagnostic listeners
  */
 export function initReloadDiagnostics() {
-  if (!isDev) {
-    console.log('[DIAG] Diagnostics disabled in production');
-    return;
-  }
+  if (!isNavDebugEnabled()) return;
+  if (installed) return;
+  installed = true;
   
   console.log('%c[DIAG] 🔍 Reload diagnostics initialized', 'color: #00aaff; font-weight: bold');
   
@@ -217,6 +218,7 @@ export function initReloadDiagnostics() {
  * Check for service workers and their update behavior
  */
 async function checkServiceWorker() {
+  if (!isNavDebugEnabled()) return;
   if (!('serviceWorker' in navigator)) {
     console.log('[DIAG] Service Worker not supported');
     return;
@@ -237,8 +239,11 @@ async function checkServiceWorker() {
         scope: reg.scope,
         updateViaCache: reg.updateViaCache,
         active: reg.active?.state,
+        activeScriptURL: (reg.active as ServiceWorker | undefined)?.scriptURL,
         waiting: reg.waiting?.state,
+        waitingScriptURL: (reg.waiting as ServiceWorker | undefined)?.scriptURL,
         installing: reg.installing?.state,
+        installingScriptURL: (reg.installing as ServiceWorker | undefined)?.scriptURL,
       });
       
       // Listen for updates
@@ -283,7 +288,7 @@ export function getDiagnosticSummary() {
 }
 
 // Export for console access
-if (isDev && typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && isNavDebugEnabled()) {
   (window as any).__oikDiagnostics = {
     getLog: () => diagnosticLog,
     getSummary: getDiagnosticSummary,
