@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { isInFocusTransition } from '@/hooks/useStableAuth';
 
 interface Family {
   id: string;
@@ -178,7 +179,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         async (event, newSession) => {
           if (!mounted) return;
           
-          console.log('[Auth] Auth state change:', event);
+          console.log('[Auth] Auth state change:', event, 'inFocusTransition:', isInFocusTransition());
+          
+          // CRITICAL: If we're in a focus transition and receive a null session,
+          // this is likely a temporary state during token refresh. Don't reset state.
+          if (!newSession && isInFocusTransition()) {
+            console.log('[Auth] Ignoring null session during focus transition - likely token refresh');
+            return;
+          }
           
           // Update session and user synchronously
           setSession(newSession);
@@ -205,6 +213,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }, 0);
           } else {
             // No user - reset everything
+            // Only do this if we're NOT in a focus transition
+            console.log('[Auth] Session is null, resetting state');
             setFamily(null);
             setFamilyMember(null);
             setProfileStatus('unknown');
