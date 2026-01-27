@@ -1,14 +1,16 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useUserRole, useHasAnyAdmin } from "@/hooks/useUserRole";
 import { ScreenLoader } from "@/components/ui/money-loader";
 import { useAppLifecycle } from "@/hooks/useAppLifecycle";
+import { useStableAuth, useFocusTransition } from "@/hooks/useStableAuth";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { STALE_TIMES, GC_TIMES } from "@/lib/queryConfig";
+import { clearExpiredDrafts } from "@/hooks/useDraftPersistence";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { TermosPage } from "./pages/TermosPage";
@@ -25,6 +27,10 @@ import { SelectContextPage } from "./pages/SelectContextPage";
 import { SelectFamilyPage } from "./pages/SelectFamilyPage";
 import { InviteAcceptPage } from "./pages/InviteAcceptPage";
 import { OnboardingFlowPage } from "./pages/OnboardingFlowPage";
+import { useEffect } from "react";
+
+// Clear expired drafts on app init
+clearExpiredDrafts();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,8 +39,9 @@ const queryClient = new QueryClient({
       staleTime: STALE_TIMES.transactions,
       // Garbage collection time - how long to keep unused data in cache
       gcTime: GC_TIMES.default,
-      // Refetch on window focus for multi-device sync
-      refetchOnWindowFocus: true,
+      // DISABLED: refetchOnWindowFocus causes UI reset on tab switch
+      // Background sync is handled manually via useAppLifecycle with debouncing
+      refetchOnWindowFocus: false,
       // Refetch on reconnect for offline support
       refetchOnReconnect: true,
       // Retry failed requests
@@ -44,6 +51,22 @@ const queryClient = new QueryClient({
   },
 });
 
+// Custom focus manager to prevent aggressive refetching
+focusManager.setEventListener((handleFocus) => {
+  // Only trigger focus events after a longer delay to prevent flash
+  const onFocus = () => {
+    // Delay focus event to let auth stabilize
+    setTimeout(() => {
+      handleFocus(true);
+    }, 500);
+  };
+  
+  window.addEventListener('focus', onFocus, false);
+  return () => {
+    window.removeEventListener('focus', onFocus);
+  };
+});
+
 function LoadingSpinner() {
   return <ScreenLoader label="Carregando..." />
 }
@@ -51,19 +74,22 @@ function LoadingSpinner() {
 /**
  * AuthGate - Bootstrap guard that prevents routing until auth is fully resolved
  * This prevents the "flash" of signup/onboarding screens during login
+ * 
+ * CRITICAL: Uses useStableAuth to handle tab-switch transitions gracefully
  */
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { bootstrapStatus, profileStatus } = useAuth();
+  const { isLoading, isAuthTransition } = useStableAuth();
   
-  // Wait until bootstrap is complete (auth + profile data loaded)
-  if (bootstrapStatus === 'initializing') {
-    return <ScreenLoader label="Iniciando..." />;
-  }
+  // Log transition state for debugging
+  useEffect(() => {
+    if (isAuthTransition) {
+      console.log('[AuthGate] In auth transition - holding render');
+    }
+  }, [isAuthTransition]);
   
-  // If we're still loading profile after bootstrap, show loader
-  // This handles edge cases during rapid navigation
-  if (profileStatus === 'loading') {
-    return <ScreenLoader label="Carregando perfil..." />;
+  // Wait until auth is fully stable (not loading AND not in transition)
+  if (isLoading) {
+    return <ScreenLoader label="Carregando..." />;
   }
   
   return <>{children}</>;
@@ -76,13 +102,19 @@ function ProtectedRoute({
   children: React.ReactNode;
   requireFamily?: boolean;
 }) {
-  const { user, family, profileStatus } = useAuth();
+  const { user, family, profileStatus, shouldRedirectToLogin, isAuthTransition } = useStableAuth();
   const location = useLocation();
 
   const next = encodeURIComponent(`${location.pathname}${location.search ?? ""}`);
 
-  // No user - redirect to login
-  if (!user) {
+  // CRITICAL: Never redirect during auth transition (tab switch, token refresh)
+  if (isAuthTransition) {
+    return <LoadingSpinner />;
+  }
+
+  // Only redirect when we're CERTAIN there's no session
+  if (shouldRedirectToLogin) {
+    console.log('[ProtectedRoute] No valid session, redirecting to login');
     return (
       <Navigate
         to={`/login?next=${next}`}
@@ -98,7 +130,7 @@ function ProtectedRoute({
   }
   
   // Need family but don't have one - redirect to signup
-  if (requireFamily && !family) {
+  if (requireFamily && !family && user) {
     return <Navigate to="/signup" replace state={{ from: { pathname: location.pathname, search: location.search } }} />;
   }
 
@@ -106,19 +138,25 @@ function ProtectedRoute({
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, profileStatus } = useAuth();
+  const { user, profileStatus, shouldRedirectToLogin, isAuthTransition } = useStableAuth();
   const { data: role, isLoading: roleLoading } = useUserRole();
   const location = useLocation();
 
   const next = encodeURIComponent(`${location.pathname}${location.search ?? ""}`);
+
+  // CRITICAL: Never redirect during auth transition
+  if (isAuthTransition) {
+    return <LoadingSpinner />;
+  }
 
   // Still loading role
   if (roleLoading || profileStatus === 'loading') {
     return <LoadingSpinner />;
   }
   
-  // No user - redirect to login
-  if (!user) {
+  // Only redirect when we're CERTAIN there's no session
+  if (shouldRedirectToLogin) {
+    console.log('[AdminRoute] No valid session, redirecting to login');
     return (
       <Navigate
         to={`/login?next=${next}`}
@@ -131,7 +169,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   // Admin users (admin, cs, admin_master) don't need a family - they access dashboard directly
   const isAdminRole = role === "admin" || role === "cs" || role === "admin_master";
   
-  if (!isAdminRole) {
+  if (!isAdminRole && user) {
     return <Navigate to="/app" replace />;
   }
 
@@ -139,9 +177,14 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, family, profileStatus } = useAuth();
+  const { user, family, profileStatus, isAuthTransition } = useStableAuth();
   const { data: role, isLoading: roleLoading } = useUserRole();
   const { isLoading: checkingAdmin } = useHasAnyAdmin();
+  
+  // CRITICAL: Never redirect during auth transition
+  if (isAuthTransition) {
+    return <LoadingSpinner />;
+  }
   
   // Still loading - don't render anything (AuthGate handles this)
   if (roleLoading || checkingAdmin || profileStatus === 'loading') {
