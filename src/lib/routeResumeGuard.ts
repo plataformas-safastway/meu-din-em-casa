@@ -5,6 +5,8 @@ type ResumeState = {
 
 const STORAGE_KEY = "oik:route_resume";
 
+let installed = false;
+
 function getFullPath(): string {
   return `${window.location.pathname}${window.location.search ?? ""}${window.location.hash ?? ""}`;
 }
@@ -31,6 +33,29 @@ function writeState(path: string) {
   }
 }
 
+function isHomeLike(path: string) {
+  // Treat both '/' and '/login' as “public home surfaces”; still, we want to preserve
+  // query params such as ?next=...
+  return path === "/" || path.startsWith("/login");
+}
+
+function reportIfUnexpectedHome(nextPath: string, source: string) {
+  const saved = readState();
+  const current = getFullPath();
+
+  // We care when navigation *lands* on '/' (or /login without query) from a non-home route.
+  // The user bug is: /login?next=... -> '/' on tab return.
+  if (isHomeLike(nextPath) && saved?.path && !isHomeLike(saved.path)) {
+    console.error("[RouteResume] HOME_LIKE_NAV_DETECTED", {
+      fromSaved: saved.path,
+      to: nextPath,
+      current,
+      source,
+    });
+    console.trace("[RouteResume] home-like nav stack");
+  }
+}
+
 export function clearRouteResumeState() {
   try {
     sessionStorage.removeItem(STORAGE_KEY);
@@ -48,61 +73,106 @@ export function clearRouteResumeState() {
  */
 export function installRouteResumeGuard() {
   if (typeof window === "undefined" || typeof document === "undefined") return;
+  if (installed) return;
+  installed = true;
+
+  // Track route changes continuously, not only on visibility hidden.
+  // This gives us a reliable lastRoute even when visibility events are flaky.
+  const originalPushState = history.pushState;
+  const originalReplaceState = history.replaceState;
+
+  history.pushState = function patchedPushState(...args) {
+    // eslint-disable-next-line prefer-rest-params
+    const ret = originalPushState.apply(this, args as any);
+    const nextPath = getFullPath();
+    if (!isHomeLike(nextPath)) {
+      writeState(nextPath);
+    } else {
+      reportIfUnexpectedHome(nextPath, "history.pushState");
+    }
+    return ret;
+  } as any;
+
+  history.replaceState = function patchedReplaceState(...args) {
+    // eslint-disable-next-line prefer-rest-params
+    const ret = originalReplaceState.apply(this, args as any);
+    const nextPath = getFullPath();
+    if (!isHomeLike(nextPath)) {
+      writeState(nextPath);
+    } else {
+      reportIfUnexpectedHome(nextPath, "history.replaceState");
+    }
+    return ret;
+  } as any;
+
+  window.addEventListener(
+    "popstate",
+    () => {
+      const nextPath = getFullPath();
+      if (!isHomeLike(nextPath)) {
+        writeState(nextPath);
+      } else {
+        reportIfUnexpectedHome(nextPath, "popstate");
+      }
+    },
+    true
+  );
 
   // Persist the route when the tab goes to background.
+  const tryRestore = (source: string) => {
+    const current = getFullPath();
+    const saved = readState();
+
+    // Restore when we land on '/' or '/login' but we had a more specific route saved.
+    if (isHomeLike(current) && saved?.path && !isHomeLike(saved.path)) {
+      const MAX_AGE_MS = 10 * 60 * 1000;
+      const age = Date.now() - saved.ts;
+      if (age <= MAX_AGE_MS) {
+        console.error("[RouteResume] RESTORE_FROM_HOME_LIKE", {
+          from: current,
+          to: saved.path,
+          ageMs: age,
+          source,
+        });
+        console.trace("[RouteResume] restore stack");
+
+        history.replaceState(null, "", saved.path);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }
+    }
+  };
+
   const onVisibilityChange = () => {
     if (document.visibilityState === "hidden") {
       const current = getFullPath();
-      writeState(current);
+      // Only store non-home routes as "resume" targets.
+      if (!isHomeLike(current)) {
+        writeState(current);
+      }
       console.log("[RouteResume] Saved before hidden", { path: current });
     }
 
     if (document.visibilityState === "visible") {
-      const current = getFullPath();
-      const saved = readState();
-
-      // Only restore when we *unexpectedly* land on '/', but we had a different
-      // route right before going hidden.
-      if (current === "/" && saved?.path && saved.path !== "/") {
-        // 10 minutes max window to avoid restoring stale routes.
-        const MAX_AGE_MS = 10 * 60 * 1000;
-        const age = Date.now() - saved.ts;
-        if (age <= MAX_AGE_MS) {
-          console.error("[RouteResume] RESTORE_FROM_UNEXPECTED_HOME", {
-            from: current,
-            to: saved.path,
-            ageMs: age,
-          });
-          console.trace("[RouteResume] stack");
-
-          history.replaceState(null, "", saved.path);
-          // Notify react-router (BrowserRouter listens to popstate)
-          window.dispatchEvent(new PopStateEvent("popstate"));
-        } else {
-          console.log("[RouteResume] Saved route too old, not restoring", {
-            saved: saved.path,
-            ageMs: age,
-          });
-        }
-      }
+      tryRestore("visibilitychange:visible");
     }
   };
 
   document.addEventListener("visibilitychange", onVisibilityChange, true);
 
+  // Some browsers don't reliably fire visibilitychange on tab return; focus is a fallback.
+  window.addEventListener(
+    "focus",
+    () => {
+      tryRestore("window:focus");
+    },
+    true
+  );
+
   // Also handle bfcache restore scenarios.
   window.addEventListener(
     "pageshow",
     () => {
-      const current = getFullPath();
-      const saved = readState();
-      if (current === "/" && saved?.path && saved.path !== "/") {
-        console.warn("[RouteResume] pageshow on '/', attempting restore", {
-          to: saved.path,
-        });
-        history.replaceState(null, "", saved.path);
-        window.dispatchEvent(new PopStateEvent("popstate"));
-      }
+      tryRestore("pageshow");
     },
     true
   );
@@ -116,10 +186,10 @@ export function installRouteResumeGuard() {
 export function tryInitialRouteRestore() {
   if (typeof window === "undefined") return;
   const current = getFullPath();
-  if (current !== "/") return;
+  if (!isHomeLike(current)) return;
 
   const saved = readState();
-  if (!saved?.path || saved.path === "/") return;
+  if (!saved?.path || isHomeLike(saved.path)) return;
 
   const MAX_AGE_MS = 10 * 60 * 1000;
   const age = Date.now() - saved.ts;
