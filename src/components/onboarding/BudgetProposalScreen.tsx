@@ -1,0 +1,340 @@
+import { useState, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
+import { ArrowLeft, Sparkles, AlertCircle, Check, Loader2, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/formatters";
+import { 
+  getBandById, 
+  getSubBandById,
+  BASE_PERCENTAGES,
+  PREFIX_CONFIG,
+  type PrefixConfig,
+} from "@/data/budgetTemplates";
+import { 
+  type OnboardingData,
+  applyModeAdjustments,
+  redistributeInactivePercentages,
+  NON_MONTHLY_PLANNING_LEVELS,
+  getBudgetModeById,
+} from "@/data/budgetModes";
+import { getCategoryById } from "@/data/categories";
+import { toast } from "sonner";
+
+interface BudgetProposalScreenProps {
+  data: OnboardingData;
+  onBack: () => void;
+  onConfirm: (budgets: BudgetItem[]) => void;
+  onGenerateAI?: () => void;
+  isGeneratingAI?: boolean;
+}
+
+export interface BudgetItem {
+  prefixCode: string;
+  prefixName: string;
+  categoryId: string;
+  percentage: number;
+  amount: number;
+  isEdited: boolean;
+}
+
+export function BudgetProposalScreen({ 
+  data, 
+  onBack, 
+  onConfirm, 
+  onGenerateAI,
+  isGeneratingAI 
+}: BudgetProposalScreenProps) {
+  const [budgets, setBudgets] = useState<BudgetItem[]>([]);
+  const [editingPrefix, setEditingPrefix] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Calculate base budget from onboarding data
+  useEffect(() => {
+    const band = getBandById(data.incomeBandId);
+    if (!band) return;
+
+    // Get base percentages for this income band
+    const basePercents = BASE_PERCENTAGES[data.incomeBandId] 
+      ? { ...BASE_PERCENTAGES[data.incomeBandId] }
+      : { ...BASE_PERCENTAGES['band_8k_15k'] };
+
+    // Apply budget mode adjustments
+    let adjustedPercents = applyModeAdjustments(basePercents, data.budgetMode);
+
+    // Track inactive categories
+    const inactiveCategories: string[] = [];
+    if (!data.hasPets) inactiveCategories.push('PET');
+    if (!data.hasDependents) inactiveCategories.push('F');
+
+    // Redistribute inactive percentages
+    if (inactiveCategories.length > 0) {
+      adjustedPercents = redistributeInactivePercentages(
+        adjustedPercents, 
+        inactiveCategories, 
+        data.budgetMode
+      );
+    }
+
+    // Apply non-monthly planning adjustment (increase E - provisions if needed)
+    const planningLevel = NON_MONTHLY_PLANNING_LEVELS.find(l => l.id === data.nonMonthlyPlanningLevel);
+    if (planningLevel && planningLevel.adjustE > 0) {
+      // Increase E (provisions) and decrease IF proportionally
+      const eAdjust = planningLevel.adjustE;
+      adjustedPercents['E'] = (adjustedPercents['E'] || 0) + eAdjust;
+      adjustedPercents['IF'] = Math.max(0.01, (adjustedPercents['IF'] || 0) - eAdjust);
+      
+      // Re-normalize
+      const total = Object.values(adjustedPercents).reduce((a, b) => a + b, 0);
+      Object.keys(adjustedPercents).forEach(k => {
+        adjustedPercents[k] = adjustedPercents[k] / total;
+      });
+    }
+
+    // Get budgetable prefixes
+    const budgetablePrefixes = PREFIX_CONFIG.filter(p => {
+      if (!p.isBudgetable) return false;
+      if (p.conditionalOn === 'has_pets' && !data.hasPets) return false;
+      if (p.conditionalOn === 'has_dependents' && !data.hasDependents) return false;
+      return true;
+    });
+
+    // Create budget items
+    const items: BudgetItem[] = budgetablePrefixes
+      .filter(p => adjustedPercents[p.code] !== undefined && adjustedPercents[p.code] > 0)
+      .map(prefix => ({
+        prefixCode: prefix.code,
+        prefixName: prefix.name,
+        categoryId: prefix.categoryId,
+        percentage: adjustedPercents[prefix.code] * 100,
+        amount: Math.round(data.incomeAnchorValue * adjustedPercents[prefix.code]),
+        isEdited: false,
+      }));
+
+    setBudgets(items);
+  }, [data]);
+
+  // Calculate totals
+  const totalPercentage = useMemo(() => 
+    budgets.reduce((sum, b) => sum + b.percentage, 0), 
+    [budgets]
+  );
+  
+  const totalAmount = useMemo(() => 
+    budgets.reduce((sum, b) => sum + b.amount, 0), 
+    [budgets]
+  );
+
+  // Get IF (reserve/investments) item for balancing
+  const ifItem = budgets.find(b => b.prefixCode === 'IF');
+  const ifIndex = budgets.findIndex(b => b.prefixCode === 'IF');
+
+  // Handle percentage adjustment
+  const handlePercentageChange = (prefixCode: string, newPercentage: number) => {
+    if (prefixCode === 'IF') return; // IF is the buffer, can't be directly edited
+
+    const currentItem = budgets.find(b => b.prefixCode === prefixCode);
+    if (!currentItem || !ifItem) return;
+
+    const delta = newPercentage - currentItem.percentage;
+    const newIfPercentage = ifItem.percentage - delta;
+
+    // Prevent IF from going negative
+    if (newIfPercentage < 0) {
+      toast.error("Você atingiu o limite da sua renda. Para aumentar aqui, reduza outra categoria.");
+      return;
+    }
+
+    // Update both values
+    setBudgets(prev => prev.map(b => {
+      if (b.prefixCode === prefixCode) {
+        return {
+          ...b,
+          percentage: newPercentage,
+          amount: Math.round(data.incomeAnchorValue * (newPercentage / 100)),
+          isEdited: true,
+        };
+      }
+      if (b.prefixCode === 'IF') {
+        return {
+          ...b,
+          percentage: newIfPercentage,
+          amount: Math.round(data.incomeAnchorValue * (newIfPercentage / 100)),
+        };
+      }
+      return b;
+    }));
+  };
+
+  // Handle confirm
+  const handleConfirm = async () => {
+    // Validate sum = 100%
+    if (Math.abs(totalPercentage - 100) > 0.5) {
+      toast.error("A soma das categorias deve ser 100%");
+      return;
+    }
+
+    setIsSubmitting(true);
+    await new Promise(r => setTimeout(r, 500));
+    onConfirm(budgets);
+  };
+
+  const mode = getBudgetModeById(data.budgetMode);
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="p-4 flex items-center gap-3 border-b">
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div className="flex-1">
+          <h1 className="font-semibold">Orçamento Sugerido</h1>
+          <p className="text-xs text-muted-foreground">
+            Modo: {mode?.label} {mode?.icon}
+          </p>
+        </div>
+        {onGenerateAI && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onGenerateAI}
+            disabled={isGeneratingAI}
+            className="gap-2"
+          >
+            {isGeneratingAI ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            Gerar por AI
+          </Button>
+        )}
+      </header>
+
+      {/* Info card */}
+      <div className="px-4 py-3">
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="p-3 flex gap-2">
+            <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-muted-foreground">
+              Este orçamento foi sugerido por categorias. Você pode distribuir nas subcategorias depois.
+              O saldo de <strong>Reserva/Investimentos</strong> ajusta automaticamente quando você edita outras categorias.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Summary */}
+      <div className="px-4 py-2 flex items-center justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">Renda base</p>
+          <p className="text-lg font-bold">{formatCurrency(data.incomeAnchorValue)}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-muted-foreground">Alocado</p>
+          <p className={cn(
+            "text-lg font-bold",
+            Math.abs(totalPercentage - 100) < 0.5 ? "text-success" : "text-destructive"
+          )}>
+            {totalPercentage.toFixed(1)}%
+          </p>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Budget list */}
+      <main className="flex-1 overflow-y-auto p-4 space-y-3">
+        {budgets.map((item, index) => {
+          const category = getCategoryById(item.categoryId);
+          const isIF = item.prefixCode === 'IF';
+          
+          return (
+            <motion.div
+              key={item.prefixCode}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03 }}
+            >
+              <Card className={cn(
+                "overflow-hidden transition-all",
+                editingPrefix === item.prefixCode && "ring-2 ring-primary",
+                isIF && "bg-primary/5 border-primary/30"
+              )}>
+                <CardContent className="p-4 space-y-3">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{category?.icon || '📦'}</span>
+                      <div>
+                        <p className="font-medium text-sm">{item.prefixName}</p>
+                        {isIF && (
+                          <Badge variant="outline" className="text-xs mt-0.5">
+                            Saldo do plano
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold">{formatCurrency(item.amount)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.percentage.toFixed(1)}%
+                        {item.isEdited && <span className="text-primary ml-1">✎</span>}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Slider (except for IF) */}
+                  {!isIF && (
+                    <div className="pt-2">
+                      <Slider
+                        value={[item.percentage]}
+                        onValueChange={([val]) => handlePercentageChange(item.prefixCode, val)}
+                        min={0}
+                        max={Math.min(50, item.percentage + (ifItem?.percentage || 0))}
+                        step={0.5}
+                        className="w-full"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                        <span>0%</span>
+                        <span>{Math.min(50, item.percentage + (ifItem?.percentage || 0)).toFixed(0)}%</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </main>
+
+      {/* Footer */}
+      <div className="p-4 border-t bg-background/95 backdrop-blur">
+        <Button 
+          onClick={handleConfirm} 
+          className="w-full h-12 gap-2" 
+          size="lg"
+          disabled={isSubmitting || Math.abs(totalPercentage - 100) > 0.5}
+        >
+          {isSubmitting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <>
+              <Check className="w-4 h-4" />
+              Confirmar orçamento
+            </>
+          )}
+        </Button>
+        
+        <p className="text-xs text-center text-muted-foreground mt-2">
+          As sugestões são educativas e podem ser ajustadas a qualquer momento.
+        </p>
+      </div>
+    </div>
+  );
+}
