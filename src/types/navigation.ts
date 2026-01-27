@@ -75,7 +75,8 @@ export type CTATargetScreen =
   | 'profile'
   | 'family'
   | 'help'
-  | 'learn-more';
+  | 'learn-more'
+  | 'insights';   // Insights Hub
 
 // ============================================
 // SOURCE CONTEXT - Where the CTA came from

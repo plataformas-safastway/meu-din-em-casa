@@ -2916,6 +2916,53 @@ export type Database = {
           },
         ]
       }
+      monthly_reports: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          family_id: string
+          id: string
+          issues: Json | null
+          month_ref: string
+          status: string
+          summary: Json | null
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          family_id: string
+          id?: string
+          issues?: Json | null
+          month_ref: string
+          status?: string
+          summary?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          family_id?: string
+          id?: string
+          issues?: Json | null
+          month_ref?: string
+          status?: string
+          summary?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_reports_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications_log: {
         Row: {
           category_id: string | null
@@ -3718,6 +3765,47 @@ export type Database = {
             columns: ["notify_member_id"]
             isOneToOne: false
             referencedRelation: "family_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_exports: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          family_id: string
+          file_path: string | null
+          id: string
+          month_ref: string
+          requested_by: string
+          signed_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          family_id: string
+          file_path?: string | null
+          id?: string
+          month_ref: string
+          requested_by: string
+          signed_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          family_id?: string
+          file_path?: string | null
+          id?: string
+          month_ref?: string
+          requested_by?: string
+          signed_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_exports_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
             referencedColumns: ["id"]
           },
         ]

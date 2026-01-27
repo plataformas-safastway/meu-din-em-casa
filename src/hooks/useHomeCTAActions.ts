@@ -337,7 +337,7 @@ export function useHomeCTAActions({ navigate, monthRef }: UseHomeCTAActionsParam
   /** View all insights */
   const onInsightsViewAll = useCallback(() => {
     const request = buildCTARequest({
-      targetScreen: 'reports',
+      targetScreen: 'insights',
       defaultMode: CTADefaultMode.DETAILS,
       slot: 'insight',
       entityType: 'category',
@@ -347,10 +347,10 @@ export function useHomeCTAActions({ navigate, monthRef }: UseHomeCTAActionsParam
     handleHomeCTA(request, navigate);
   }, [buildCTARequest, handleHomeCTA, navigate, currentMonthRef]);
 
-  /** Handle insight click (navigate to related screen) */
+  /** Handle insight click (navigate to insights hub) */
   const onInsightClick = useCallback((insightId: string, targetScreen?: CTATargetScreen) => {
     const request = buildCTARequest({
-      targetScreen: targetScreen || 'reports',
+      targetScreen: 'insights',
       defaultMode: CTADefaultMode.DETAILS,
       slot: 'insight',
       entityType: 'category',

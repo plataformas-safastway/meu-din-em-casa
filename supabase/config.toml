@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.receipt-ocr]
 verify_jwt = false
+
+[functions.generate-report-pdf]
+verify_jwt = false
