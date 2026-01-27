@@ -1469,47 +1469,65 @@ export type Database = {
       }
       families: {
         Row: {
+          budget_mode: string | null
           created_at: string
           email_report_day: number | null
           email_report_enabled: boolean
           email_report_recipient: string | null
+          financial_stage: string | null
           has_dependents: boolean | null
           has_pets: boolean | null
+          household_structure: string | null
           id: string
+          income_anchor_value: number | null
           income_range: string | null
           income_subband: string | null
+          income_type: string | null
           members_count: number
           name: string
+          non_monthly_planning_level: string | null
           primary_objective: string | null
           updated_at: string
         }
         Insert: {
+          budget_mode?: string | null
           created_at?: string
           email_report_day?: number | null
           email_report_enabled?: boolean
           email_report_recipient?: string | null
+          financial_stage?: string | null
           has_dependents?: boolean | null
           has_pets?: boolean | null
+          household_structure?: string | null
           id?: string
+          income_anchor_value?: number | null
           income_range?: string | null
           income_subband?: string | null
+          income_type?: string | null
           members_count?: number
           name: string
+          non_monthly_planning_level?: string | null
           primary_objective?: string | null
           updated_at?: string
         }
         Update: {
+          budget_mode?: string | null
           created_at?: string
           email_report_day?: number | null
           email_report_enabled?: boolean
           email_report_recipient?: string | null
+          financial_stage?: string | null
           has_dependents?: boolean | null
           has_pets?: boolean | null
+          household_structure?: string | null
           id?: string
+          income_anchor_value?: number | null
           income_range?: string | null
           income_subband?: string | null
+          income_type?: string | null
           members_count?: number
           name?: string
+          non_monthly_planning_level?: string | null
           primary_objective?: string | null
           updated_at?: string
         }
@@ -3241,6 +3259,41 @@ export type Database = {
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_responses: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          response_key: string
+          response_value: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          response_key: string
+          response_value: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          response_key?: string
+          response_value?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_responses_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
             referencedColumns: ["id"]
           },
         ]
@@ -4998,12 +5051,14 @@ export type Database = {
       }
       user_onboarding: {
         Row: {
+          ai_budget_generated_at: string | null
           contextual_hints_enabled: boolean
           created_at: string
           education_tips_enabled: boolean
           family_id: string
           has_seen_welcome: boolean
           id: string
+          onboarding_wizard_completed_at: string | null
           progress_percent: number
           step_account_created_at: string | null
           step_bank_account_at: string | null
@@ -5011,17 +5066,20 @@ export type Database = {
           step_family_invite_at: string | null
           step_goal_at: string | null
           step_import_at: string | null
+          suggested_budget_generated_at: string | null
           updated_at: string
           user_id: string
           welcome_seen_at: string | null
         }
         Insert: {
+          ai_budget_generated_at?: string | null
           contextual_hints_enabled?: boolean
           created_at?: string
           education_tips_enabled?: boolean
           family_id: string
           has_seen_welcome?: boolean
           id?: string
+          onboarding_wizard_completed_at?: string | null
           progress_percent?: number
           step_account_created_at?: string | null
           step_bank_account_at?: string | null
@@ -5029,17 +5087,20 @@ export type Database = {
           step_family_invite_at?: string | null
           step_goal_at?: string | null
           step_import_at?: string | null
+          suggested_budget_generated_at?: string | null
           updated_at?: string
           user_id: string
           welcome_seen_at?: string | null
         }
         Update: {
+          ai_budget_generated_at?: string | null
           contextual_hints_enabled?: boolean
           created_at?: string
           education_tips_enabled?: boolean
           family_id?: string
           has_seen_welcome?: boolean
           id?: string
+          onboarding_wizard_completed_at?: string | null
           progress_percent?: number
           step_account_created_at?: string | null
           step_bank_account_at?: string | null
@@ -5047,6 +5108,7 @@ export type Database = {
           step_family_invite_at?: string | null
           step_goal_at?: string | null
           step_import_at?: string | null
+          suggested_budget_generated_at?: string | null
           updated_at?: string
           user_id?: string
           welcome_seen_at?: string | null

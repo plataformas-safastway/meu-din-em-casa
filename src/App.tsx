@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 import { SelectContextPage } from "./pages/SelectContextPage";
 import { SelectFamilyPage } from "./pages/SelectFamilyPage";
 import { InviteAcceptPage } from "./pages/InviteAcceptPage";
+import { OnboardingFlowPage } from "./pages/OnboardingFlowPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -180,6 +181,7 @@ function AppRoutes() {
         <Route path="/" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/onboarding" element={<ProtectedRoute requireFamily={false}><OnboardingFlowPage /></ProtectedRoute>} />
         <Route path="/select-context" element={<ProtectedRoute requireFamily={false}><SelectContextPage /></ProtectedRoute>} />
         <Route path="/select-family" element={<ProtectedRoute requireFamily={false}><SelectFamilyPage /></ProtectedRoute>} />
         <Route path="/termos" element={<TermosPage />} />
