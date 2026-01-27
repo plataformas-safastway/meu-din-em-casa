@@ -1,14 +1,46 @@
+/**
+ * Route Resume Guard v2
+ * 
+ * Handles route restoration after preview reload (navigationType = "reload").
+ * 
+ * CRITICAL: This runs BEFORE React renders to restore the last valid route
+ * when the preview iframe is reloaded by the platform.
+ */
+
 type ResumeState = {
   path: string;
   ts: number;
+  context: "admin" | "consumer";
 };
 
 const STORAGE_KEY = "oik:route_resume";
+const CONTEXT_KEY = "oik:route_context";
 
+// Global state to prevent guards from redirecting during restore
+let isRestoringRoute = false;
 let installed = false;
+
+// TTL: 30 minutes
+const MAX_AGE_MS = 30 * 60 * 1000;
 
 function getFullPath(): string {
   return `${window.location.pathname}${window.location.search ?? ""}${window.location.hash ?? ""}`;
+}
+
+function getNavigationType(): string | null {
+  try {
+    const entries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
+    return entries[0]?.type ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function determineContext(path: string): "admin" | "consumer" {
+  if (path.startsWith("/admin")) {
+    return "admin";
+  }
+  return "consumer";
 }
 
 function readState(): ResumeState | null {
@@ -26,190 +58,254 @@ function readState(): ResumeState | null {
 
 function writeState(path: string) {
   try {
-    const state: ResumeState = { path, ts: Date.now() };
+    const context = determineContext(path);
+    const state: ResumeState = { path, ts: Date.now(), context };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    sessionStorage.setItem(CONTEXT_KEY, context);
   } catch {
     // ignore
-  }
-}
-
-/**
- * Determines if a path is "home-like" (a public surface with no navigation context).
- * 
- * CRITICAL: '/login?next=...' is NOT home-like because it has navigation context we want to preserve.
- * Only exact '/' and '/login' (without query) are considered home-like.
- */
-function isHomeLike(path: string): boolean {
-  // '/' is always home-like - no context to preserve.
-  if (path === "/") return true;
-
-  // '/login' without query params is home-like.
-  if (path === "/login") return true;
-
-  // Everything else, including '/login?next=...' and '/admin', is NOT home-like.
-  return false;
-}
-
-function reportIfUnexpectedHome(nextPath: string, source: string) {
-  const saved = readState();
-  const current = getFullPath();
-
-  // We care when navigation *lands* on a home-like surface from a non-home route.
-  if (isHomeLike(nextPath) && saved?.path && !isHomeLike(saved.path)) {
-    console.error("[RouteResume] HOME_LIKE_NAV_DETECTED", {
-      fromSaved: saved.path,
-      to: nextPath,
-      current,
-      source,
-    });
-    console.trace("[RouteResume] home-like nav stack");
   }
 }
 
 export function clearRouteResumeState() {
   try {
     sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(CONTEXT_KEY);
   } catch {
     // ignore
   }
 }
 
 /**
- * If the browser/tab resumes and somehow the URL becomes '/', restore the last
- * known route that was active right before the tab was hidden.
- *
- * This addresses the critical bug: tab switch -> return -> URL flips to '/'
- * even without explicit app navigation.
+ * Check if we're currently in the process of restoring a route.
+ * Guards should NOT redirect while this is true.
+ */
+export function isRouteRestoreInProgress(): boolean {
+  return isRestoringRoute;
+}
+
+/**
+ * Determines if a path is "home-like" (a public surface with no navigation context).
+ * Only exact '/' and '/login' (without query) are considered home-like.
+ */
+function isHomeLike(path: string): boolean {
+  if (path === "/") return true;
+  if (path === "/login") return true;
+  return false;
+}
+
+/**
+ * Validates if a saved route should be restored.
+ */
+function isValidRestore(saved: ResumeState, currentPath: string): boolean {
+  // Check TTL
+  const age = Date.now() - saved.ts;
+  if (age > MAX_AGE_MS) {
+    console.log("[RouteResume] Saved route expired", { age, maxAge: MAX_AGE_MS });
+    return false;
+  }
+
+  // Don't restore to home-like routes
+  if (isHomeLike(saved.path)) {
+    console.log("[RouteResume] Saved route is home-like, skipping");
+    return false;
+  }
+
+  // Don't restore if we're already at the saved path
+  if (currentPath === saved.path) {
+    console.log("[RouteResume] Already at saved path");
+    return false;
+  }
+
+  // Context validation: if saved context is admin, path must start with /admin
+  if (saved.context === "admin" && !saved.path.startsWith("/admin")) {
+    console.log("[RouteResume] Context mismatch: admin context but non-admin path");
+    return false;
+  }
+
+  // Context validation: if saved context is consumer, path must NOT start with /admin
+  if (saved.context === "consumer" && saved.path.startsWith("/admin")) {
+    console.log("[RouteResume] Context mismatch: consumer context but admin path");
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Perform the route restoration.
+ * Uses history.replaceState to avoid polluting the history stack.
+ */
+function performRestore(saved: ResumeState, source: string) {
+  console.log(`[RouteResume] 🔄 RESTORING route via ${source}`, {
+    from: getFullPath(),
+    to: saved.path,
+    context: saved.context,
+    ageMs: Date.now() - saved.ts,
+  });
+
+  isRestoringRoute = true;
+
+  try {
+    // Use replaceState to avoid history stack pollution
+    history.replaceState(null, "", saved.path);
+    
+    // Dispatch popstate to notify React Router
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    
+    console.log("[RouteResume] ✅ Route restored successfully");
+  } catch (err) {
+    console.error("[RouteResume] Failed to restore route", err);
+  } finally {
+    // Clear restoring flag after a short delay to let React Router process
+    setTimeout(() => {
+      isRestoringRoute = false;
+      console.log("[RouteResume] Restore complete, guards can proceed");
+    }, 100);
+  }
+}
+
+/**
+ * CRITICAL: Runs BEFORE React renders.
+ * 
+ * Detects if:
+ * 1. This is a reload (navigationType === "reload")
+ * 2. Or we landed at "/" but have a valid saved route
+ * 
+ * If so, restores the last known route immediately.
+ */
+export function tryInitialRouteRestore() {
+  if (typeof window === "undefined") return;
+
+  const navType = getNavigationType();
+  const currentPath = getFullPath();
+  const saved = readState();
+
+  console.log("[RouteResume] Initial check", {
+    navType,
+    currentPath,
+    hasSaved: !!saved,
+    savedPath: saved?.path,
+    savedContext: saved?.context,
+  });
+
+  // Case 1: Page reload - always try to restore
+  if (navType === "reload") {
+    if (saved && isValidRestore(saved, currentPath)) {
+      // Only restore if we're at a home-like route or different from saved
+      if (isHomeLike(currentPath) || currentPath !== saved.path) {
+        performRestore(saved, "reload");
+        return;
+      }
+    }
+    console.log("[RouteResume] Reload detected but no valid restore needed");
+    return;
+  }
+
+  // Case 2: Landed at "/" but have a saved route (tab resume scenario)
+  if (isHomeLike(currentPath) && saved && isValidRestore(saved, currentPath)) {
+    performRestore(saved, "home-landing");
+    return;
+  }
+
+  console.log("[RouteResume] No restoration needed");
+}
+
+/**
+ * Installs the route resume guard.
+ * 
+ * This:
+ * 1. Tracks route changes and saves them to sessionStorage
+ * 2. Handles visibility changes to restore routes
+ * 3. Patches history methods to intercept navigation
  */
 export function installRouteResumeGuard() {
   if (typeof window === "undefined" || typeof document === "undefined") return;
   if (installed) return;
   installed = true;
 
-  // Track route changes continuously, not only on visibility hidden.
-  // This gives us a reliable lastRoute even when visibility events are flaky.
+  console.log("[RouteResume] Installing guard...", {
+    initialPath: getFullPath(),
+    navType: getNavigationType(),
+  });
+
+  // Save initial path if not home-like
+  const initialPath = getFullPath();
+  if (!isHomeLike(initialPath)) {
+    writeState(initialPath);
+  }
+
+  // Track route changes via history patches
   const originalPushState = history.pushState;
   const originalReplaceState = history.replaceState;
 
   history.pushState = function patchedPushState(...args) {
-    // eslint-disable-next-line prefer-rest-params
     const ret = originalPushState.apply(this, args as any);
     const nextPath = getFullPath();
     if (!isHomeLike(nextPath)) {
       writeState(nextPath);
-    } else {
-      reportIfUnexpectedHome(nextPath, "history.pushState");
     }
     return ret;
-  } as any;
+  } as typeof history.pushState;
 
   history.replaceState = function patchedReplaceState(...args) {
-    // eslint-disable-next-line prefer-rest-params
     const ret = originalReplaceState.apply(this, args as any);
     const nextPath = getFullPath();
-    if (!isHomeLike(nextPath)) {
+    // Don't save during restore to avoid overwriting with "/" 
+    if (!isHomeLike(nextPath) && !isRestoringRoute) {
       writeState(nextPath);
-    } else {
-      reportIfUnexpectedHome(nextPath, "history.replaceState");
     }
     return ret;
-  } as any;
+  } as typeof history.replaceState;
 
-  window.addEventListener(
-    "popstate",
-    () => {
-      const nextPath = getFullPath();
-      if (!isHomeLike(nextPath)) {
-        writeState(nextPath);
-      } else {
-        reportIfUnexpectedHome(nextPath, "popstate");
-      }
-    },
-    true
-  );
-
-  // Persist the route when the tab goes to background.
-  const tryRestore = (source: string) => {
-    const current = getFullPath();
-    const saved = readState();
-
-    // Restore when we land on a home-like surface but we had a non-home route saved.
-    if (isHomeLike(current) && saved?.path && !isHomeLike(saved.path)) {
-      const MAX_AGE_MS = 10 * 60 * 1000;
-      const age = Date.now() - saved.ts;
-      if (age <= MAX_AGE_MS) {
-        console.error("[RouteResume] RESTORE_FROM_HOME_LIKE", {
-          from: current,
-          to: saved.path,
-          ageMs: age,
-          source,
-        });
-        console.trace("[RouteResume] restore stack");
-
-        history.replaceState(null, "", saved.path);
-        window.dispatchEvent(new PopStateEvent("popstate"));
-      }
+  // Track popstate
+  window.addEventListener("popstate", () => {
+    const nextPath = getFullPath();
+    if (!isHomeLike(nextPath) && !isRestoringRoute) {
+      writeState(nextPath);
     }
-  };
+  }, true);
 
-  const onVisibilityChange = () => {
+  // Save route when tab goes to background
+  document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") {
-      const current = getFullPath();
-      // Always store the current path (except pure home-like) as resume target.
-      if (!isHomeLike(current)) {
-        writeState(current);
+      const currentPath = getFullPath();
+      if (!isHomeLike(currentPath)) {
+        writeState(currentPath);
+        console.log("[RouteResume] Saved before hidden", { path: currentPath });
       }
-      console.log("[RouteResume] Saved before hidden", { path: current });
     }
 
+    // When visible, check if we need to restore
     if (document.visibilityState === "visible") {
-      tryRestore("visibilitychange:visible");
+      const currentPath = getFullPath();
+      const saved = readState();
+      
+      if (isHomeLike(currentPath) && saved && isValidRestore(saved, currentPath)) {
+        performRestore(saved, "visibilitychange");
+      }
     }
-  };
+  }, true);
 
-  document.addEventListener("visibilitychange", onVisibilityChange, true);
+  // Handle focus as fallback
+  window.addEventListener("focus", () => {
+    const currentPath = getFullPath();
+    const saved = readState();
+    
+    if (isHomeLike(currentPath) && saved && isValidRestore(saved, currentPath)) {
+      performRestore(saved, "focus");
+    }
+  }, true);
 
-  // Some browsers don't reliably fire visibilitychange on tab return; focus is a fallback.
-  window.addEventListener(
-    "focus",
-    () => {
-      tryRestore("window:focus");
-    },
-    true
-  );
+  // Handle pageshow for BFCache scenarios
+  window.addEventListener("pageshow", (e) => {
+    const currentPath = getFullPath();
+    const saved = readState();
+    
+    if (isHomeLike(currentPath) && saved && isValidRestore(saved, currentPath)) {
+      performRestore(saved, e.persisted ? "pageshow:bfcache" : "pageshow");
+    }
+  }, true);
 
-  // Also handle bfcache restore scenarios.
-  window.addEventListener(
-    "pageshow",
-    () => {
-      tryRestore("pageshow");
-    },
-    true
-  );
-}
-
-/**
- * Runs BEFORE React renders (call at module init). If we boot at '/', but we
- * have a recently saved route from a tab-hidden event, restore it immediately
- * so BrowserRouter starts on the correct location.
- */
-export function tryInitialRouteRestore() {
-  if (typeof window === "undefined") return;
-  const current = getFullPath();
-  if (!isHomeLike(current)) return;
-
-  const saved = readState();
-  if (!saved?.path || isHomeLike(saved.path)) return;
-
-  const MAX_AGE_MS = 10 * 60 * 1000;
-  const age = Date.now() - saved.ts;
-  if (age > MAX_AGE_MS) return;
-
-  console.error("[RouteResume] INITIAL_RESTORE", {
-    from: current,
-    to: saved.path,
-    ageMs: age,
-  });
-  console.trace("[RouteResume] initial stack");
-  history.replaceState(null, "", saved.path);
+  console.log("[RouteResume] Guard installed ✅");
 }
