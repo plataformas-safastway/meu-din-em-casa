@@ -12,6 +12,7 @@ import {
   Mail,
   CreditCard,
   Building2,
+  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -48,6 +49,7 @@ const PROVIDER_ICONS: Record<IntegrationProvider, React.ReactNode> = {
   OPEN_FINANCE: <Building2 className="w-4 h-4" />,
   ACQUIRER: <CreditCard className="w-4 h-4" />,
   RESEND: <Mail className="w-4 h-4" />,
+  ENOTAS: <FileText className="w-4 h-4" />,
 };
 
 export function IntegrationLogsCard({ provider }: IntegrationLogsCardProps) {

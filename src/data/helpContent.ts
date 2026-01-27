@@ -1462,9 +1462,9 @@ export const adminFaqItems: FAQItem[] = [
   {
     id: "admin-faq-19",
     question: "O que são as Integrações no painel admin?",
-    answer: "As Integrações centralizam a configuração de conexões externas: Open Finance (Pluggy), Adquirentes de pagamento e Resend (e-mail). Cada integração tem seu status, configurações, métricas e logs de eventos.",
+    answer: "As Integrações centralizam a configuração de conexões externas: Open Finance (Pluggy), Adquirentes de pagamento, Resend (e-mail) e eNotas (notas fiscais). Cada integração tem seu status, configurações, métricas e logs de eventos.",
     category: "admin",
-    keywords: ["integrações", "pluggy", "resend", "adquirente", "conexão", "api"],
+    keywords: ["integrações", "pluggy", "resend", "adquirente", "enotas", "conexão", "api"],
   },
   {
     id: "admin-faq-20",
@@ -1493,6 +1493,13 @@ export const adminFaqItems: FAQItem[] = [
     answer: "Sim. API keys e secrets são armazenados de forma segura e nunca são exibidos após salvos. Após configurar, o sistema mostra apenas 'Configurado'. Todas as alterações são registradas em auditoria sem expor os valores.",
     category: "admin",
     keywords: ["segurança", "credencial", "secret", "api", "key", "auditoria"],
+  },
+  {
+    id: "admin-faq-24",
+    question: "Como funciona a integração com eNotas?",
+    answer: "A integração eNotas permite a emissão automática de notas fiscais de serviço (NFS-e). Configure a API Key, ID da Empresa e o ambiente (produção ou homologação). As métricas mostram notas emitidas, canceladas e pendentes. O sistema é compatível com mais de 2.000 prefeituras.",
+    category: "admin",
+    keywords: ["enotas", "nota fiscal", "nfse", "emissão", "fiscal", "prefeitura"],
   },
 ];
 

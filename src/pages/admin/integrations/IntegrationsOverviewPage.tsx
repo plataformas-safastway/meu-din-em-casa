@@ -1,4 +1,4 @@
-import { Building2, CreditCard, Mail, CheckCircle, AlertTriangle, Clock, XCircle, ArrowRight } from "lucide-react";
+import { Building2, CreditCard, Mail, FileText, CheckCircle, AlertTriangle, Clock, XCircle, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ const PROVIDER_ICONS: Record<IntegrationProvider, React.ReactNode> = {
   OPEN_FINANCE: <Building2 className="w-8 h-8" />,
   ACQUIRER: <CreditCard className="w-8 h-8" />,
   RESEND: <Mail className="w-8 h-8" />,
+  ENOTAS: <FileText className="w-8 h-8" />,
 };
 
 const STATUS_ICONS: Record<IntegrationStatus, React.ReactNode> = {
@@ -33,6 +34,7 @@ const PROVIDER_DESCRIPTIONS: Record<IntegrationProvider, string> = {
   OPEN_FINANCE: "Conexão com bancos via Pluggy para importação automática de extratos",
   ACQUIRER: "Processamento de pagamentos via cartão de crédito/débito",
   RESEND: "Envio de e-mails transacionais e notificações",
+  ENOTAS: "Emissão automática de notas fiscais de serviço (NFS-e)",
 };
 
 export function IntegrationsOverviewPage({ onNavigate }: IntegrationsOverviewPageProps) {
@@ -60,7 +62,7 @@ export function IntegrationsOverviewPage({ onNavigate }: IntegrationsOverviewPag
     );
   }
 
-  const providers: IntegrationProvider[] = ['OPEN_FINANCE', 'ACQUIRER', 'RESEND'];
+  const providers: IntegrationProvider[] = ['OPEN_FINANCE', 'ACQUIRER', 'RESEND', 'ENOTAS'];
 
   return (
     <div className="space-y-6">
