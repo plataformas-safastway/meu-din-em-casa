@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback,
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { isInFocusTransition } from '@/hooks/useStableAuth';
+import { clearRouteResumeState } from '@/lib/routeResumeGuard';
 
 interface Family {
   id: string;
@@ -319,6 +320,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Ensure we don't restore a previous protected route after a real logout.
+    clearRouteResumeState();
+
     // Cancel any pending fetches
     if (fetchAbortControllerRef.current) {
       fetchAbortControllerRef.current.abort();
