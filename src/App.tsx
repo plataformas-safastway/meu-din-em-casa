@@ -14,6 +14,7 @@ import { clearExpiredDrafts } from "@/hooks/useDraftPersistence";
 import { installNavigationAudit } from "@/lib/navigationAudit";
 import { setAuthDebugSnapshot } from "@/lib/devDiagnostics";
 import { installRouteResumeGuard, tryInitialRouteRestore } from "@/lib/routeResumeGuard";
+import { installDevNavigationInstrumentation, logNavigationAttempt } from "@/lib/devNavigationInstrumentation";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { TermosPage } from "./pages/TermosPage";
@@ -37,6 +38,9 @@ clearExpiredDrafts();
 
 // Install redirect diagnostics as early as possible (before any React render)
 installNavigationAudit();
+
+// DEV-ONLY: Install navigation instrumentation to capture stack traces
+installDevNavigationInstrumentation();
 
 // If we booted at '/' unexpectedly after a tab discard/resume, restore immediately
 tryInitialRouteRestore();
@@ -178,6 +182,15 @@ function ProtectedRoute({
 
   // Only redirect when we're CERTAIN there's no session
   if (shouldRedirectToLogin) {
+    const targetPath = `/login?next=${next}`;
+    logNavigationAttempt('ProtectedRoute:Navigate', targetPath, {
+      currentPath: location.pathname,
+      isAuthTransition,
+      user: !!user,
+      session: !!session,
+      profileStatus,
+      bootstrapStatus,
+    });
     console.error('[ProtectedRoute] REDIRECT TO LOGIN TRIGGERED', { 
       currentPath: location.pathname, 
       isAuthTransition,
@@ -189,7 +202,7 @@ function ProtectedRoute({
     console.trace();
     return (
       <Navigate
-        to={`/login?next=${next}`}
+        to={targetPath}
         replace
         state={{ from: { pathname: location.pathname, search: location.search } }}
       />
@@ -258,6 +271,15 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   
   // Only redirect when we're CERTAIN there's no session
   if (shouldRedirectToLogin) {
+    const targetPath = `/login?next=${next}`;
+    logNavigationAttempt('AdminRoute:Navigate', targetPath, {
+      currentPath: location.pathname,
+      isAuthTransition,
+      user: !!user,
+      session: !!session,
+      profileStatus,
+      bootstrapStatus,
+    });
     console.error('[AdminRoute] REDIRECT TO LOGIN TRIGGERED', {
       currentPath: location.pathname,
       isAuthTransition,
@@ -269,7 +291,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     console.trace();
     return (
       <Navigate
-        to={`/login?next=${next}`}
+        to={targetPath}
         replace
         state={{ from: { pathname: location.pathname, search: location.search } }}
       />
@@ -280,6 +302,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   const isAdminRole = role === "admin" || role === "cs" || role === "admin_master";
   
   if (!isAdminRole && user) {
+    logNavigationAttempt('AdminRoute:NotAdmin', '/app', { role, user: !!user });
     console.log('[AdminRoute] User is not admin, redirecting to /app');
     return <Navigate to="/app" replace />;
   }
@@ -306,11 +329,13 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   const isAdminRole = role === 'admin' || role === 'cs' || role === 'admin_master';
   
   if (user && isAdminRole) {
+    logNavigationAttempt('PublicRoute:AdminRedirect', '/admin', { role, user: !!user });
     return <Navigate to="/admin" replace />;
   }
   
   // User with family - go to app
   if (user && family) {
+    logNavigationAttempt('PublicRoute:UserWithFamily', '/app', { user: !!user, family: !!family });
     return <Navigate to="/app" replace />;
   }
   
