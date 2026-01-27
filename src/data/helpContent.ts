@@ -1458,6 +1458,42 @@ export const adminFaqItems: FAQItem[] = [
     category: "admin",
     keywords: ["excluir", "desativar", "soft", "delete", "auditoria"],
   },
+  // ===== INTEGRAÇÕES =====
+  {
+    id: "admin-faq-19",
+    question: "O que são as Integrações no painel admin?",
+    answer: "As Integrações centralizam a configuração de conexões externas: Open Finance (Pluggy), Adquirentes de pagamento e Resend (e-mail). Cada integração tem seu status, configurações, métricas e logs de eventos.",
+    category: "admin",
+    keywords: ["integrações", "pluggy", "resend", "adquirente", "conexão", "api"],
+  },
+  {
+    id: "admin-faq-20",
+    question: "Como configurar a integração Open Finance?",
+    answer: "Acesse Integrações > Open Finance. Insira o Client ID e Client Secret da Pluggy. Clique em 'Testar conexão' para validar as credenciais. Os secrets são armazenados de forma segura e nunca são exibidos após salvar.",
+    category: "admin",
+    keywords: ["open", "finance", "pluggy", "configurar", "credencial", "secret"],
+  },
+  {
+    id: "admin-faq-21",
+    question: "Como funciona a integração com Resend?",
+    answer: "A integração Resend permite enviar e-mails transacionais (boas-vindas, alertas, relatórios). Configure a API Key e o e-mail de envio. As métricas mostram e-mails enviados, entregues e falhas.",
+    category: "admin",
+    keywords: ["resend", "email", "transacional", "envio", "notificação"],
+  },
+  {
+    id: "admin-faq-22",
+    question: "O que significam os status das integrações?",
+    answer: "ATIVO: funcionando normalmente. INATIVO: desabilitado manualmente. PENDENTE: aguardando configuração. ERRO: falha detectada no último teste. Use 'Testar conexão' para atualizar o status.",
+    category: "admin",
+    keywords: ["status", "ativo", "inativo", "pendente", "erro", "integração"],
+  },
+  {
+    id: "admin-faq-23",
+    question: "As credenciais de integração são seguras?",
+    answer: "Sim. API keys e secrets são armazenados de forma segura e nunca são exibidos após salvos. Após configurar, o sistema mostra apenas 'Configurado'. Todas as alterações são registradas em auditoria sem expor os valores.",
+    category: "admin",
+    keywords: ["segurança", "credencial", "secret", "api", "key", "auditoria"],
+  },
 ];
 
 export const categoryLabels: Record<string, string> = {
