@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useUserRole, useHasAnyAdmin } from "@/hooks/useUserRole";
 import { ScreenLoader } from "@/components/ui/money-loader";
 import { useAppLifecycle } from "@/hooks/useAppLifecycle";
-import { useStableAuth, useFocusTransition } from "@/hooks/useStableAuth";
+import { useStableAuth } from "@/hooks/useStableAuth";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { STALE_TIMES, GC_TIMES } from "@/lib/queryConfig";
 import { clearExpiredDrafts } from "@/hooks/useDraftPersistence";
