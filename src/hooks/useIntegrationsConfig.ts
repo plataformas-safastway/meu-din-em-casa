@@ -8,7 +8,7 @@ import type { Json } from '@/integrations/supabase/types';
 // Types
 // =====================================================
 
-export type IntegrationProvider = 'OPEN_FINANCE' | 'ACQUIRER' | 'RESEND';
+export type IntegrationProvider = 'OPEN_FINANCE' | 'ACQUIRER' | 'RESEND' | 'ENOTAS';
 export type IntegrationStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'ERROR';
 
 export interface IntegrationConfig {
@@ -59,6 +59,12 @@ export interface ResendConfig {
   api_key_configured?: boolean;
   from_email?: string;
   from_name?: string;
+}
+
+export interface EnotasConfig {
+  api_key_configured?: boolean;
+  empresa_id?: string;
+  ambiente?: 'producao' | 'homologacao';
 }
 
 // =====================================================
@@ -266,6 +272,12 @@ export function useTestIntegrationConnection() {
             success = false;
             errorMessage = 'Teste de conexão não implementado';
             break;
+
+          case 'ENOTAS':
+            // Check eNotas configuration
+            success = false;
+            errorMessage = 'Teste de conexão não implementado';
+            break;
         }
       } catch (err) {
         errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -400,6 +412,8 @@ export function getProviderDisplayName(provider: IntegrationProvider): string {
       return 'Adquirentes';
     case 'RESEND':
       return 'Resend (E-mail)';
+    case 'ENOTAS':
+      return 'eNotas';
     default:
       return provider;
   }

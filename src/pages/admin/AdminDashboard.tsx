@@ -86,6 +86,7 @@ import {
   IntegrationOpenFinancePage,
   IntegrationAcquirerPage,
   IntegrationResendPage,
+  IntegrationEnotasPage,
 } from "./integrations";
 import ExecutiveReportsPage from "./executive/ExecutiveReportsPage";
 import { useExecutiveAccess } from "@/hooks/useExecutiveReports";
@@ -101,7 +102,7 @@ type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "s
   | "tech-health" | "tech-logs" | "tech-integrations" | "tech-keys" | "tech-flags" | "tech-audit"
   | "lgpd-overview" | "lgpd-dsar" | "lgpd-vault" | "lgpd-breakglass" | "lgpd-audit"
   | "exec-reports"
-  | "int-overview" | "int-openfinance" | "int-acquirer" | "int-resend";
+  | "int-overview" | "int-openfinance" | "int-acquirer" | "int-resend" | "int-enotas";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -186,6 +187,7 @@ export function AdminDashboard() {
     { id: "int-openfinance" as AdminTab, label: "Open Finance", icon: Building2 },
     { id: "int-acquirer" as AdminTab, label: "Adquirentes", icon: CreditCard },
     { id: "int-resend" as AdminTab, label: "Resend", icon: Mail },
+    { id: "int-enotas" as AdminTab, label: "eNotas", icon: FileText },
     { id: "tech-keys" as AdminTab, label: "Chaves API", icon: Key },
   ] : [];
 
@@ -199,6 +201,9 @@ export function AdminDashboard() {
         break;
       case 'RESEND':
         setActiveTab('int-resend');
+        break;
+      case 'ENOTAS':
+        setActiveTab('int-enotas');
         break;
     }
   };
@@ -313,6 +318,8 @@ export function AdminDashboard() {
         return <IntegrationAcquirerPage />;
       case "int-resend":
         return <IntegrationResendPage />;
+      case "int-enotas":
+        return <IntegrationEnotasPage />;
       default:
         return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} hasSupportAccess={!!hasSupportAccess} hasCSAccess={!!hasCSAccess} hasTechAccess={!!hasTechAccess} hasExecutiveAccess={!!hasExecutiveAccess} hasLegalAccess={!!hasLegalAccess} />;
     }
