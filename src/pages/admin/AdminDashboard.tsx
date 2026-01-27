@@ -128,7 +128,6 @@ export function AdminDashboard() {
     { id: "users" as AdminTab, label: "Usuários", icon: Users },
     { id: "ebooks" as AdminTab, label: "eBooks", icon: BookOpen },
     { id: "metrics" as AdminTab, label: "Métricas", icon: BarChart3 },
-    { id: "openfinance" as AdminTab, label: "Open Finance", icon: Building2 },
     ...(isAdmin ? [{ id: "settings" as AdminTab, label: "Configurações", icon: Settings }] : []),
   ];
 
@@ -168,8 +167,6 @@ export function AdminDashboard() {
   const techMenuItems = hasTechAccess ? [
     { id: "tech-health" as AdminTab, label: "Saúde do Sistema", icon: Activity },
     { id: "tech-logs" as AdminTab, label: "Logs", icon: FileText },
-    { id: "tech-integrations" as AdminTab, label: "Integrações", icon: Server },
-    { id: "tech-keys" as AdminTab, label: "Chaves API", icon: Key },
     { id: "tech-flags" as AdminTab, label: "Feature Flags", icon: Flag },
     { id: "tech-audit" as AdminTab, label: "Auditoria Tech", icon: ClipboardList },
   ] : [];
@@ -189,6 +186,7 @@ export function AdminDashboard() {
     { id: "int-openfinance" as AdminTab, label: "Open Finance", icon: Building2 },
     { id: "int-acquirer" as AdminTab, label: "Adquirentes", icon: CreditCard },
     { id: "int-resend" as AdminTab, label: "Resend", icon: Mail },
+    { id: "tech-keys" as AdminTab, label: "Chaves API", icon: Key },
   ] : [];
 
   const handleIntegrationNavigate = (provider: IntegrationProvider) => {
