@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useUserRole, useHasAnyAdmin } from "@/hooks/useUserRole";
 import { ScreenLoader } from "@/components/ui/money-loader";
@@ -13,7 +13,13 @@ import { STALE_TIMES, GC_TIMES } from "@/lib/queryConfig";
 import { clearExpiredDrafts } from "@/hooks/useDraftPersistence";
 import { installNavigationAudit } from "@/lib/navigationAudit";
 import { setAuthDebugSnapshot } from "@/lib/devDiagnostics";
-import { installRouteResumeGuard, tryInitialRouteRestore, isRouteRestoreInProgress } from "@/lib/routeResumeGuard";
+import { 
+  installRouteResumeGuard, 
+  tryInitialRouteRestore, 
+  isRouteRestoreInProgress,
+  tryFallbackRestore,
+  markRestoreCompleted
+} from "@/lib/routeResumeGuard";
 import { installDevNavigationInstrumentation, installDevNavigationInstrumentationV2, logNavigationAttempt } from "@/lib/devNavigationInstrumentation";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
@@ -94,7 +100,9 @@ function LoadingSpinner() {
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthTransition, session, user, bootstrapStatus, profileStatus, shouldRedirectToLogin } = useStableAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const lastRouteRef = useRef<string | null>(null);
+  const fallbackAttemptedRef = useRef(false);
 
   // Keep an always-up-to-date snapshot for diagnostics
   setAuthDebugSnapshot({
@@ -115,6 +123,30 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       console.log('[AuthGate] In auth transition - holding render');
     }
   }, [isAuthTransition]);
+
+  // React-side fallback: If pre-React restore didn't work, try here
+  useEffect(() => {
+    // Only attempt once per session
+    if (fallbackAttemptedRef.current) return;
+    
+    // Wait until auth is ready
+    if (isLoading || isAuthTransition || bootstrapStatus !== 'ready') return;
+    
+    // Only attempt if authenticated
+    const isAuthenticated = !!session && !!user;
+    if (!isAuthenticated) return;
+    
+    // Try fallback restore
+    const restorePath = tryFallbackRestore(location.pathname, isAuthenticated);
+    if (restorePath) {
+      fallbackAttemptedRef.current = true;
+      console.log('[AuthGate] Fallback restore to:', restorePath);
+      navigate(restorePath, { replace: true });
+    } else {
+      // Mark restore as completed even if no restore was needed
+      markRestoreCompleted();
+    }
+  }, [isLoading, isAuthTransition, bootstrapStatus, session, user, location.pathname, navigate]);
 
   // Router-level route change logging (closest thing to routeChangeStart/Complete)
   useEffect(() => {
@@ -143,7 +175,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }, [location.pathname, location.search, location.hash, isLoading, isAuthTransition, bootstrapStatus, profileStatus, session, user]);
   
   // Wait until auth is fully stable (not loading AND not in transition)
-  if (isLoading) {
+  // Also wait during route restoration
+  if (isLoading || isRouteRestoreInProgress()) {
     return <ScreenLoader label="Carregando..." />;
   }
   
