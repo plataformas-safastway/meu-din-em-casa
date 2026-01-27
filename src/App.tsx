@@ -13,6 +13,7 @@ import { STALE_TIMES, GC_TIMES } from "@/lib/queryConfig";
 import { clearExpiredDrafts } from "@/hooks/useDraftPersistence";
 import { installNavigationAudit } from "@/lib/navigationAudit";
 import { setAuthDebugSnapshot } from "@/lib/devDiagnostics";
+import { installRouteResumeGuard, tryInitialRouteRestore } from "@/lib/routeResumeGuard";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { TermosPage } from "./pages/TermosPage";
@@ -33,6 +34,12 @@ import { useEffect, useRef } from "react";
 
 // Clear expired drafts on app init
 clearExpiredDrafts();
+
+// Install redirect diagnostics as early as possible (before any React render)
+installNavigationAudit();
+
+// If we booted at '/' unexpectedly after a tab discard/resume, restore immediately
+tryInitialRouteRestore();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -320,7 +327,11 @@ function AppLifecycleHandler({ children }: { children: React.ReactNode }) {
 
   // One-time install: logs stack traces if URL flips to '/' unexpectedly.
   useEffect(() => {
+    // Idempotent; already installed at module init, but safe to call again.
     installNavigationAudit();
+
+    // Install route resume guard (fix: prevent unexpected '/' on tab return)
+    installRouteResumeGuard();
 
     // App mount/unmount diagnostics to detect real reload vs remount
     const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
