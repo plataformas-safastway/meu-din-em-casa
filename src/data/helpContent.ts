@@ -702,6 +702,51 @@ export const helpArticles: HelpArticle[] = [
     deepLink: "settings",
   },
 
+  {
+    id: "ocr-batch-import",
+    title: "OCR em Lote: Importar Várias Fotos",
+    category: "import",
+    icon: "📸",
+    summary: "Como importar e categorizar vários recibos de uma vez",
+    steps: [
+      {
+        title: "Iniciar o OCR em Lote",
+        description: "Toque no botão + na tela inicial e selecione 'OCR em Lote'. Você pode adicionar até 10 fotos por vez.",
+        tip: "Use para processar vários comprovantes, notas fiscais ou recibos de uma só vez.",
+      },
+      {
+        title: "Adicionar fotos",
+        description: "Selecione múltiplas fotos da galeria ou tire fotos diretamente. Cada imagem será processada individualmente.",
+        tip: "Garanta boa iluminação e enquadre todo o documento para melhor leitura.",
+      },
+      {
+        title: "Processamento automático",
+        description: "O OIK extrai automaticamente valor, data, estabelecimento e forma de pagamento de cada comprovante.",
+        tip: "Itens com erro podem ser reprocessados individualmente.",
+      },
+      {
+        title: "Revisão do lote",
+        description: "Após o processamento, revise todos os itens. Você pode filtrar por 'Sem categoria', 'Duplicados' ou 'Erros'.",
+      },
+      {
+        title: "Edição em lote",
+        description: "Selecione vários itens e aplique categoria, forma de pagamento ou data de uma só vez.",
+        tip: "Ideal quando vários recibos são do mesmo tipo de gasto (ex: supermercado).",
+      },
+      {
+        title: "Detecção de duplicados",
+        description: "O sistema marca automaticamente possíveis duplicados baseado em data, valor e estabelecimento.",
+        tip: "Duplicados não são excluídos automaticamente - você decide se são realmente repetidos.",
+      },
+      {
+        title: "Salvar transações",
+        description: "Ao finalizar, toque em 'Salvar' para criar as transações. Os comprovantes ficam anexados aos lançamentos.",
+      },
+    ],
+    keywords: ["ocr", "foto", "recibo", "nota", "comprovante", "lote", "múltiplas", "batch", "categoria", "leitura automática", "scanner"],
+    deepLink: "dashboard",
+  },
+
   // ===== PRIVACIDADE E SEGURANÇA =====
   {
     id: "privacy-security",
