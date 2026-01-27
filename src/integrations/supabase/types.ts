@@ -5415,7 +5415,7 @@ export type Database = {
       import_file_type: "ofx" | "xls" | "xlsx" | "pdf"
       import_status: "pending" | "processing" | "completed" | "failed"
       installment_status: "POSTED" | "PLANNED" | "RECONCILED" | "CANCELLED"
-      integration_provider: "OPEN_FINANCE" | "ACQUIRER" | "RESEND"
+      integration_provider: "OPEN_FINANCE" | "ACQUIRER" | "RESEND" | "ENOTAS"
       integration_status: "ACTIVE" | "INACTIVE" | "PENDING" | "ERROR"
       lgpd_request_status: "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED"
       member_status: "INVITED" | "ACTIVE" | "REMOVED" | "DISABLED" | "BLOCKED"
@@ -5585,7 +5585,7 @@ export const Constants = {
       import_file_type: ["ofx", "xls", "xlsx", "pdf"],
       import_status: ["pending", "processing", "completed", "failed"],
       installment_status: ["POSTED", "PLANNED", "RECONCILED", "CANCELLED"],
-      integration_provider: ["OPEN_FINANCE", "ACQUIRER", "RESEND"],
+      integration_provider: ["OPEN_FINANCE", "ACQUIRER", "RESEND", "ENOTAS"],
       integration_status: ["ACTIVE", "INACTIVE", "PENDING", "ERROR"],
       lgpd_request_status: ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"],
       member_status: ["INVITED", "ACTIVE", "REMOVED", "DISABLED", "BLOCKED"],
