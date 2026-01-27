@@ -4945,6 +4945,10 @@ export type Database = {
           success: boolean
         }[]
       }
+      admin_reset_user_password: {
+        Args: { _target_user_id: string }
+        Returns: boolean
+      }
       auto_reveal_expired_privacy: { Args: never; Returns: undefined }
       bulk_reclassify_transactions: {
         Args: {
@@ -4963,6 +4967,14 @@ export type Database = {
           onboarding_row: Database["public"]["Tables"]["user_onboarding"]["Row"]
         }
         Returns: number
+      }
+      can_change_admin_role: {
+        Args: {
+          _caller_id: string
+          _new_role: Database["public"]["Enums"]["admin_role"]
+          _target_id: string
+        }
+        Returns: boolean
       }
       can_manage_admins: { Args: { _user_id: string }; Returns: boolean }
       change_user_account_status: {
@@ -5068,6 +5080,10 @@ export type Database = {
         Returns: boolean
       }
       is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
+      log_admin_login: {
+        Args: { _blocked_reason?: string; _success: boolean }
+        Returns: undefined
+      }
       log_dashboard_access: {
         Args: {
           _actor_id: string

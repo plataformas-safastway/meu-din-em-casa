@@ -34,7 +34,9 @@ import {
   Ban,
   CheckCircle,
   Trash2,
-  Edit
+  Edit,
+  Eye,
+  RotateCcw
 } from "lucide-react";
 import { AdminUser, AdminRole, useCurrentAdminRole } from "@/hooks/useAdminUsers";
 import { format } from "date-fns";
@@ -46,6 +48,8 @@ interface AdminUsersTableProps {
   onToggleActive: (user: AdminUser) => void;
   onRequirePasswordChange: (user: AdminUser) => void;
   onDelete: (user: AdminUser) => void;
+  onView?: (user: AdminUser) => void;
+  onResetPassword?: (user: AdminUser) => void;
 }
 
 const roleLabels: Record<AdminRole, string> = {
@@ -74,7 +78,9 @@ export function AdminUsersTable({
   onEdit, 
   onToggleActive, 
   onRequirePasswordChange,
-  onDelete 
+  onDelete,
+  onView,
+  onResetPassword,
 }: AdminUsersTableProps) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -220,14 +226,28 @@ export function AdminUsersTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {onView && (
+                            <DropdownMenuItem onClick={() => onView(user)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Ver detalhes
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => onEdit(user)}>
                             <Edit className="w-4 h-4 mr-2" />
                             Editar
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {onResetPassword && (
+                            <DropdownMenuItem onClick={() => onResetPassword(user)}>
+                              <RotateCcw className="w-4 h-4 mr-2" />
+                              Resetar senha
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => onRequirePasswordChange(user)}>
                             <Key className="w-4 h-4 mr-2" />
                             Exigir troca de senha
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => onToggleActive(user)}>
                             {user.is_active ? (
                               <>
