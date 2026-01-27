@@ -11,7 +11,13 @@ import {
   UserX,
   Shield,
   History,
-  MoreHorizontal
+  MoreHorizontal,
+  UserCog,
+  Plus,
+  KeyRound,
+  Edit,
+  Power,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,9 +49,21 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAssignRole, useRemoveRole, AppRole } from "@/hooks/useUserRole";
 import { AdminUserProfileView } from "@/components/admin/AdminUserProfileView";
@@ -53,6 +71,20 @@ import { UserStatusBadge } from "@/components/admin/UserStatusBadge";
 import { ChangeUserStatusDialog } from "@/components/admin/ChangeUserStatusDialog";
 import { UserStatusAuditSheet } from "@/components/admin/UserStatusAuditSheet";
 import { useUsersWithStatus, useUserStatusCounts, UserAccountStatus } from "@/hooks/useUserAccountStatus";
+import { 
+  useAdminUsersList, 
+  useUpdateAdminUser, 
+  useDeleteAdminUser,
+  useCanManageAdmins,
+  AdminUser 
+} from "@/hooks/useAdminUsers";
+import { 
+  CreateAdminUserSheet, 
+  EditAdminUserSheet,
+  AdminAuditLogsTable,
+  ResetPasswordSheet,
+  AdminUserDetailSheet,
+} from "@/components/admin/users";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -77,7 +109,9 @@ export function AdminUsersPage() {
   const [selectedFamily, setSelectedFamily] = useState<FamilyWithMembers | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<{ userId: string; memberId: string } | null>(null);
+  const [mainTab, setMainTab] = useState<"consumers" | "admin">("consumers");
   const [activeTab, setActiveTab] = useState<"active" | "blocked">("active");
+  const [adminSubTab, setAdminSubTab] = useState<"users" | "audit">("users");
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [auditSheetOpen, setAuditSheetOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{
@@ -86,16 +120,63 @@ export function AdminUsersPage() {
     status: UserAccountStatus;
   } | null>(null);
 
+  // Admin users management state
+  const [createAdminOpen, setCreateAdminOpen] = useState(false);
+  const [editAdminUser, setEditAdminUser] = useState<AdminUser | null>(null);
+  const [deleteAdminUser, setDeleteAdminUser] = useState<AdminUser | null>(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState<AdminUser | null>(null);
+  const [detailAdminUser, setDetailAdminUser] = useState<AdminUser | null>(null);
+
   // User status data
   const { data: statusCounts } = useUserStatusCounts();
   const { data: usersWithStatus, isLoading: usersLoading } = useUsersWithStatus(
     activeTab === "active" ? "ACTIVE" : "ALL"
   );
 
+  // Admin users data
+  const { data: canManageAdmins } = useCanManageAdmins();
+  const { data: adminUsers, isLoading: adminUsersLoading, refetch: refetchAdminUsers } = useAdminUsersList();
+  const updateAdminUser = useUpdateAdminUser();
+  const deleteAdminUserMutation = useDeleteAdminUser();
+
   // Filter users for blocked/disabled tab
   const blockedUsers = usersWithStatus?.filter(
     (u) => u.account_status === "BLOCKED" || u.account_status === "DISABLED"
   );
+
+  // Admin user handlers
+  const handleToggleAdminActive = async (user: AdminUser) => {
+    try {
+      await updateAdminUser.mutateAsync({
+        id: user.id,
+        isActive: !user.is_active,
+      });
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  const handleRequirePasswordChange = async (user: AdminUser) => {
+    try {
+      await updateAdminUser.mutateAsync({
+        id: user.id,
+        mustChangePassword: true,
+      });
+      toast.success("Troca de senha será exigida no próximo login");
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  const handleConfirmDeleteAdmin = async () => {
+    if (!deleteAdminUser) return;
+    try {
+      await deleteAdminUserMutation.mutateAsync(deleteAdminUser.id);
+      setDeleteAdminUser(null);
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
 
   const { data: families, isLoading } = useQuery({
     queryKey: ['admin-families'],
@@ -184,74 +265,99 @@ export function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Usuários</h2>
-        <p className="text-muted-foreground">Gerencie usuários e famílias do sistema</p>
-      </div>
-
-      {/* Status Summary Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Users className="w-8 h-8 text-primary" />
-              <div>
-                <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{statusCounts?.total || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Shield className="w-8 h-8 text-primary" />
-              <div>
-                <p className="text-sm text-muted-foreground">Ativos</p>
-                <p className="text-2xl font-bold">{statusCounts?.active || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <UserX className="w-8 h-8 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">Desativados</p>
-                <p className="text-2xl font-bold">{statusCounts?.disabled || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Ban className="w-8 h-8 text-destructive" />
-              <div>
-                <p className="text-sm text-muted-foreground">Bloqueados</p>
-                <p className="text-2xl font-bold">{statusCounts?.blocked || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search */}
-      <div className="flex gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou família..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Usuários</h2>
+          <p className="text-muted-foreground">Gerencie usuários consumidores e colaboradores do dashboard</p>
         </div>
+        {mainTab === "admin" && canManageAdmins && (
+          <Button onClick={() => setCreateAdminOpen(true)} className="w-full sm:w-auto">
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Colaborador
+          </Button>
+        )}
       </div>
 
-      {/* Tabs for Active / Blocked users */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "blocked")}>
+      {/* Main Tabs: Consumers vs Admin */}
+      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as "consumers" | "admin")}>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="consumers" className="flex-1 sm:flex-none gap-2">
+            <Users className="w-4 h-4" />
+            Consumidores
+          </TabsTrigger>
+          {canManageAdmins && (
+            <TabsTrigger value="admin" className="flex-1 sm:flex-none gap-2">
+              <UserCog className="w-4 h-4" />
+              Colaboradores Admin
+            </TabsTrigger>
+          )}
+        </TabsList>
+
+        {/* Consumer Users Content */}
+        <TabsContent value="consumers" className="mt-6 space-y-6">
+          {/* Status Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Users className="w-8 h-8 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total</p>
+                    <p className="text-2xl font-bold">{statusCounts?.total || 0}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Shield className="w-8 h-8 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ativos</p>
+                    <p className="text-2xl font-bold">{statusCounts?.active || 0}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <UserX className="w-8 h-8 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Desativados</p>
+                    <p className="text-2xl font-bold">{statusCounts?.disabled || 0}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Ban className="w-8 h-8 text-destructive" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Bloqueados</p>
+                    <p className="text-2xl font-bold">{statusCounts?.blocked || 0}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Search */}
+          <div className="flex gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome ou família..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          {/* Tabs for Active / Blocked users */}
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "blocked")}>
         <TabsList>
           <TabsTrigger value="active" className="gap-2">
             <Shield className="w-4 h-4" />
@@ -452,76 +558,209 @@ export function AdminUsersPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Families Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Famílias Cadastradas
-          </CardTitle>
-          <CardDescription>
-            {families?.length || 0} famílias no sistema
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin" />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Família</TableHead>
-                  <TableHead>Membros</TableHead>
-                  <TableHead>Criado em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredFamilies?.map((family) => (
-                  <TableRow key={family.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{family.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {family.family_members[0]?.display_name || "—"}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {family.members_count} {family.members_count === 1 ? 'membro' : 'membros'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(family.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewDetails(family)}
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        Ver
-                        <ChevronRight className="w-4 h-4 ml-1" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredFamilies?.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      Nenhuma família encontrada
-                    </TableCell>
-                  </TableRow>
+          {/* Families Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Famílias Cadastradas
+              </CardTitle>
+              <CardDescription>
+                {families?.length || 0} famílias no sistema
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Família</TableHead>
+                      <TableHead>Membros</TableHead>
+                      <TableHead>Criado em</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredFamilies?.map((family) => (
+                      <TableRow key={family.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{family.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {family.family_members[0]?.display_name || "—"}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {family.members_count} {family.members_count === 1 ? 'membro' : 'membros'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(family.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewDetails(family)}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            Ver
+                            <ChevronRight className="w-4 h-4 ml-1" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filteredFamilies?.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          Nenhuma família encontrada
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Admin Users Tab */}
+        {canManageAdmins && (
+          <TabsContent value="admin" className="mt-6 space-y-6">
+            <Tabs value={adminSubTab} onValueChange={(v) => setAdminSubTab(v as "users" | "audit")}>
+              <TabsList>
+                <TabsTrigger value="users" className="gap-2">
+                  <UserCog className="w-4 h-4" />
+                  Colaboradores
+                </TabsTrigger>
+                <TabsTrigger value="audit" className="gap-2">
+                  <History className="w-4 h-4" />
+                  Auditoria
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="users" className="mt-4">
+                {adminUsersLoading ? (
+                  <div className="space-y-4">
+                    {[...Array(5)].map((_, i) => (
+                      <Skeleton key={i} className="h-16 w-full" />
+                    ))}
+                  </div>
+                ) : (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <UserCog className="w-5 h-5" />
+                        Colaboradores do Dashboard
+                      </CardTitle>
+                      <CardDescription>
+                        {adminUsers?.length || 0} colaboradores com acesso ao dashboard
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Colaborador</TableHead>
+                            <TableHead>Papel</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Último acesso</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {adminUsers?.map((adminUser) => (
+                            <TableRow key={adminUser.id}>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{adminUser.display_name || adminUser.email}</p>
+                                  <p className="text-xs text-muted-foreground">{adminUser.email}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={adminUser.admin_role === 'MASTER' ? 'default' : 'secondary'}>
+                                  {adminUser.admin_role}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={adminUser.is_active ? 'default' : 'destructive'}>
+                                  {adminUser.is_active ? 'Ativo' : 'Inativo'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {adminUser.last_login_at 
+                                  ? format(new Date(adminUser.last_login_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
+                                  : "Nunca"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <MoreHorizontal className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => setDetailAdminUser(adminUser)}>
+                                      <Eye className="w-4 h-4 mr-2" />
+                                      Ver detalhes
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setEditAdminUser(adminUser)}>
+                                      <Edit className="w-4 h-4 mr-2" />
+                                      Editar
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setResetPasswordUser(adminUser)}>
+                                      <KeyRound className="w-4 h-4 mr-2" />
+                                      Resetar senha
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => handleToggleAdminActive(adminUser)}>
+                                      <Power className="w-4 h-4 mr-2" />
+                                      {adminUser.is_active ? 'Desativar' : 'Reativar'}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleRequirePasswordChange(adminUser)}>
+                                      <KeyRound className="w-4 h-4 mr-2" />
+                                      Exigir troca de senha
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      className="text-destructive" 
+                                      onClick={() => setDeleteAdminUser(adminUser)}
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      Excluir
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {(adminUsers?.length || 0) === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                Nenhum colaborador cadastrado
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
                 )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+              </TabsContent>
+
+              <TabsContent value="audit" className="mt-4">
+                <AdminAuditLogsTable />
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+        )}
+      </Tabs>
 
       {/* Family Details Sheet */}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
@@ -610,7 +849,7 @@ export function AdminUsersPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Change Status Dialog */}
+      {/* Consumer User Dialogs */}
       {selectedUser && (
         <>
           <ChangeUserStatusDialog
@@ -628,6 +867,60 @@ export function AdminUsersPage() {
           />
         </>
       )}
+
+      {/* Admin Users Sheets */}
+      <CreateAdminUserSheet 
+        open={createAdminOpen} 
+        onOpenChange={setCreateAdminOpen} 
+      />
+      
+      <EditAdminUserSheet
+        user={editAdminUser}
+        open={!!editAdminUser}
+        onOpenChange={(open) => !open && setEditAdminUser(null)}
+      />
+
+      <ResetPasswordSheet
+        user={resetPasswordUser}
+        open={!!resetPasswordUser}
+        onOpenChange={(open) => !open && setResetPasswordUser(null)}
+        onSuccess={() => refetchAdminUsers()}
+      />
+
+      <AdminUserDetailSheet
+        user={detailAdminUser}
+        open={!!detailAdminUser}
+        onOpenChange={(open) => !open && setDetailAdminUser(null)}
+        onEdit={setEditAdminUser}
+        onResetPassword={setResetPasswordUser}
+        onToggleActive={handleToggleAdminActive}
+        onRequirePasswordChange={handleRequirePasswordChange}
+      />
+
+      {/* Delete Admin Confirmation */}
+      <AlertDialog open={!!deleteAdminUser} onOpenChange={(open) => !open && setDeleteAdminUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Colaborador</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <strong>{deleteAdminUser?.display_name || deleteAdminUser?.email}</strong>?
+              <br /><br />
+              <span className="text-amber-600">
+                Recomendamos desativar ao invés de excluir para manter o histórico de auditoria.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDeleteAdmin}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
