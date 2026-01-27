@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 27/01/2026 - Sprint 8 Gestão Usuários Admin
-export const HELP_CENTER_VERSION = "27/01/2026 v9";
+// Última atualização: 27/01/2026 - Fix Tab Switch Session Persistence
+export const HELP_CENTER_VERSION = "27/01/2026 v10";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -1379,6 +1379,28 @@ export const faqItems: FAQItem[] = [
     answer: "Se uma linha tem valor mas não tem data, o OIK usa a data da linha anterior. Isso é comum em extratos Bradesco onde múltiplas transações do mesmo dia aparecem sem repetir a data. A ordem original do arquivo é preservada.",
     category: "import",
     keywords: ["data", "carry", "forward", "anterior", "mesma", "bradesco"],
+  },
+  // ===== SESSÃO E RASCUNHO =====
+  {
+    id: "faq-session-1",
+    question: "O que acontece se eu alternar de aba ou minimizar o app?",
+    answer: "Sua sessão permanece ativa e você continua na mesma tela ao retornar. Não há perda de dados ou redirecionamento para a tela inicial. O OIK mantém sua posição mesmo após ficar ausente por vários minutos.",
+    category: "settings",
+    keywords: ["aba", "minimizar", "sessão", "alternar", "janela", "voltar", "focus"],
+  },
+  {
+    id: "faq-session-2",
+    question: "Meus dados de formulário são salvos automaticamente?",
+    answer: "Sim! O OIK salva automaticamente rascunhos de formulários em edição. Se você alternar de aba ou fechar acidentalmente, ao retornar seus dados serão restaurados automaticamente. Um aviso discreto 'Rascunho restaurado' aparece quando isso acontece.",
+    category: "settings",
+    keywords: ["rascunho", "salvar", "automático", "formulário", "perder", "dados", "restaurar"],
+  },
+  {
+    id: "faq-session-3",
+    question: "Por quanto tempo o rascunho fica salvo?",
+    answer: "Os rascunhos são mantidos por 24 horas. Após esse período, são automaticamente descartados. Ao salvar com sucesso, o rascunho é imediatamente removido.",
+    category: "settings",
+    keywords: ["rascunho", "tempo", "expirar", "24 horas", "duração"],
   },
 ];
 
