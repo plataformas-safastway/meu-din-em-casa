@@ -479,12 +479,12 @@ export function AdminDashboard() {
               })}
             </>
           )}
-          {lgpdMenuItems.length > 0 && (
+          {integrationsMenuItems.length > 0 && (
             <>
               <div className="pt-4 pb-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">LGPD & Privacidade</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Integrações</p>
               </div>
-              {lgpdMenuItems.map((item) => {
+              {integrationsMenuItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -503,12 +503,12 @@ export function AdminDashboard() {
               })}
             </>
           )}
-          {integrationsMenuItems.length > 0 && (
+          {lgpdMenuItems.length > 0 && (
             <>
               <div className="pt-4 pb-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Integrações</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">LGPD & Privacidade</p>
               </div>
-              {integrationsMenuItems.map((item) => {
+              {lgpdMenuItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
