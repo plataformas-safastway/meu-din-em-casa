@@ -1,4 +1,5 @@
 import { getAuthDebugSnapshot } from "@/lib/devDiagnostics";
+import { isNavDebugEnabled } from "@/lib/navDebug";
 
 let installed = false;
 
@@ -16,6 +17,7 @@ function getNavigationType(): string | undefined {
 }
 
 export function installNavigationAudit() {
+  if (!isNavDebugEnabled()) return;
   if (installed) return;
   if (typeof window === "undefined") return;
   installed = true;
