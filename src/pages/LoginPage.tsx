@@ -46,13 +46,16 @@ export function LoginPage() {
     }
 
     setLoading(true);
-    const { error } = await signIn(email, password);
+    try {
+      // Defensive: in some edge cases (test env / unexpected auth layer failure),
+      // signIn can resolve to undefined; never destructure without a guard.
+      const result = await signIn(email, password);
+      const error = result?.error ?? null;
 
-    if (error) {
-      toast.error("E-mail ou senha incorretos");
-      setLoading(false);
-      return;
-    }
+      if (error) {
+        toast.error("E-mail ou senha incorretos");
+        return;
+      }
 
     const nextParam = searchParams.get("next");
     const safeNext = nextParam && nextParam.startsWith("/") ? nextParam : null;
@@ -106,8 +109,14 @@ export function LoginPage() {
       }
     }
 
-    toast.success("Bem-vindos de volta");
-    navigate(redirectTo, { replace: true });
+      toast.success("Bem-vindos de volta");
+      navigate(redirectTo, { replace: true });
+    } catch (err) {
+      console.error("[Login] handleLogin failed", err);
+      toast.error("Erro ao entrar. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
