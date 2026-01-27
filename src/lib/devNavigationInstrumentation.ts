@@ -1,15 +1,20 @@
 /**
- * DEV-ONLY Navigation Instrumentation
+ * DEV-ONLY Navigation Instrumentation v2
  * 
- * This file intercepts ALL navigation attempts to "/" and logs a full stack trace.
- * It also logs visibility/focus events to help debug tab-switch issues.
+ * Comprehensive instrumentation to capture:
+ * 1. All browser lifecycle events (focus, blur, visibility, pagehide, pageshow, etc.)
+ * 2. Navigation via window.location (assign, replace, href setter)
+ * 3. Reload detection via Performance API
+ * 4. Service Worker / PWA interference
+ * 5. BFCache restore
  * 
- * This file should ONLY run in development mode.
+ * All logs prefixed with [DEV-NAV] or [DEV-NAV2]
  */
 
 const IS_DEV = import.meta.env.DEV;
 
 let installed = false;
+let installedV2 = false;
 
 function getFullPath(): string {
   return `${window.location.pathname}${window.location.search ?? ""}${window.location.hash ?? ""}`;
@@ -27,6 +32,25 @@ function getVisibilityInfo() {
   };
 }
 
+function getNavigationType(): string | null {
+  try {
+    const entries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
+    return entries[0]?.type ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function getLocationInfo() {
+  return {
+    href: window.location.href,
+    pathname: window.location.pathname,
+    search: window.location.search,
+    hash: window.location.hash,
+    referrer: document.referrer,
+  };
+}
+
 /**
  * Logs when we detect a navigation TO "/" and includes a stack trace
  */
@@ -38,7 +62,6 @@ function logHomeNavigation(method: string, targetUrl: string | URL | null | unde
   try {
     if (targetUrl) {
       if (typeof targetUrl === "string") {
-        // Could be full URL or just path
         if (targetUrl.startsWith("http")) {
           targetPath = new URL(targetUrl).pathname;
         } else {
@@ -52,13 +75,10 @@ function logHomeNavigation(method: string, targetUrl: string | URL | null | unde
     targetPath = String(targetUrl);
   }
 
-  // Only log if navigating to "/" or "/login" (home-like surfaces)
   const isHomeLike = targetPath === "/" || targetPath === "/login";
   if (!isHomeLike) return;
 
   const currentPath = getFullPath();
-  
-  // Don't log if we're already at home
   if (currentPath === "/" || currentPath === "/login") return;
 
   console.error(`[DEV-NAV] 🚨 HOME_NAVIGATION_DETECTED via ${method}`, {
@@ -91,11 +111,9 @@ export function installDevNavigationInstrumentation() {
   
   installed = true;
   
-  console.log("[DEV-NAV] 🔧 Installing navigation instrumentation...");
+  console.log("[DEV-NAV] 🔧 Installing navigation instrumentation v1...");
 
-  // =====================================================
-  // 1. Intercept history.pushState and history.replaceState
-  // =====================================================
+  // Intercept history.pushState and history.replaceState
   const originalPushState = history.pushState;
   const originalReplaceState = history.replaceState;
 
@@ -109,15 +127,7 @@ export function installDevNavigationInstrumentation() {
     return originalReplaceState.call(this, state, unused, url);
   };
 
-  // =====================================================
-  // 2. Intercept window.location assignments
-  // =====================================================
-  // We can't directly intercept location.href, but we can detect changes via popstate
-  // and also log when location changes via other means
-
-  // =====================================================
-  // 3. Log browser visibility/focus events
-  // =====================================================
+  // Log browser visibility/focus events
   document.addEventListener("visibilitychange", (e) => {
     logBrowserEvent("visibilitychange", e);
   }, true);
@@ -132,7 +142,6 @@ export function installDevNavigationInstrumentation() {
 
   window.addEventListener("popstate", (e) => {
     logBrowserEvent("popstate", e);
-    // Check if we landed on "/"
     const currentPath = getFullPath();
     if (currentPath === "/" || currentPath === "/login") {
       console.error("[DEV-NAV] 🚨 POPSTATE landed on home-like route", {
@@ -153,9 +162,7 @@ export function installDevNavigationInstrumentation() {
     logBrowserEvent("pagehide", e);
   }, true);
 
-  // =====================================================
-  // 4. Periodic path check (detect external changes)
-  // =====================================================
+  // Periodic path check
   let lastPath = getFullPath();
   const checkInterval = setInterval(() => {
     const currentPath = getFullPath();
@@ -178,15 +185,319 @@ export function installDevNavigationInstrumentation() {
     }
   }, 500);
 
-  // Cleanup not needed for dev instrumentation, but good practice
   window.addEventListener("beforeunload", () => {
     clearInterval(checkInterval);
   });
 
-  console.log("[DEV-NAV] ✅ Navigation instrumentation installed", {
+  console.log("[DEV-NAV] ✅ Navigation instrumentation v1 installed", {
     initialPath: getFullPath(),
     timestamp: getTimestamp(),
   });
+}
+
+/**
+ * V2 Instrumentation: Complete lifecycle + location.* + reload detection + SW check
+ */
+export function installDevNavigationInstrumentationV2() {
+  if (!IS_DEV) return;
+  if (installedV2) return;
+  if (typeof window === "undefined") return;
+  
+  installedV2 = true;
+  
+  const navType = getNavigationType();
+  
+  console.log("[DEV-NAV2] 🔧 Installing COMPLETE navigation instrumentation v2...", {
+    initialPath: getFullPath(),
+    navigationType: navType,
+    location: getLocationInfo(),
+    timestamp: getTimestamp(),
+  });
+
+  // =====================================================
+  // 1. LIFECYCLE EVENTS
+  // =====================================================
+  
+  window.addEventListener("focus", () => {
+    console.log("[DEV-NAV2] 👁️ window.focus", {
+      path: getFullPath(),
+      visibility: getVisibilityInfo(),
+      navigationType: getNavigationType(),
+      ts: getTimestamp(),
+    });
+  }, true);
+
+  window.addEventListener("blur", () => {
+    console.log("[DEV-NAV2] 👁️ window.blur", {
+      path: getFullPath(),
+      visibility: getVisibilityInfo(),
+      ts: getTimestamp(),
+    });
+  }, true);
+
+  document.addEventListener("visibilitychange", () => {
+    console.log("[DEV-NAV2] 👁️ visibilitychange", {
+      path: getFullPath(),
+      state: document.visibilityState,
+      hidden: document.hidden,
+      navigationType: getNavigationType(),
+      ts: getTimestamp(),
+    });
+  }, true);
+
+  window.addEventListener("pagehide", (e) => {
+    console.warn("[DEV-NAV2] ⚠️ pagehide", {
+      path: getFullPath(),
+      persisted: (e as PageTransitionEvent).persisted,
+      ts: getTimestamp(),
+    });
+  }, true);
+
+  window.addEventListener("pageshow", (e) => {
+    const persisted = (e as PageTransitionEvent).persisted;
+    const currentPath = getFullPath();
+    const navType = getNavigationType();
+    
+    console.warn("[DEV-NAV2] ⚠️ pageshow", {
+      path: currentPath,
+      persisted,
+      navigationType: navType,
+      isBFCacheRestore: persisted,
+      ts: getTimestamp(),
+    });
+
+    // Check if we're at "/" unexpectedly after pageshow
+    if (currentPath === "/" || currentPath === "/login") {
+      console.error("[DEV-NAV2] 🚨 PAGESHOW_AT_HOME", {
+        path: currentPath,
+        persisted,
+        navigationType: navType,
+        location: getLocationInfo(),
+      });
+      console.trace("[DEV-NAV2] pageshow at home stack");
+    }
+
+    // BFCache restore detection
+    if (persisted) {
+      console.error("[DEV-NAV2] 🔄 BFCACHE_RESTORE_DETECTED", {
+        path: currentPath,
+        ts: getTimestamp(),
+      });
+    }
+  }, true);
+
+  window.addEventListener("beforeunload", (e) => {
+    console.warn("[DEV-NAV2] ⚠️ beforeunload", {
+      path: getFullPath(),
+      ts: getTimestamp(),
+    });
+  }, true);
+
+  window.addEventListener("unload", () => {
+    console.warn("[DEV-NAV2] ⚠️ unload", {
+      path: getFullPath(),
+      ts: getTimestamp(),
+    });
+  }, true);
+
+  // freeze/resume (Page Lifecycle API)
+  if ("onfreeze" in document) {
+    document.addEventListener("freeze", () => {
+      console.warn("[DEV-NAV2] ❄️ freeze (page frozen)", {
+        path: getFullPath(),
+        ts: getTimestamp(),
+      });
+    }, true);
+  }
+
+  if ("onresume" in document) {
+    document.addEventListener("resume", () => {
+      console.warn("[DEV-NAV2] 🔥 resume (page unfrozen)", {
+        path: getFullPath(),
+        navigationType: getNavigationType(),
+        ts: getTimestamp(),
+      });
+    }, true);
+  }
+
+  // =====================================================
+  // 2. INTERCEPT window.location NAVIGATION
+  // =====================================================
+  
+  try {
+    // Intercept location.assign
+    const originalAssign = window.location.assign.bind(window.location);
+    window.location.assign = function devAssign(url: string) {
+      console.error("[DEV-NAV2] 🚨 location.assign CALLED", {
+        from: getFullPath(),
+        to: url,
+        ts: getTimestamp(),
+      });
+      console.trace("[DEV-NAV2] location.assign stack");
+      return originalAssign(url);
+    };
+
+    // Intercept location.replace
+    const originalReplace = window.location.replace.bind(window.location);
+    window.location.replace = function devReplace(url: string) {
+      console.error("[DEV-NAV2] 🚨 location.replace CALLED", {
+        from: getFullPath(),
+        to: url,
+        ts: getTimestamp(),
+      });
+      console.trace("[DEV-NAV2] location.replace stack");
+      return originalReplace(url);
+    };
+
+    console.log("[DEV-NAV2] ✅ location.assign/replace intercepted");
+  } catch (err) {
+    console.warn("[DEV-NAV2] Could not intercept location methods", err);
+  }
+
+  // Note: location.href setter cannot be intercepted directly
+  // We rely on the periodic check to detect changes
+
+  // =====================================================
+  // 3. RELOAD DETECTION
+  // =====================================================
+  
+  // Check navigation type on load
+  const initialNavType = getNavigationType();
+  if (initialNavType === "reload") {
+    console.error("[DEV-NAV2] 🔄 PAGE_RELOAD_DETECTED on init", {
+      path: getFullPath(),
+      navigationType: initialNavType,
+      location: getLocationInfo(),
+    });
+  } else if (initialNavType === "back_forward") {
+    console.warn("[DEV-NAV2] ⏮️ BACK_FORWARD_NAVIGATION on init", {
+      path: getFullPath(),
+      navigationType: initialNavType,
+    });
+  }
+
+  // =====================================================
+  // 4. SERVICE WORKER / PWA CHECK
+  // =====================================================
+  
+  checkServiceWorkers();
+
+  // =====================================================
+  // 5. ENHANCED PERIODIC CHECK
+  // =====================================================
+  
+  let lastPathV2 = getFullPath();
+  let lastNavType = initialNavType;
+  
+  setInterval(() => {
+    const currentPath = getFullPath();
+    const currentNavType = getNavigationType();
+    
+    // Detect path change
+    if (currentPath !== lastPathV2) {
+      const wasHome = lastPathV2 === "/" || lastPathV2 === "/login";
+      const isHome = currentPath === "/" || currentPath === "/login";
+      
+      if (!wasHome && isHome) {
+        console.error("[DEV-NAV2] 🚨 PATH_CHANGED_TO_HOME (interval)", {
+          from: lastPathV2,
+          to: currentPath,
+          navigationType: currentNavType,
+          visibility: getVisibilityInfo(),
+          ts: getTimestamp(),
+        });
+        console.trace("[DEV-NAV2] interval -> home stack");
+      }
+      
+      lastPathV2 = currentPath;
+    }
+    
+    // Detect navigation type change (reload during session)
+    if (currentNavType !== lastNavType && currentNavType === "reload") {
+      console.error("[DEV-NAV2] 🔄 RELOAD_DETECTED_DURING_SESSION", {
+        path: currentPath,
+        previousNavType: lastNavType,
+        currentNavType,
+        ts: getTimestamp(),
+      });
+    }
+    lastNavType = currentNavType;
+  }, 300);
+
+  // =====================================================
+  // 6. TEST START LOG
+  // =====================================================
+  
+  console.log("[DEV-NAV2] ✅ TEST_START - Complete instrumentation active", {
+    href: window.location.href,
+    pathname: window.location.pathname,
+    navigationType: initialNavType,
+    referrer: document.referrer,
+    visibility: getVisibilityInfo(),
+    ts: getTimestamp(),
+  });
+}
+
+/**
+ * Check and log Service Worker status
+ */
+async function checkServiceWorkers() {
+  if (!IS_DEV) return;
+  if (!("serviceWorker" in navigator)) {
+    console.log("[DEV-NAV2] 🔧 No Service Worker support in this browser");
+    return;
+  }
+
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    
+    if (registrations.length === 0) {
+      console.log("[DEV-NAV2] 🔧 No Service Workers registered");
+      return;
+    }
+
+    console.warn("[DEV-NAV2] ⚠️ SERVICE_WORKERS_FOUND", {
+      count: registrations.length,
+      registrations: registrations.map(r => ({
+        scope: r.scope,
+        active: r.active?.state,
+        waiting: r.waiting?.state,
+        installing: r.installing?.state,
+      })),
+    });
+
+    // Log if any SW is active
+    for (const reg of registrations) {
+      if (reg.active) {
+        console.warn("[DEV-NAV2] ⚠️ ACTIVE_SERVICE_WORKER", {
+          scope: reg.scope,
+          state: reg.active.state,
+          scriptURL: reg.active.scriptURL,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[DEV-NAV2] Error checking service workers", err);
+  }
+}
+
+/**
+ * DEV-ONLY: Unregister all service workers for testing
+ */
+export async function unregisterAllServiceWorkers() {
+  if (!IS_DEV) return;
+  if (!("serviceWorker" in navigator)) return;
+
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    for (const reg of registrations) {
+      await reg.unregister();
+      console.log("[DEV-NAV2] 🗑️ Unregistered SW:", reg.scope);
+    }
+    console.log("[DEV-NAV2] ✅ All Service Workers unregistered");
+  } catch (err) {
+    console.error("[DEV-NAV2] Error unregistering service workers", err);
+  }
 }
 
 /**

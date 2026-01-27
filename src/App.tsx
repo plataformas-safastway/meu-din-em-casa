@@ -14,7 +14,7 @@ import { clearExpiredDrafts } from "@/hooks/useDraftPersistence";
 import { installNavigationAudit } from "@/lib/navigationAudit";
 import { setAuthDebugSnapshot } from "@/lib/devDiagnostics";
 import { installRouteResumeGuard, tryInitialRouteRestore } from "@/lib/routeResumeGuard";
-import { installDevNavigationInstrumentation, logNavigationAttempt } from "@/lib/devNavigationInstrumentation";
+import { installDevNavigationInstrumentation, installDevNavigationInstrumentationV2, logNavigationAttempt } from "@/lib/devNavigationInstrumentation";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { TermosPage } from "./pages/TermosPage";
@@ -41,6 +41,7 @@ installNavigationAudit();
 
 // DEV-ONLY: Install navigation instrumentation to capture stack traces
 installDevNavigationInstrumentation();
+installDevNavigationInstrumentationV2();
 
 // If we booted at '/' unexpectedly after a tab discard/resume, restore immediately
 tryInitialRouteRestore();
