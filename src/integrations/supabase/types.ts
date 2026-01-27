@@ -2438,6 +2438,75 @@ export type Database = {
           },
         ]
       }
+      integrations_config: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          is_enabled: boolean | null
+          last_success_at: string | null
+          last_test_at: string | null
+          provider: Database["public"]["Enums"]["integration_provider"]
+          status: Database["public"]["Enums"]["integration_status"] | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          last_success_at?: string | null
+          last_test_at?: string | null
+          provider: Database["public"]["Enums"]["integration_provider"]
+          status?: Database["public"]["Enums"]["integration_status"] | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          last_success_at?: string | null
+          last_test_at?: string | null
+          provider?: Database["public"]["Enums"]["integration_provider"]
+          status?: Database["public"]["Enums"]["integration_status"] | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      integrations_metrics_daily: {
+        Row: {
+          created_at: string | null
+          id: string
+          metric_date: string
+          metric_key: string
+          metric_value: number | null
+          provider: Database["public"]["Enums"]["integration_provider"]
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          metric_date?: string
+          metric_key: string
+          metric_value?: number | null
+          provider: Database["public"]["Enums"]["integration_provider"]
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          metric_date?: string
+          metric_key?: string
+          metric_value?: number | null
+          provider?: Database["public"]["Enums"]["integration_provider"]
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number
@@ -5346,6 +5415,8 @@ export type Database = {
       import_file_type: "ofx" | "xls" | "xlsx" | "pdf"
       import_status: "pending" | "processing" | "completed" | "failed"
       installment_status: "POSTED" | "PLANNED" | "RECONCILED" | "CANCELLED"
+      integration_provider: "OPEN_FINANCE" | "ACQUIRER" | "RESEND"
+      integration_status: "ACTIVE" | "INACTIVE" | "PENDING" | "ERROR"
       lgpd_request_status: "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED"
       member_status: "INVITED" | "ACTIVE" | "REMOVED" | "DISABLED" | "BLOCKED"
       payment_method:
@@ -5514,6 +5585,8 @@ export const Constants = {
       import_file_type: ["ofx", "xls", "xlsx", "pdf"],
       import_status: ["pending", "processing", "completed", "failed"],
       installment_status: ["POSTED", "PLANNED", "RECONCILED", "CANCELLED"],
+      integration_provider: ["OPEN_FINANCE", "ACQUIRER", "RESEND"],
+      integration_status: ["ACTIVE", "INACTIVE", "PENDING", "ERROR"],
       lgpd_request_status: ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"],
       member_status: ["INVITED", "ACTIVE", "REMOVED", "DISABLED", "BLOCKED"],
       payment_method: ["cash", "debit", "credit", "pix", "transfer", "cheque"],

@@ -28,6 +28,9 @@ import {
   Scale,
   Vault,
   UserPlus,
+  Plug,
+  Mail,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,11 +81,18 @@ import {
   BreakglassApprovalsPage,
   LGPDAuditPage,
 } from "./lgpd";
+import {
+  IntegrationsOverviewPage,
+  IntegrationOpenFinancePage,
+  IntegrationAcquirerPage,
+  IntegrationResendPage,
+} from "./integrations";
 import ExecutiveReportsPage from "./executive/ExecutiveReportsPage";
 import { useExecutiveAccess } from "@/hooks/useExecutiveReports";
 import { useLegalAccess } from "@/hooks/useLegalAccess";
 import { ForcePasswordChangeModal } from "@/components/auth/ForcePasswordChangeModal";
 import { CreateMasterUserSheet } from "@/components/admin/CreateMasterUserSheet";
+import { type IntegrationProvider } from "@/hooks/useIntegrationsConfig";
 
 type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "settings"
   | "fin-overview" | "fin-users" | "fin-payments" | "fin-invoices" | "fin-reports" | "fin-audit"
@@ -90,7 +100,8 @@ type AdminTab = "overview" | "users" | "ebooks" | "metrics" | "openfinance" | "s
   | "cs-overview" | "cs-users" | "cs-automation" | "cs-health" | "cs-audit" | "cs-lgpd"
   | "tech-health" | "tech-logs" | "tech-integrations" | "tech-keys" | "tech-flags" | "tech-audit"
   | "lgpd-overview" | "lgpd-dsar" | "lgpd-vault" | "lgpd-breakglass" | "lgpd-audit"
-  | "exec-reports";
+  | "exec-reports"
+  | "int-overview" | "int-openfinance" | "int-acquirer" | "int-resend";
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -172,6 +183,28 @@ export function AdminDashboard() {
     { id: "lgpd-audit" as AdminTab, label: "Auditoria", icon: ClipboardList },
   ] : [];
 
+  // Integrations menu - only for users with admin or tech access
+  const integrationsMenuItems = (isAdmin || hasTechAccess) ? [
+    { id: "int-overview" as AdminTab, label: "Visão Geral", icon: Plug },
+    { id: "int-openfinance" as AdminTab, label: "Open Finance", icon: Building2 },
+    { id: "int-acquirer" as AdminTab, label: "Adquirentes", icon: CreditCard },
+    { id: "int-resend" as AdminTab, label: "Resend", icon: Mail },
+  ] : [];
+
+  const handleIntegrationNavigate = (provider: IntegrationProvider) => {
+    switch (provider) {
+      case 'OPEN_FINANCE':
+        setActiveTab('int-openfinance');
+        break;
+      case 'ACQUIRER':
+        setActiveTab('int-acquirer');
+        break;
+      case 'RESEND':
+        setActiveTab('int-resend');
+        break;
+    }
+  };
+
   const renderContent = () => {
     // Check financial access for financial tabs
     if (activeTab.startsWith('fin-') && !hasFinancialAccess) {
@@ -201,6 +234,11 @@ export function AdminDashboard() {
     // Check Legal access for LGPD tabs
     if (activeTab.startsWith('lgpd-') && !hasLegalAccess) {
       return <AccessDenied message="Este módulo requer perfil LEGAL ou ADMIN_MASTER" />;
+    }
+
+    // Check access for Integrations tabs
+    if (activeTab.startsWith('int-') && !isAdmin && !hasTechAccess) {
+      return <AccessDenied message="Este módulo requer perfil ADMIN ou TECNOLOGIA" />;
     }
 
     switch (activeTab) {
@@ -268,6 +306,15 @@ export function AdminDashboard() {
         return <BreakglassApprovalsPage />;
       case "lgpd-audit":
         return <LGPDAuditPage />;
+      // Integrations
+      case "int-overview":
+        return <IntegrationsOverviewPage onNavigate={handleIntegrationNavigate} />;
+      case "int-openfinance":
+        return <IntegrationOpenFinancePage />;
+      case "int-acquirer":
+        return <IntegrationAcquirerPage />;
+      case "int-resend":
+        return <IntegrationResendPage />;
       default:
         return <AdminOverview onNavigate={setActiveTab} hasFinancialAccess={!!hasFinancialAccess} hasSupportAccess={!!hasSupportAccess} hasCSAccess={!!hasCSAccess} hasTechAccess={!!hasTechAccess} hasExecutiveAccess={!!hasExecutiveAccess} hasLegalAccess={!!hasLegalAccess} />;
     }
@@ -456,6 +503,30 @@ export function AdminDashboard() {
               })}
             </>
           )}
+          {integrationsMenuItems.length > 0 && (
+            <>
+              <div className="pt-4 pb-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase px-3">Integrações</p>
+              </div>
+              {integrationsMenuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      activeTab === item.id
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
@@ -527,6 +598,9 @@ function AdminOverview({ onNavigate, hasFinancialAccess, hasSupportAccess, hasCS
     ] : []),
     ...(hasLegalAccess ? [
       { label: "LGPD & Privacidade", icon: Shield, action: () => onNavigate("lgpd-overview") },
+    ] : []),
+    ...(hasTechAccess ? [
+      { label: "Integrações", icon: Plug, action: () => onNavigate("int-overview") },
     ] : []),
   ];
 
