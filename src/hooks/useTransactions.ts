@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { STALE_TIMES, invalidateQueryGroup } from "@/lib/queryConfig";
 import { useLogActivity } from "@/hooks/useFamilyActivity";
+import { classifyExpenseNature } from "@/lib/expenseNature";
 
 // Valid transaction sources
 export type TransactionSource = 'MANUAL' | 'UPLOAD' | 'IMPORT' | 'OCR' | 'OPEN_FINANCE' | 'GOAL_CONTRIBUTION';
@@ -158,6 +159,19 @@ export function useCreateTransaction() {
     mutationFn: async (data: TransactionInput) => {
       if (!family) throw new Error("No family");
 
+      // Classify expense nature for expenses
+      let expenseNature: string | undefined;
+      let expenseNatureSource: string | undefined;
+      
+      if (data.type === 'expense') {
+        const classification = classifyExpenseNature({
+          categoryId: data.category_id,
+          subcategoryId: data.subcategory_id || undefined,
+        });
+        expenseNature = classification.nature;
+        expenseNatureSource = classification.source;
+      }
+
       const { data: inserted, error } = await supabase.from("transactions").insert({
         family_id: family.id,
         type: data.type,
@@ -177,6 +191,8 @@ export function useCreateTransaction() {
         created_by_name: familyMember?.display_name || user?.email?.split('@')[0] || 'Usuário',
         ocr_confidence: data.ocr_confidence,
         original_description: data.original_description || data.description,
+        expense_nature: expenseNature as any,
+        expense_nature_source: expenseNatureSource as any,
       } as any).select("id").single();
 
       if (error) throw error;
