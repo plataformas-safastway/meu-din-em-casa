@@ -210,7 +210,6 @@ export function AdminLayout() {
         open={showAppAccessDenied}
         onClose={() => setShowAppAccessDenied(false)}
         reason={appAccessReason}
-        showCreateOption={false} // For now, don't allow creating from dashboard
       />
 
       <div className="min-h-screen bg-background flex">

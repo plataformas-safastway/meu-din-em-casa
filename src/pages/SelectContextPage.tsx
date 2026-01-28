@@ -49,7 +49,6 @@ export function SelectContextPage() {
         open={showAppAccessDenied}
         onClose={() => setShowAppAccessDenied(false)}
         reason={reason}
-        showCreateOption={false}
       />
       
       <div className="min-h-screen relative flex flex-col overflow-hidden">

@@ -4,9 +4,12 @@
  * This modal blocks navigation to /app when the user:
  * - Is an admin/master user without a consumer profile (no family_member record)
  * - Has not completed the App onboarding
+ * 
+ * CONSISTENCY: Messaging aligned with /app-access-blocked page
  */
 
-import { AlertCircle, Smartphone, ArrowLeft, UserPlus } from "lucide-react";
+import { AlertCircle, Smartphone, ArrowLeft, LogOut, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -15,24 +18,36 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AppAccessDeniedModalProps {
   open: boolean;
   onClose: () => void;
   reason: 'no_consumer_profile' | 'onboarding_incomplete' | null;
-  onCreateConsumerProfile?: () => void;
-  showCreateOption?: boolean;
 }
 
 export function AppAccessDeniedModal({
   open,
   onClose,
   reason,
-  onCreateConsumerProfile,
-  showCreateOption = false,
 }: AppAccessDeniedModalProps) {
+  const navigate = useNavigate();
+  const { signOut, user } = useAuth();
+  
   const isNoProfile = reason === 'no_consumer_profile';
   const isOnboardingIncomplete = reason === 'onboarding_incomplete';
+
+  const handleSignOutAndCreateAccount = async () => {
+    onClose();
+    await signOut();
+    // Navigate to signup as a public user
+    navigate("/signup", { replace: true });
+  };
+
+  const handleViewDetails = () => {
+    onClose();
+    navigate("/app-access-blocked");
+  };
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -47,8 +62,7 @@ export function AppAccessDeniedModal({
           <DialogDescription className="text-center mt-2">
             {isNoProfile && (
               <>
-                Seu login é do <strong>Dashboard administrativo</strong>. Para acessar o{" "}
-                <strong>App OIK</strong>, é necessário ter uma conta de usuário consumer.
+                Este login é do <strong>Dashboard administrativo</strong> e não possui um usuário no App OIK.
               </>
             )}
             {isOnboardingIncomplete && (
@@ -61,14 +75,13 @@ export function AppAccessDeniedModal({
         </DialogHeader>
 
         <div className="space-y-3 mt-6">
-          {isNoProfile && showCreateOption && onCreateConsumerProfile && (
-            <Button 
-              className="w-full gap-2" 
-              onClick={onCreateConsumerProfile}
-            >
-              <UserPlus className="w-4 h-4" />
-              Criar conta do App
-            </Button>
+          {/* Explanation box - consistent with blocked page */}
+          {isNoProfile && (
+            <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground space-y-2">
+              <p>
+                O <strong>Dashboard</strong> e o <strong>App</strong> são ambientes separados com contextos de acesso independentes.
+              </p>
+            </div>
           )}
           
           {isOnboardingIncomplete && (
@@ -82,19 +95,43 @@ export function AppAccessDeniedModal({
             </div>
           )}
 
+          {/* Primary CTA: Return to Dashboard */}
           <Button 
-            variant="outline" 
             className="w-full gap-2" 
             onClick={onClose}
           >
             <ArrowLeft className="w-4 h-4" />
             Voltar ao Dashboard
           </Button>
+
+          {/* Secondary CTA: Sign out and create consumer account */}
+          {isNoProfile && (
+            <Button 
+              variant="outline" 
+              className="w-full gap-2" 
+              onClick={handleSignOutAndCreateAccount}
+            >
+              <LogOut className="w-4 h-4" />
+              Sair e criar conta do App
+            </Button>
+          )}
+
+          {/* Link to full details page */}
+          {isNoProfile && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-muted-foreground hover:text-foreground"
+              onClick={handleViewDetails}
+            >
+              <ExternalLink className="w-3 h-3 mr-1" />
+              Ver detalhes
+            </Button>
+          )}
         </div>
 
         <p className="text-xs text-muted-foreground text-center mt-4">
-          Contas do Dashboard e do App são independentes.<br />
-          Cada uma tem seu próprio contexto de acesso.
+          Contas do Dashboard e do App são independentes.
         </p>
       </DialogContent>
     </Dialog>
