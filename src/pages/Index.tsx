@@ -29,6 +29,7 @@ const OpenFinancePage = lazy(() => import("./OpenFinancePage").then(m => ({ defa
 const FamilyPage = lazy(() => import("./FamilyPage").then(m => ({ default: m.FamilyPage })));
 const InsightsHubPage = lazy(() => import("./InsightsHubPage").then(m => ({ default: m.InsightsHubPage })));
 const LearnedRulesPage = lazy(() => import("./settings/LearnedRulesPage"));
+const SuggestedBudgetPage = lazy(() => import("./SuggestedBudgetPage").then(m => ({ default: m.SuggestedBudgetPage })));
 
 // Minimal loading component for lazy modules
 const PageLoader = memo(() => (
