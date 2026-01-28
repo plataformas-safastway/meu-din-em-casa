@@ -8,7 +8,7 @@ import type { Json } from '@/integrations/supabase/types';
 // Types
 // =====================================================
 
-export type IntegrationProvider = 'OPEN_FINANCE' | 'ACQUIRER' | 'RESEND' | 'ENOTAS' | 'GOOGLE_DRIVE' | 'ONEDRIVE';
+export type IntegrationProvider = 'OPEN_FINANCE' | 'ACQUIRER' | 'RESEND' | 'ENOTAS' | 'GOOGLE_DRIVE' | 'ONEDRIVE' | 'LOVABLE_AI' | 'OPENSTREETMAP';
 export type IntegrationStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'ERROR';
 
 export interface IntegrationConfig {
@@ -77,6 +77,17 @@ export interface OneDriveConfig {
   client_id?: string;
   tenant_id?: string;
   picker_enabled?: boolean;
+}
+
+export interface LovableAIConfig {
+  api_key_configured?: boolean;
+  default_model?: string;
+  enabled_features?: string[];
+}
+
+export interface OpenStreetMapConfig {
+  nominatim_enabled?: boolean;
+  rate_limit_per_second?: number;
 }
 
 // =====================================================
@@ -302,6 +313,16 @@ export function useTestIntegrationConnection() {
             success = false;
             errorMessage = 'Teste de conexão não implementado';
             break;
+
+          case 'LOVABLE_AI':
+            // Check if LOVABLE_API_KEY is configured (it's auto-provisioned)
+            success = true; // Always available with Cloud
+            break;
+
+          case 'OPENSTREETMAP':
+            // OpenStreetMap Nominatim is free and always available
+            success = true;
+            break;
         }
       } catch (err) {
         errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -442,6 +463,10 @@ export function getProviderDisplayName(provider: IntegrationProvider): string {
       return 'Google Drive';
     case 'ONEDRIVE':
       return 'OneDrive';
+    case 'LOVABLE_AI':
+      return 'Lovable AI';
+    case 'OPENSTREETMAP':
+      return 'OpenStreetMap';
     default:
       return provider;
   }
