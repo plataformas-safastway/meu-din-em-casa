@@ -13,10 +13,10 @@ Esta pasta contém os materiais proprietários que fundamentam a IA OIK.
 | Arquivo | Material | Conceitos-Chave |
 |---------|----------|-----------------|
 | `Planejamento-Financeiro-Pessoal.pdf` | Jornada Completa | Inteligência emocional, diagnóstico financeiro, mapeamento receitas/despesas |
-| `Vida-Financeira-8-Passos.pdf` | 8 Passos | Sequência evolutiva, premissas fundamentais, equilíbrio acima de tudo |
+| `Vida-Financeira-8-Passos.pdf` | 8 Passos | **4 Premissas Fundamentais:** 1) Equilíbrio acima de tudo, 2) Planejamento é liberdade, 3) Esforço coletivo, 4) Crescimento constante |
 | `Principios-Equilibrio-Financeiro.pdf` | Equilíbrio Familiar | "Não depende do quanto ganha, mas do conhecimento aplicado" |
 | `Guia-Pratico-Iniciantes.pdf` | Iniciantes | "O segredo não é gastar mais, mas gastar melhor" - História João/Pedro |
-| `Trabalha-mas-dinheiro-some.pdf` | Dinheiro Some? | Método 50/30/20, reserva de emergência, para renda R$1.518-5.000 |
+| `Trabalha-mas-dinheiro-some.pdf` | Dinheiro Some? | **Método 50/30/20** (50% necessidades, 30% desejos, 20% poupança), reserva emergência 3-6 meses, para renda R$1.518-5.000 |
 
 ---
 
@@ -48,9 +48,26 @@ Esta pasta contém os materiais proprietários que fundamentam a IA OIK.
 
 ---
 
+## 📘 Núcleo Técnico (Módulos CFP®)
+
+Materiais do curso "Planejamento Financeiro - Da Teoria à Prática" da Planejar:
+
+| Arquivo | Módulo | Conceitos-Chave |
+|---------|--------|-----------------|
+| `Modulo-01-Gestao-Financeira.pdf` | Gestão Financeira | Fluxo de caixa, levantamento patrimonial, orçamento futuro, análise fatores situacionais |
+| `Modulo-02-Gestao-Riscos.pdf` | Gestão de Riscos | **3 passos:** Identificar → Eliminar → Reduzir. Depois: assumir ou terceirizar. Proteção patrimonial, pessoal e responsabilidade civil |
+| `Modulo-03-Gestao-Ativos.pdf` | Gestão de Ativos | Ciclos da vida financeira, aversão a perda, objetivos do cliente, montagem de carteira |
+| `Modulo-04-Aposentadoria.pdf` | Aposentadoria | Fábula Cigarra/Formiga, 6 riscos básicos, valor do dinheiro no tempo, longevidade |
+| `Modulo-05-Tributario.pdf` | Tributário | Pró-labore vs dividendos, PGBL, eficiência tributária (não elisão ilícita), ativos no exterior |
+| `Modulo-06-Sucessorio.pdf` | Sucessório | Regimes de bens (comunhão parcial, total, separação, participação final), testamento, acordo de cotistas |
+| `Modulo-07-Recomendacao.pdf` | Recomendação | Síntese, lista revisional, implementação gradual, revisão periódica |
+| `Modulo-08-Estudo-Caso-Eduardo-Monica.pdf` | Estudo de Caso | Exemplo prático completo com família fictícia |
+
+---
+
 ## 📌 Uso na IA OIK
 
-Estes materiais são a **única base de conhecimento** da IA OIK.
+Estes **20 materiais** são a **única base de conhecimento** da IA OIK.
 
 A IA **não deve criar metodologias novas** fora desta base.
 
