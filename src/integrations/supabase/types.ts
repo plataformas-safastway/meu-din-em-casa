@@ -430,6 +430,87 @@ export type Database = {
           },
         ]
       }
+      categorization_feedback: {
+        Row: {
+          apply_scope: Database["public"]["Enums"]["learning_scope"]
+          created_at: string
+          family_id: string
+          fingerprint_strong: string | null
+          fingerprint_weak: string | null
+          id: string
+          normalized_descriptor: string
+          predicted_category_id: string | null
+          predicted_confidence: number | null
+          predicted_source:
+            | Database["public"]["Enums"]["prediction_source"]
+            | null
+          predicted_subcategory_id: string | null
+          raw_descriptor: string
+          transaction_id: string | null
+          user_category_id: string
+          user_id: string
+          user_subcategory_id: string | null
+          was_prediction_correct: boolean
+        }
+        Insert: {
+          apply_scope?: Database["public"]["Enums"]["learning_scope"]
+          created_at?: string
+          family_id: string
+          fingerprint_strong?: string | null
+          fingerprint_weak?: string | null
+          id?: string
+          normalized_descriptor: string
+          predicted_category_id?: string | null
+          predicted_confidence?: number | null
+          predicted_source?:
+            | Database["public"]["Enums"]["prediction_source"]
+            | null
+          predicted_subcategory_id?: string | null
+          raw_descriptor: string
+          transaction_id?: string | null
+          user_category_id: string
+          user_id: string
+          user_subcategory_id?: string | null
+          was_prediction_correct?: boolean
+        }
+        Update: {
+          apply_scope?: Database["public"]["Enums"]["learning_scope"]
+          created_at?: string
+          family_id?: string
+          fingerprint_strong?: string | null
+          fingerprint_weak?: string | null
+          id?: string
+          normalized_descriptor?: string
+          predicted_category_id?: string | null
+          predicted_confidence?: number | null
+          predicted_source?:
+            | Database["public"]["Enums"]["prediction_source"]
+            | null
+          predicted_subcategory_id?: string | null
+          raw_descriptor?: string
+          transaction_id?: string | null
+          user_category_id?: string
+          user_id?: string
+          user_subcategory_id?: string | null
+          was_prediction_correct?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categorization_feedback_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categorization_feedback_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       category_change_logs: {
         Row: {
           action: string
@@ -2670,6 +2751,71 @@ export type Database = {
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "subscription_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learned_merchant_rules: {
+        Row: {
+          category_id: string
+          confidence_base: number
+          conflict_count: number
+          created_at: string
+          examples_count: number
+          family_id: string | null
+          fingerprint: string
+          fingerprint_type: Database["public"]["Enums"]["fingerprint_type"]
+          id: string
+          is_archived: boolean
+          last_used_at: string
+          merchant_canon: string | null
+          scope_type: Database["public"]["Enums"]["learning_scope"]
+          subcategory_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          category_id: string
+          confidence_base?: number
+          conflict_count?: number
+          created_at?: string
+          examples_count?: number
+          family_id?: string | null
+          fingerprint: string
+          fingerprint_type: Database["public"]["Enums"]["fingerprint_type"]
+          id?: string
+          is_archived?: boolean
+          last_used_at?: string
+          merchant_canon?: string | null
+          scope_type?: Database["public"]["Enums"]["learning_scope"]
+          subcategory_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          category_id?: string
+          confidence_base?: number
+          conflict_count?: number
+          created_at?: string
+          examples_count?: number
+          family_id?: string | null
+          fingerprint?: string
+          fingerprint_type?: Database["public"]["Enums"]["fingerprint_type"]
+          id?: string
+          is_archived?: boolean
+          last_used_at?: string
+          merchant_canon?: string | null
+          scope_type?: Database["public"]["Enums"]["learning_scope"]
+          subcategory_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learned_merchant_rules_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
             referencedColumns: ["id"]
           },
         ]
@@ -5481,6 +5627,23 @@ export type Database = {
         Returns: Json
       }
       get_growth_metrics: { Args: { _months?: number }; Returns: Json }
+      get_learned_categorization: {
+        Args: {
+          p_family_id: string
+          p_fingerprint_strong: string
+          p_fingerprint_weak: string
+          p_user_id: string
+        }
+        Returns: {
+          category_id: string
+          confidence: number
+          examples_count: number
+          fingerprint_matched: Database["public"]["Enums"]["fingerprint_type"]
+          merchant_canon: string
+          source_scope: Database["public"]["Enums"]["learning_scope"]
+          subcategory_id: string
+        }[]
+      }
       get_member_permissions: {
         Args: { _family_id: string; _user_id: string }
         Returns: Json
@@ -5562,6 +5725,26 @@ export type Database = {
         Args: { p_planned_id: string; p_transaction_id: string }
         Returns: boolean
       }
+      record_categorization_feedback: {
+        Args: {
+          p_apply_scope?: Database["public"]["Enums"]["learning_scope"]
+          p_apply_to_future?: boolean
+          p_family_id: string
+          p_fingerprint_strong: string
+          p_fingerprint_weak: string
+          p_normalized_descriptor: string
+          p_predicted_category_id: string
+          p_predicted_confidence: number
+          p_predicted_source: Database["public"]["Enums"]["prediction_source"]
+          p_predicted_subcategory_id: string
+          p_raw_descriptor: string
+          p_transaction_id: string
+          p_user_category_id: string
+          p_user_id: string
+          p_user_subcategory_id: string
+        }
+        Returns: Json
+      }
       restore_family_member: {
         Args: { _member_id: string; _restored_by: string }
         Returns: boolean
@@ -5625,6 +5808,7 @@ export type Database = {
       card_type: "credit" | "debit" | "both"
       confidence_level: "HIGH" | "MEDIUM" | "LOW"
       family_role: "owner" | "member"
+      fingerprint_type: "strong" | "weak"
       import_file_type: "ofx" | "xls" | "xlsx" | "pdf"
       import_status: "pending" | "processing" | "completed" | "failed"
       installment_status: "POSTED" | "PLANNED" | "RECONCILED" | "CANCELLED"
@@ -5636,6 +5820,7 @@ export type Database = {
         | "GOOGLE_DRIVE"
         | "ONEDRIVE"
       integration_status: "ACTIVE" | "INACTIVE" | "PENDING" | "ERROR"
+      learning_scope: "user" | "family" | "global"
       lgpd_request_status: "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED"
       member_status: "INVITED" | "ACTIVE" | "REMOVED" | "DISABLED" | "BLOCKED"
       payment_method:
@@ -5645,6 +5830,7 @@ export type Database = {
         | "pix"
         | "transfer"
         | "cheque"
+      prediction_source: "learned" | "regex" | "heuristic" | "fallback"
       transaction_classification:
         | "income"
         | "expense"
@@ -5801,6 +5987,7 @@ export const Constants = {
       card_type: ["credit", "debit", "both"],
       confidence_level: ["HIGH", "MEDIUM", "LOW"],
       family_role: ["owner", "member"],
+      fingerprint_type: ["strong", "weak"],
       import_file_type: ["ofx", "xls", "xlsx", "pdf"],
       import_status: ["pending", "processing", "completed", "failed"],
       installment_status: ["POSTED", "PLANNED", "RECONCILED", "CANCELLED"],
@@ -5813,9 +6000,11 @@ export const Constants = {
         "ONEDRIVE",
       ],
       integration_status: ["ACTIVE", "INACTIVE", "PENDING", "ERROR"],
+      learning_scope: ["user", "family", "global"],
       lgpd_request_status: ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"],
       member_status: ["INVITED", "ACTIVE", "REMOVED", "DISABLED", "BLOCKED"],
       payment_method: ["cash", "debit", "credit", "pix", "transfer", "cheque"],
+      prediction_source: ["learned", "regex", "heuristic", "fallback"],
       transaction_classification: [
         "income",
         "expense",
