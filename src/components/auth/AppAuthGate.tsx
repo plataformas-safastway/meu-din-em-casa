@@ -15,6 +15,11 @@
  * REGRA CRÍTICA:
  * - Admin/Master SEM consumer profile → NUNCA redireciona para /signup
  * - Sempre bloqueia e redireciona para /app-access-blocked
+ * 
+ * TIMEOUT BEHAVIOR (v2):
+ * - Overlay não desmonta children
+ * - Após 10s, mostra CTAs de recuperação (soft mode)
+ * - NUNCA redireciona automaticamente por timeout
  */
 
 import { ReactNode, useEffect } from "react";
@@ -22,29 +27,12 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAppAuthorization } from "@/hooks/useAppAuthorization";
 import { useStableAuth } from "@/hooks/useStableAuth";
 import { isRouteRestoreInProgress } from "@/lib/routeResumeGuard";
-import { ScreenLoader } from "@/components/ui/money-loader";
+import { SessionOverlayWithTimeout } from "./SessionOverlayWithTimeout";
 
 interface AppAuthGateProps {
   children: ReactNode;
   /** If true, also requires onboarding to be complete. Default: true */
   requireOnboardingComplete?: boolean;
-}
-
-/**
- * Soft overlay that doesn't unmount children
- */
-function SoftSessionOverlay() {
-  return (
-    <div 
-      className="fixed inset-0 z-40 bg-background/30 backdrop-blur-[2px] flex items-center justify-center pointer-events-auto animate-in fade-in duration-300"
-      style={{ touchAction: 'none' }}
-    >
-      <div className="bg-background/90 backdrop-blur-sm rounded-lg px-6 py-4 shadow-lg flex items-center gap-3">
-        <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm text-muted-foreground">Verificando acesso…</span>
-      </div>
-    </div>
-  );
 }
 
 export function AppAuthGate({ 
@@ -104,13 +92,17 @@ export function AppAuthGate({
     );
   }
 
-  // RULE 3: Loading state - show overlay but keep children mounted
+  // RULE 3: Loading state - show overlay with timeout but keep children mounted
+  // Uses SessionOverlayWithTimeout for non-blocking timeout handling
   if (isLoading || bootstrapStatus === 'initializing') {
     return (
-      <>
+      <SessionOverlayWithTimeout 
+        isLoading={true}
+        timeoutMs={10000}
+        showDashboardReturn={false}
+      >
         {children}
-        <SoftSessionOverlay />
-      </>
+      </SessionOverlayWithTimeout>
     );
   }
 

@@ -298,13 +298,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
+      {/* Non-blocking timeout fallback - shows recovery CTAs after threshold */}
       {hasTimedOut ? (
-        <div className="fixed inset-0 z-50 pointer-events-auto touch-none overscroll-contain">
-          <AuthTimeoutFallback
-            onRetry={handleTimeoutRetry}
-            timeoutSeconds={Math.ceil(AUTH_TIMEOUT_MS / 1000)}
-          />
-        </div>
+        <AuthTimeoutFallback
+          onRetry={handleTimeoutRetry}
+          timeoutSeconds={Math.ceil(AUTH_TIMEOUT_MS / 1000)}
+          mode="soft"
+          showDashboardReturn={location.pathname.startsWith('/admin')}
+        />
       ) : hasSession && shouldShowSessionOverlay ? (
         <SoftSessionOverlay />
       ) : null}
@@ -484,7 +485,8 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Still loading role/profile - keep children mounted + overlay
+  // Still loading role/profile - keep children mounted + soft overlay
+  // Uses same non-blocking pattern as AppAuthGate
   if (roleLoading || profileStatus === 'loading') {
     return (
       <>
