@@ -400,9 +400,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, family, profileStatus, isAuthTransition } = useStableAuth();
+  const { user, family, profileStatus, isAuthTransition, session } = useStableAuth();
   const { data: role, isLoading: roleLoading } = useUserRole();
   const { isLoading: checkingAdmin } = useHasAnyAdmin();
+  const location = useLocation();
   
   // CRITICAL: Never redirect during auth transition or route restoration
   if (isAuthTransition || isRouteRestoreInProgress()) {
@@ -410,7 +411,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
   
   // Still loading - don't render anything (AuthGate handles this)
-  if (roleLoading || checkingAdmin || profileStatus === 'loading') {
+  if (roleLoading || checkingAdmin || profileStatus === 'loading' || profileStatus === 'unknown') {
     return <LoadingSpinner />;
   }
   
@@ -428,9 +429,12 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/app" replace />;
   }
   
-  // User without family but not admin - will be handled by signup flow
-  // Don't redirect here to avoid flash - let them stay on public route
-  // The signup page will handle the redirect properly
+  // User logged in but without family - redirect to signup/onboarding
+  // EXCEPT if they're already on signup page (to avoid redirect loop)
+  if (user && !family && location.pathname !== '/signup' && location.pathname !== '/onboarding') {
+    logNavigationAttempt('PublicRoute:UserWithoutFamily', '/signup', { user: !!user, family: !!family });
+    return <Navigate to="/signup" replace />;
+  }
   
   return <>{children}</>;
 }
