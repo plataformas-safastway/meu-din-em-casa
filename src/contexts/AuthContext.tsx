@@ -77,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Refs to prevent race conditions
   const currentUserIdRef = useRef<string | null>(null);
   const fetchAbortControllerRef = useRef<AbortController | null>(null);
+  const isIntentionalLogoutRef = useRef(false);
 
   const fetchFamilyData = useCallback(async (userId: string): Promise<boolean> => {
     // Cancel any pending fetch
@@ -224,7 +225,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // CRITICAL: If we're in a focus transition and receive a null session,
           // this is likely a temporary state during token refresh. Don't reset state.
           // ALSO: If we recently had a valid session before hiding, ignore spurious SIGNED_OUT
-          const shouldIgnoreNullSession = !newSession && (
+          // BUT: Never ignore if user explicitly clicked logout (isIntentionalLogoutRef)
+          const shouldIgnoreNullSession = !newSession && !isIntentionalLogoutRef.current && (
             isInFocusTransition() || 
             (hadRecentValidSession() && event === 'SIGNED_OUT' && currentUserIdRef.current !== null)
           );
@@ -426,6 +428,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    console.log('[Auth] signOut called - marking intentional logout');
+    
+    // CRITICAL: Mark this as intentional so onAuthStateChange doesn't ignore it
+    isIntentionalLogoutRef.current = true;
+    
     // Ensure we don't restore a previous protected route after a real logout.
     clearRouteResumeState();
 
@@ -436,11 +443,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Reset state before signing out
     currentUserIdRef.current = null;
+    setUser(null);
+    setSession(null);
     setFamily(null);
     setFamilyMember(null);
     setProfileStatus('unknown');
+    setUserContext(null);
     
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+      console.log('[Auth] signOut completed successfully');
+    } catch (error) {
+      console.error('[Auth] signOut error:', error);
+    } finally {
+      // Reset the flag after a delay to allow for any pending auth events
+      setTimeout(() => {
+        isIntentionalLogoutRef.current = false;
+      }, 2000);
+    }
   };
 
   const resetPassword = async (email: string) => {
