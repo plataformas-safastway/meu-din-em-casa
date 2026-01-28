@@ -1,7 +1,7 @@
 export interface HelpArticle {
   id: string;
   title: string;
-  category: "getting-started" | "home" | "transactions" | "categories" | "goals" | "objectives" | "budgets" | "projection" | "import" | "family" | "settings" | "privacy" | "insights";
+  category: "getting-started" | "home" | "transactions" | "categories" | "goals" | "objectives" | "budgets" | "projection" | "import" | "family" | "settings" | "privacy" | "insights" | "access-control";
   icon: string;
   summary: string;
   steps: Array<{
@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 28/01/2026 - Authorization layer (Dashboard vs App)
-export const HELP_CENTER_VERSION = "28/01/2026 v13";
+// Última atualização: 28/01/2026 - Authorization layer (Dashboard vs App) - Artigos de acesso
+export const HELP_CENTER_VERSION = "28/01/2026 v14";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -1021,6 +1021,150 @@ export const helpArticles: HelpArticle[] = [
     keywords: ["whatsapp", "consultoria", "ajuda", "suporte", "atendimento", "oik"],
     deepLink: "dashboard",
   },
+
+  // ===== ACESSO E AUTORIZAÇÃO =====
+  {
+    id: "dashboard-vs-app",
+    title: "Dashboard e App são Ambientes Diferentes",
+    category: "access-control",
+    icon: "🔐",
+    summary: "Entenda a diferença entre o Dashboard administrativo e o App OIK",
+    steps: [
+      {
+        title: "O que é o Dashboard?",
+        description: "O Dashboard é o painel administrativo para gestores, CS e equipes internas do OIK. Ele não acessa dados financeiros pessoais — apenas configurações e análises do sistema.",
+        tip: "O Dashboard está em /admin e requer um perfil de colaborador (admin_users).",
+      },
+      {
+        title: "O que é o App?",
+        description: "O App é onde famílias gerenciam suas finanças: lançamentos, categorias, metas, importação de extratos. Cada usuário precisa de um perfil de consumidor (family_member).",
+        tip: "O App está em /app e requer conclusão do onboarding.",
+      },
+      {
+        title: "Por que são separados?",
+        description: "Segurança e privacidade. Um administrador do sistema não deve acessar dados financeiros de famílias sem autorização explícita. A separação impede acesso indevido.",
+      },
+      {
+        title: "Posso ter acesso aos dois?",
+        description: "Sim! Se você for colaborador E tiver um perfil de consumidor (família própria), verá a tela de seleção de contexto ao fazer login. Escolha App ou Dashboard conforme o que deseja fazer.",
+        tip: "Use 'Ir ao Dashboard' ou 'Ir ao App' para alternar entre contextos.",
+      },
+    ],
+    keywords: ["dashboard", "app", "diferença", "admin", "ambiente", "separado", "acesso", "autorização"],
+  },
+  {
+    id: "back-to-app-button",
+    title: "Botão 'Voltar ao App' no Dashboard",
+    category: "access-control",
+    icon: "🔙",
+    summary: "Por que o botão pode estar bloqueado e o que fazer",
+    steps: [
+      {
+        title: "O que faz esse botão?",
+        description: "No Dashboard, o botão 'Voltar ao App' permite alternar rapidamente para o App de finanças pessoais, se você tiver acesso.",
+      },
+      {
+        title: "Por que está bloqueado?",
+        description: "O botão fica bloqueado se você não tiver um perfil de consumidor (family_member) vinculado ao seu login. Isso significa que sua conta é apenas administrativa.",
+        tip: "Contas administrativas não acessam o App automaticamente — é uma proteção de segurança.",
+      },
+      {
+        title: "O que acontece ao clicar quando bloqueado?",
+        description: "Um modal aparece explicando que 'Este login é do Dashboard administrativo e não possui um usuário no App OIK'. Você pode voltar ao Dashboard ou sair para criar uma conta no App.",
+      },
+      {
+        title: "Como ter acesso ao App?",
+        description: "Saia da sessão atual e crie uma conta de consumidor pelo fluxo normal de cadastro (/signup). As contas são independentes.",
+      },
+    ],
+    keywords: ["voltar", "app", "botão", "bloqueado", "dashboard", "modal"],
+  },
+  {
+    id: "app-access-blocked-page",
+    title: "Página de Acesso Bloqueado (/app-access-blocked)",
+    category: "access-control",
+    icon: "🚫",
+    summary: "O que significa e como resolver quando você vê esta página",
+    steps: [
+      {
+        title: "Quando aparece?",
+        description: "Esta página aparece quando você tenta acessar /app mas seu login não possui um perfil de consumidor (family_member). É comum para usuários que só têm conta administrativa.",
+      },
+      {
+        title: "Por que não sou redirecionado para cadastro?",
+        description: "Por segurança, não redirecionamos administradores para o cadastro do App automaticamente. Isso evita criação acidental de famílias e mistura de contextos.",
+        tip: "Esta é uma proteção intencional, não um erro.",
+      },
+      {
+        title: "O que posso fazer?",
+        description: "Opção 1: Clique em 'Voltar ao Dashboard' para continuar usando o painel administrativo. Opção 2: Clique em 'Sair e criar conta do App' para fazer logout e criar uma conta de consumidor separada.",
+      },
+      {
+        title: "Posso usar o mesmo email?",
+        description: "Atualmente, cada ambiente tem perfis independentes. Se quiser usar o mesmo email, entre em contato com o suporte para orientação sobre como proceder.",
+      },
+    ],
+    keywords: ["bloqueado", "acesso", "blocked", "app-access-blocked", "administrador", "família"],
+  },
+  {
+    id: "signup-blocked-admin-session",
+    title: "/signup Bloqueado com Sessão Administrativa",
+    category: "access-control",
+    icon: "⚠️",
+    summary: "Por que não consigo criar conta no App enquanto logado como admin",
+    steps: [
+      {
+        title: "O que acontece?",
+        description: "Ao acessar /signup com uma sessão administrativa ativa (admin/cs/admin_master), você vê um card informando 'Sessão administrativa ativa' e não consegue prosseguir com o cadastro.",
+      },
+      {
+        title: "Por que esse bloqueio existe?",
+        description: "Impede que administradores criem famílias acidentalmente enquanto logados. As contas do Dashboard e do App são independentes por design.",
+        tip: "Isso protege a integridade dos dados e evita conflitos de contexto.",
+      },
+      {
+        title: "Como criar minha conta no App?",
+        description: "Clique em 'Sair e criar conta do App'. Isso faz logout da sessão administrativa e permite que você crie uma conta de consumidor como um novo usuário.",
+      },
+      {
+        title: "Posso voltar ao Dashboard depois?",
+        description: "Sim! Basta fazer login novamente com suas credenciais administrativas. As sessões são completamente independentes.",
+      },
+    ],
+    keywords: ["signup", "cadastro", "bloqueado", "admin", "sessão", "criar conta"],
+  },
+  {
+    id: "session-loading-timeout",
+    title: "Carregamento de Sessão e Timeouts",
+    category: "access-control",
+    icon: "⏳",
+    summary: "O que fazer quando a verificação de sessão demora ou exibe alertas",
+    steps: [
+      {
+        title: "O que é o overlay de verificação?",
+        description: "Quando você acessa uma área protegida, o OIK verifica sua sessão. Um overlay sutil aparece com 'Verificando acesso...' enquanto isso acontece.",
+        tip: "Normalmente leva menos de 2 segundos. Se demorar mais, pode indicar problema de conexão.",
+      },
+      {
+        title: "Por que aparece 'Carregamento demorado'?",
+        description: "Após 5 segundos, mostramos um contador. Após 10 segundos, exibimos opções de recuperação. Isso pode acontecer por conexão lenta, sessão expirada ou problema temporário.",
+      },
+      {
+        title: "O que fazer quando aparece?",
+        description: "Opção 1: 'Tentar novamente' — recarrega o estado de autenticação. Opção 2: 'Sair' — limpa a sessão e redireciona para login. Opção 3 (se disponível): 'Voltar ao Dashboard'.",
+        tip: "Se o problema persistir, tente limpar os dados do navegador ou usar outro dispositivo.",
+      },
+      {
+        title: "Meu formulário será perdido?",
+        description: "Não! O overlay é 'suave' — ele não desmonta a tela por baixo. Se você estava preenchendo algo, os dados continuam lá enquanto a sessão é verificada.",
+      },
+      {
+        title: "Quando devo contatar o suporte?",
+        description: "Se mesmo após tentar novamente e limpar a sessão o problema continuar, entre em contato pelo WhatsApp de suporte com o código de erro (se exibido).",
+      },
+    ],
+    keywords: ["carregamento", "lento", "timeout", "sessão", "verificando", "overlay", "travou", "loading"],
+  },
 ];
 
 export const faqItems: FAQItem[] = [
@@ -1663,6 +1807,43 @@ export const adminFaqItems: FAQItem[] = [
     category: "general",
     keywords: ["onboarding", "obrigatório", "cadastro", "inicial", "configuração", "completo", "bloqueado"],
   },
+  
+  // ===== ACESSO E AUTORIZAÇÃO =====
+  {
+    id: "access-faq-1",
+    question: "Por que vejo 'Acesso ao App indisponível' quando clico em 'Voltar ao App'?",
+    answer: "Seu login é do Dashboard administrativo e não possui um perfil de consumidor (family_member). Dashboard e App são ambientes separados por segurança. Para usar o App, saia da sessão atual e crie uma conta de consumidor pelo cadastro normal.",
+    category: "access-control",
+    keywords: ["acesso", "indisponível", "app", "voltar", "bloqueado", "modal"],
+  },
+  {
+    id: "access-faq-2",
+    question: "Fui para /app-access-blocked. O que isso significa?",
+    answer: "Você tentou acessar o App sem ter um perfil de consumidor. Se você é um administrador, isso é esperado — administradores não têm acesso automático ao App de finanças. Clique em 'Voltar ao Dashboard' ou 'Sair e criar conta do App' para prosseguir.",
+    category: "access-control",
+    keywords: ["app-access-blocked", "bloqueado", "administrador", "família"],
+  },
+  {
+    id: "access-faq-3",
+    question: "Tentei fazer signup mas aparece 'Sessão administrativa ativa'. O que fazer?",
+    answer: "Você está logado como admin/master e tentou criar conta no App. Por segurança, não permitimos isso na mesma sessão. Clique em 'Sair e criar conta do App' — isso faz logout e permite criar sua conta de consumidor normalmente.",
+    category: "access-control",
+    keywords: ["signup", "sessão", "administrativa", "bloqueado", "criar"],
+  },
+  {
+    id: "access-faq-4",
+    question: "A tela está travada em 'Verificando acesso'. O que fazer?",
+    answer: "Se o loading passar de 10 segundos, verá opções de recuperação: 'Tentar novamente' para recarregar a sessão ou 'Sair' para limpar a sessão. Isso pode acontecer por conexão lenta ou sessão expirada. Não se preocupe — seu formulário não será perdido durante a verificação.",
+    category: "access-control",
+    keywords: ["verificando", "acesso", "travado", "loading", "sessão", "timeout"],
+  },
+  {
+    id: "access-faq-5",
+    question: "Posso usar o mesmo email para Dashboard e App?",
+    answer: "Atualmente, cada ambiente tem perfis independentes vinculados ao mesmo usuário de autenticação. Você pode ter os dois perfis (admin_users e family_member) no mesmo email. Se tiver ambos, verá a tela de seleção de contexto ao fazer login.",
+    category: "access-control",
+    keywords: ["mesmo", "email", "dashboard", "app", "dois", "contexto"],
+  },
 ];
 
 export const categoryLabels: Record<string, string> = {
@@ -1681,6 +1862,7 @@ export const categoryLabels: Record<string, string> = {
   "privacy": "Privacidade e Segurança",
   "insights": "Insights e Relatórios",
   "general": "Geral",
+  "access-control": "Acesso e Autorização",
 };
 
 export function searchHelp(query: string): { articles: HelpArticle[]; faqs: FAQItem[] } {
