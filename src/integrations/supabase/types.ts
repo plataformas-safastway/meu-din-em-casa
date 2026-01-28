@@ -6007,6 +6007,10 @@ export type Database = {
         Args: { p_family_id: string }
         Returns: boolean
       }
+      is_openfinance_connection_member: {
+        Args: { p_connection_id: string }
+        Returns: boolean
+      }
       is_transaction_private_for_user: {
         Args: { _transaction_id: string; _user_id: string }
         Returns: boolean
