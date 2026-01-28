@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 28/01/2026 - Session overlay (preserve forms on tab switch)
-export const HELP_CENTER_VERSION = "28/01/2026 v12";
+// Última atualização: 28/01/2026 - Authorization layer (Dashboard vs App)
+export const HELP_CENTER_VERSION = "28/01/2026 v13";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -1633,6 +1633,35 @@ export const adminFaqItems: FAQItem[] = [
     answer: "Acesse Insights > Relatórios, selecione o mês desejado e toque em 'Baixar PDF'. O PDF contém o resumo do mês, principais categorias e pendências identificadas. O arquivo é gerado sob demanda e o link expira em 24 horas por segurança. Nenhum dado sensível (CPF) é incluído.",
     category: "insights",
     keywords: ["pdf", "baixar", "download", "relatório", "exportar", "imprimir"],
+  },
+  // ===== DASHBOARD vs APP =====
+  {
+    id: "dashboard-app-faq-1",
+    question: "Qual a diferença entre conta do Dashboard e do App?",
+    answer: "O OIK possui dois ambientes separados: o App (para usuários consumer organizarem suas finanças familiares) e o Dashboard (para administradores e equipe interna). Um login pode ser exclusivo de um ambiente ou ter acesso a ambos. Usuários que possuem apenas acesso ao Dashboard (admin/master) não podem acessar o App automaticamente — é necessário criar uma conta consumer separadamente.",
+    category: "admin",
+    keywords: ["dashboard", "app", "diferença", "admin", "consumer", "acesso", "conta"],
+  },
+  {
+    id: "dashboard-app-faq-2",
+    question: "O que acontece ao clicar em 'Voltar ao App' no Dashboard?",
+    answer: "Ao clicar em 'Voltar ao App', o sistema verifica se você possui uma conta consumer (membro de família) com onboarding completo. Se tiver, você é redirecionado ao App. Se não tiver, um modal explicativo aparece informando que é necessário criar uma conta consumer ou completar o onboarding primeiro. Isso garante que dados não sejam acessados indevidamente.",
+    category: "admin",
+    keywords: ["voltar", "app", "dashboard", "botão", "redirecionar", "acesso", "bloqueado"],
+  },
+  {
+    id: "dashboard-app-faq-3",
+    question: "Como criar uma conta consumer sendo admin/master?",
+    answer: "Se você é admin/master e deseja acessar o App como usuário comum, será necessário criar uma família e completar o onboarding. No entanto, isso normalmente não é recomendado pois mistura contextos de administração e uso pessoal. Entre em contato com o suporte se precisar de acesso dual aos dois ambientes.",
+    category: "admin",
+    keywords: ["criar", "conta", "consumer", "admin", "master", "família", "onboarding"],
+  },
+  {
+    id: "dashboard-app-faq-4",
+    question: "O que é onboarding e por que é obrigatório?",
+    answer: "O onboarding é o processo de configuração inicial do App onde você define sua família, faixa de renda, perfil financeiro e orçamento inicial. Ele é obrigatório porque garante que o App tenha dados mínimos para funcionar corretamente. Sem completar o onboarding, você não pode acessar as funcionalidades principais do App — ficará preso na tela de onboarding até concluir.",
+    category: "general",
+    keywords: ["onboarding", "obrigatório", "cadastro", "inicial", "configuração", "completo", "bloqueado"],
   },
 ];
 

@@ -3,7 +3,7 @@
  * Uses React Router v6 <Outlet /> for rendering child routes
  */
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { 
   Users, 
   BarChart3, 
@@ -38,7 +38,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { useUserAccessProfile } from "@/hooks/useUserAccessProfile";
 import { useMustChangePassword } from "@/hooks/useMasterUserSetup";
+import { useCanAccessAppFromDashboard } from "@/hooks/useAppAuthorization";
 import { ForcePasswordChangeModal } from "@/components/auth/ForcePasswordChangeModal";
+import { AppAccessDeniedModal } from "@/components/admin/AppAccessDeniedModal";
 import { cn } from "@/lib/utils";
 import { logLifecycle } from "@/lib/lifecycleTracer";
 
@@ -55,6 +57,10 @@ export function AdminLayout() {
   const { role, isAdmin } = useIsAdmin();
   const { data: accessProfile } = useUserAccessProfile();
   const { data: mustChangePassword, refetch: refetchPasswordCheck } = useMustChangePassword();
+  
+  // CRITICAL: Check if user can access the App before allowing navigation
+  const { canAccess: canAccessApp, reason: appAccessReason, isLoading: appAccessLoading } = useCanAccessAppFromDashboard();
+  const [showAppAccessDenied, setShowAppAccessDenied] = useState(false);
 
   // Lifecycle tracing
   useEffect(() => {
@@ -73,6 +79,20 @@ export function AdminLayout() {
   const handleSignOut = async () => {
     await signOut();
     navigate("/login");
+  };
+  
+  // Handle "Voltar ao App" with authorization check
+  const handleNavigateToApp = () => {
+    if (appAccessLoading) return;
+    
+    if (!canAccessApp) {
+      // Show modal explaining why access is denied
+      setShowAppAccessDenied(true);
+      return;
+    }
+    
+    // User has full access, navigate to App
+    navigate("/app");
   };
 
   // Main menu items
@@ -184,6 +204,14 @@ export function AdminLayout() {
         open={!!mustChangePassword} 
         onSuccess={() => refetchPasswordCheck()}
       />
+      
+      {/* Modal when user cannot access App */}
+      <AppAccessDeniedModal
+        open={showAppAccessDenied}
+        onClose={() => setShowAppAccessDenied(false)}
+        reason={appAccessReason}
+        showCreateOption={false} // For now, don't allow creating from dashboard
+      />
 
       <div className="min-h-screen bg-background flex">
         {/* Sidebar */}
@@ -238,7 +266,8 @@ export function AdminLayout() {
             <Button
               variant="ghost"
               className="w-full justify-start gap-2"
-              onClick={() => navigate("/app")}
+              onClick={handleNavigateToApp}
+              disabled={appAccessLoading}
             >
               <Home className="w-4 h-4" />
               Voltar ao App

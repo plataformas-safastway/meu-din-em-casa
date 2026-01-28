@@ -2,9 +2,10 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, focusManager, useQuery } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { useUserRole, useHasAnyAdmin } from "@/hooks/useUserRole";
 import { ScreenLoader } from "@/components/ui/money-loader";
 import { useAppLifecycle } from "@/hooks/useAppLifecycle";
@@ -313,14 +314,34 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function ProtectedRoute({
   children,
   requireFamily = true,
+  requireOnboardingComplete = true,
 }: {
   children: React.ReactNode;
   requireFamily?: boolean;
+  requireOnboardingComplete?: boolean;
 }) {
   const { user, family, profileStatus, shouldRedirectToLogin, isAuthTransition, session, bootstrapStatus } = useStableAuth();
   const location = useLocation();
+  
+  // Check onboarding status for App routes
+  const { data: onboardingData, isLoading: onboardingLoading } = useQuery({
+    queryKey: ['protected-route-onboarding', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('user_onboarding')
+        .select('status')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id && requireOnboardingComplete && requireFamily,
+    staleTime: 1000 * 60 * 5,
+  });
 
   const next = encodeURIComponent(`${location.pathname}${location.search ?? ""}`);
+  const onboardingStatus = onboardingData?.status;
+  const isOnboardingComplete = onboardingStatus === 'completed';
 
   // DEBUG: Log all state on every render
   useEffect(() => {
@@ -332,8 +353,9 @@ function ProtectedRoute({
       hasUser: !!user,
       profileStatus,
       bootstrapStatus,
+      onboardingStatus,
     });
-  }, [location.pathname, isAuthTransition, shouldRedirectToLogin, session, user, profileStatus, bootstrapStatus]);
+  }, [location.pathname, isAuthTransition, shouldRedirectToLogin, session, user, profileStatus, bootstrapStatus, onboardingStatus]);
 
   // CRITICAL: Never redirect during auth transition (tab switch, token refresh)
   // Also never redirect during route restoration
@@ -372,8 +394,8 @@ function ProtectedRoute({
     );
   }
   
-  // Profile still loading - keep children mounted + overlay
-  if (profileStatus === 'loading' || profileStatus === 'unknown') {
+  // Profile or onboarding still loading - keep children mounted + overlay
+  if (profileStatus === 'loading' || profileStatus === 'unknown' || (requireOnboardingComplete && onboardingLoading)) {
     return (
       <>
         {children}
@@ -385,6 +407,13 @@ function ProtectedRoute({
   // Need family but don't have one - redirect to signup
   if (requireFamily && !family && user) {
     return <Navigate to="/signup" replace state={{ from: { pathname: location.pathname, search: location.search } }} />;
+  }
+  
+  // CRITICAL AUTHORIZATION CHECK: User has family but onboarding not complete
+  // This blocks access to /app routes until onboarding is finished
+  if (requireFamily && requireOnboardingComplete && family && user && !isOnboardingComplete) {
+    console.log('[ProtectedRoute] Onboarding incomplete - redirecting to /onboarding');
+    return <Navigate to="/onboarding" replace state={{ from: { pathname: location.pathname, search: location.search } }} />;
   }
 
   return <>{children}</>;
@@ -575,9 +604,9 @@ function AppRoutes() {
         <Route path="/" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/onboarding" element={<ProtectedRoute requireFamily={false}><OnboardingFlowPage /></ProtectedRoute>} />
-        <Route path="/select-context" element={<ProtectedRoute requireFamily={false}><SelectContextPage /></ProtectedRoute>} />
-        <Route path="/select-family" element={<ProtectedRoute requireFamily={false}><SelectFamilyPage /></ProtectedRoute>} />
+        <Route path="/onboarding" element={<ProtectedRoute requireFamily={false} requireOnboardingComplete={false}><OnboardingFlowPage /></ProtectedRoute>} />
+        <Route path="/select-context" element={<ProtectedRoute requireFamily={false} requireOnboardingComplete={false}><SelectContextPage /></ProtectedRoute>} />
+        <Route path="/select-family" element={<ProtectedRoute requireFamily={false} requireOnboardingComplete={false}><SelectFamilyPage /></ProtectedRoute>} />
         <Route path="/termos" element={<TermosPage />} />
         <Route path="/privacidade" element={<PrivacidadePage />} />
         <Route path="/qa-report" element={<QAReportPage />} />
