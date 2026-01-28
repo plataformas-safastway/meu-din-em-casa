@@ -59,7 +59,30 @@ export function ForcePasswordChangeModal({ open, onSuccess }: ForcePasswordChang
       onSuccess();
     } catch (err: any) {
       console.error("Error changing password:", err);
-      setError(err.message || "Erro ao alterar senha");
+      const errorMessage = err.message?.toLowerCase() || "";
+      
+      // Handle leaked/breached passwords
+      if (
+        errorMessage.includes("password") && (
+          errorMessage.includes("breach") ||
+          errorMessage.includes("leaked") ||
+          errorMessage.includes("compromised") ||
+          errorMessage.includes("pwned") ||
+          errorMessage.includes("exposed")
+        )
+      ) {
+        setError("Esta senha foi encontrada em vazamentos de dados conhecidos. Por favor, escolha uma senha diferente e mais segura.");
+      } else if (
+        errorMessage.includes("password") && (
+          errorMessage.includes("weak") ||
+          errorMessage.includes("short") ||
+          errorMessage.includes("simple")
+        )
+      ) {
+        setError("Senha muito fraca. Use uma senha mais forte.");
+      } else {
+        setError(err.message || "Erro ao alterar senha");
+      }
     } finally {
       setIsLoading(false);
     }

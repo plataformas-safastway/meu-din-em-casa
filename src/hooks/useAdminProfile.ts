@@ -203,6 +203,31 @@ export function useChangeAdminPassword() {
 
       if (updateError) {
         console.error("[useChangeAdminPassword] Update error:", updateError);
+        const errorMessage = updateError.message?.toLowerCase() || "";
+        
+        // Handle leaked/breached passwords
+        if (
+          errorMessage.includes("password") && (
+            errorMessage.includes("breach") ||
+            errorMessage.includes("leaked") ||
+            errorMessage.includes("compromised") ||
+            errorMessage.includes("pwned") ||
+            errorMessage.includes("exposed")
+          )
+        ) {
+          throw new Error("Esta senha foi encontrada em vazamentos de dados. Escolha uma senha diferente.");
+        }
+        
+        // Handle weak password
+        if (
+          errorMessage.includes("password") && (
+            errorMessage.includes("weak") ||
+            errorMessage.includes("short")
+          )
+        ) {
+          throw new Error("Senha muito fraca. Use uma senha mais forte.");
+        }
+        
         throw new Error("Erro ao alterar senha. Tente novamente.");
       }
 
