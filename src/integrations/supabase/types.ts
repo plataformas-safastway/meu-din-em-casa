@@ -5206,6 +5206,7 @@ export type Database = {
           id: string
           onboarding_wizard_completed_at: string | null
           progress_percent: number
+          status: Database["public"]["Enums"]["onboarding_status"]
           step_account_created_at: string | null
           step_bank_account_at: string | null
           step_budget_at: string | null
@@ -5227,6 +5228,7 @@ export type Database = {
           id?: string
           onboarding_wizard_completed_at?: string | null
           progress_percent?: number
+          status?: Database["public"]["Enums"]["onboarding_status"]
           step_account_created_at?: string | null
           step_bank_account_at?: string | null
           step_budget_at?: string | null
@@ -5248,6 +5250,7 @@ export type Database = {
           id?: string
           onboarding_wizard_completed_at?: string | null
           progress_percent?: number
+          status?: Database["public"]["Enums"]["onboarding_status"]
           step_account_created_at?: string | null
           step_bank_account_at?: string | null
           step_budget_at?: string | null
@@ -5825,6 +5828,7 @@ export type Database = {
       learning_scope: "user" | "family" | "global"
       lgpd_request_status: "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED"
       member_status: "INVITED" | "ACTIVE" | "REMOVED" | "DISABLED" | "BLOCKED"
+      onboarding_status: "not_started" | "in_progress" | "completed"
       payment_method:
         | "cash"
         | "debit"
@@ -6007,6 +6011,7 @@ export const Constants = {
       learning_scope: ["user", "family", "global"],
       lgpd_request_status: ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"],
       member_status: ["INVITED", "ACTIVE", "REMOVED", "DISABLED", "BLOCKED"],
+      onboarding_status: ["not_started", "in_progress", "completed"],
       payment_method: ["cash", "debit", "credit", "pix", "transfer", "cheque"],
       prediction_source: ["learned", "regex", "heuristic", "fallback"],
       transaction_classification: [

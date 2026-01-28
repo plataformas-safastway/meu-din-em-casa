@@ -67,7 +67,7 @@ export function useOnboarding() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Mark welcome as seen
+  // Mark welcome as seen and start onboarding
   const markWelcomeSeen = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error("No user");
@@ -77,6 +77,7 @@ export function useOnboarding() {
         .update({
           has_seen_welcome: true,
           welcome_seen_at: new Date().toISOString(),
+          status: 'in_progress', // Mark as in_progress when user starts onboarding
         })
         .eq("user_id", user.id);
 
@@ -84,6 +85,7 @@ export function useOnboarding() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["onboarding", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["app-authorization-onboarding", user?.id] });
     },
   });
 
@@ -113,6 +115,7 @@ export function useOnboarding() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["onboarding", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["app-authorization-onboarding", user?.id] });
     },
   });
 
@@ -138,6 +141,7 @@ export function useOnboarding() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["onboarding", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["app-authorization-onboarding", user?.id] });
     },
   });
 

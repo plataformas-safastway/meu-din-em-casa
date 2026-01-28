@@ -142,13 +142,14 @@ export function useOnboardingWizard() {
         onConflict: "family_id,month_ref",
       });
 
-      // 6. Mark onboarding steps as complete
+      // 6. Mark onboarding steps and status as complete
       await supabase
         .from("user_onboarding")
         .update({
           onboarding_wizard_completed_at: new Date().toISOString(),
           suggested_budget_generated_at: new Date().toISOString(),
           step_budget_at: new Date().toISOString(),
+          status: 'completed', // CRITICAL: Mark onboarding as complete for authorization
         })
         .eq("user_id", user.id);
 
