@@ -1,4 +1,4 @@
-import { useState, Suspense, lazy, memo, useCallback } from "react";
+import { useState, Suspense, lazy, memo, useCallback, useMemo } from "react";
 import { Dashboard } from "./Dashboard";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { WhatsAppCTA } from "@/components/WhatsAppCTA";
@@ -7,6 +7,8 @@ import { CSInAppMessage } from "@/components/cs/CSInAppMessage";
 import { ScreenLoader } from "@/components/ui/money-loader";
 import { NavigationProvider, NavigationSource, getBackDestinationForSource } from "@/hooks/useNavigationContext";
 import { CTARouterProvider } from "@/hooks/useCTARouter";
+import { OikAIChat } from "@/components/ai/OikAIChat";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Lazy load heavy modules - these won't be in initial bundle
 const TransactionsPage = lazy(() => import("./TransactionsPage").then(m => ({ default: m.TransactionsPage })));
@@ -40,12 +42,23 @@ const PageLoader = memo(() => (
 PageLoader.displayName = "PageLoader";
 
 const Index = () => {
+  const { family } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [reportCategoryId, setReportCategoryId] = useState<string | null>(null);
   const [learnMoreTab, setLearnMoreTab] = useState<"accounts" | "cards">("accounts");
   
   // Track navigation source context for proper back navigation
   const [navigationSource, setNavigationSource] = useState<NavigationSource>('default');
+
+  // Prepare family context for AI chat
+  const familyContext = useMemo(() => {
+    if (!family) return undefined;
+    return {
+      familyName: family.name,
+      incomeRange: family.income_range || undefined,
+      membersCount: family.members_count,
+    };
+  }, [family]);
 
   const handleCategoryReport = (categoryId: string) => {
     setReportCategoryId(categoryId);
@@ -194,6 +207,7 @@ const Index = () => {
         {renderPage()}
         <WhatsAppCTA />
         <CSInAppMessage />
+        <OikAIChat familyContext={familyContext} />
         <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
     </CTARouterProvider>
