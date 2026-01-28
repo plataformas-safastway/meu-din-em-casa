@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 27/01/2026 - Fix Tab Switch Session Persistence
-export const HELP_CENTER_VERSION = "27/01/2026 v10";
+// Última atualização: 28/01/2026 - Add Login Troubleshooting FAQ
+export const HELP_CENTER_VERSION = "28/01/2026 v11";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -1401,6 +1401,28 @@ export const faqItems: FAQItem[] = [
     answer: "Os rascunhos são mantidos por 24 horas. Após esse período, são automaticamente descartados. Ao salvar com sucesso, o rascunho é imediatamente removido.",
     category: "settings",
     keywords: ["rascunho", "tempo", "expirar", "24 horas", "duração"],
+  },
+  // ===== LOGIN E SESSÃO =====
+  {
+    id: "faq-login-loading",
+    question: "O que fazer se o login ficar carregando infinitamente?",
+    answer: "Se o login demorar mais de 10 segundos, aparecerá uma tela com opções de 'Tentar novamente' ou 'Limpar sessão'. A opção 'Limpar sessão' remove dados de autenticação corrompidos e redireciona para o login. Se o problema persistir após limpar a sessão, tente: 1) Limpar os dados do site nas configurações do navegador, 2) Usar uma janela anônima, ou 3) Entrar em contato com o suporte.",
+    category: "settings",
+    keywords: ["login", "carregando", "infinito", "travado", "loading", "sessão", "limpar", "timeout"],
+  },
+  {
+    id: "faq-login-session-expired",
+    question: "Por que minha sessão expirou?",
+    answer: "Sessões expiram por segurança após um período de inatividade ou quando você faz login em outro dispositivo. Se isso acontecer frequentemente, verifique se o navegador não está bloqueando cookies ou se há extensões interferindo.",
+    category: "settings",
+    keywords: ["sessão", "expirou", "login", "deslogou", "automaticamente"],
+  },
+  {
+    id: "faq-login-tab-switch",
+    question: "Por que preciso fazer login novamente ao trocar de aba?",
+    answer: "Se você está sendo deslogado ao trocar de aba, isso pode indicar um problema de cache ou service worker. Tente: 1) Limpar o cache do navegador, 2) Desinstalar e reinstalar o PWA, ou 3) Acessar diretamente pelo navegador em vez do app instalado.",
+    category: "settings",
+    keywords: ["aba", "trocar", "logout", "sessão", "pwa", "cache"],
   },
 ];
 

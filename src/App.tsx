@@ -9,7 +9,10 @@ import { useUserRole, useHasAnyAdmin } from "@/hooks/useUserRole";
 import { ScreenLoader } from "@/components/ui/money-loader";
 import { useAppLifecycle } from "@/hooks/useAppLifecycle";
 import { useStableAuth } from "@/hooks/useStableAuth";
+import { useAuthTimeout } from "@/hooks/useAuthTimeout";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { AuthTimeoutFallback } from "@/components/auth/AuthTimeoutFallback";
+import { ChunkErrorBoundary } from "@/components/auth/ChunkErrorBoundary";
 import { STALE_TIMES, GC_TIMES } from "@/lib/queryConfig";
 import { clearExpiredDrafts } from "@/hooks/useDraftPersistence";
 import { installNavigationAudit } from "@/lib/navigationAudit";
@@ -40,7 +43,10 @@ import { SelectContextPage } from "./pages/SelectContextPage";
 import { SelectFamilyPage } from "./pages/SelectFamilyPage";
 import { InviteAcceptPage } from "./pages/InviteAcceptPage";
 import { OnboardingFlowPage } from "./pages/OnboardingFlowPage";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
+
+// Auth timeout configuration (in milliseconds)
+const AUTH_TIMEOUT_MS = 10000; // 10 seconds
 
 // Clear expired drafts on app init
 clearExpiredDrafts();
@@ -103,6 +109,7 @@ function LoadingSpinner() {
  * This prevents the "flash" of signup/onboarding screens during login
  * 
  * CRITICAL: Uses useStableAuth to handle tab-switch transitions gracefully
+ * NEW: Includes auth timeout failsafe to prevent infinite loading
  */
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthTransition, session, user, bootstrapStatus, profileStatus, shouldRedirectToLogin } = useStableAuth();
@@ -110,6 +117,20 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const lastRouteRef = useRef<string | null>(null);
   const fallbackAttemptedRef = useRef(false);
+
+  // Auth timeout failsafe
+  const handleTimeoutRetry = useCallback(() => {
+    // Trigger a hard reload to restart auth flow
+    window.location.reload();
+  }, []);
+
+  const { hasTimedOut, resetTimeout } = useAuthTimeout({
+    timeoutMs: AUTH_TIMEOUT_MS,
+    isLoading: isLoading || bootstrapStatus === 'initializing',
+    onTimeout: () => {
+      console.error('[AuthGate] Auth timeout triggered after', AUTH_TIMEOUT_MS, 'ms');
+    },
+  });
 
   // Keep an always-up-to-date snapshot for diagnostics
   setAuthDebugSnapshot({
@@ -181,6 +202,16 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [location.pathname, location.search, location.hash, isLoading, isAuthTransition, bootstrapStatus, profileStatus, session, user]);
   
+  // CRITICAL: Show timeout fallback if auth has been loading too long
+  if (hasTimedOut) {
+    return (
+      <AuthTimeoutFallback 
+        onRetry={handleTimeoutRetry}
+        timeoutSeconds={Math.ceil(AUTH_TIMEOUT_MS / 1000)}
+      />
+    );
+  }
+
   // Wait until auth is fully stable (not loading AND not in transition)
   // Also wait during route restoration
   if (isLoading || isRouteRestoreInProgress()) {
@@ -479,14 +510,16 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <AppLifecycleHandler>
-            <AppRoutes />
-            <InstallPrompt />
-          </AppLifecycleHandler>
-        </AuthProvider>
-      </BrowserRouter>
+      <ChunkErrorBoundary>
+        <BrowserRouter>
+          <AuthProvider>
+            <AppLifecycleHandler>
+              <AppRoutes />
+              <InstallPrompt />
+            </AppLifecycleHandler>
+          </AuthProvider>
+        </BrowserRouter>
+      </ChunkErrorBoundary>
     </TooltipProvider>
   </QueryClientProvider>
 );
