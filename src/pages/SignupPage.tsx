@@ -154,12 +154,45 @@ export function SignupPage() {
 
       if (signUpError) {
         const errorMessage = signUpError.message?.toLowerCase() || "";
+        
+        // Handle already registered users
         if (
           errorMessage.includes("already registered") ||
           errorMessage.includes("already exists") ||
           errorMessage.includes("user_already_exists")
         ) {
           setEmailAlreadyExists(true);
+          setLoading(false);
+          return;
+        }
+
+        // Handle leaked/breached passwords (Supabase Leaked Password Protection)
+        if (
+          errorMessage.includes("password") && (
+            errorMessage.includes("breach") ||
+            errorMessage.includes("leaked") ||
+            errorMessage.includes("compromised") ||
+            errorMessage.includes("pwned") ||
+            errorMessage.includes("exposed")
+          )
+        ) {
+          toast.error(
+            "Esta senha foi encontrada em vazamentos de dados conhecidos. Por favor, escolha uma senha diferente e mais segura.",
+            { duration: 6000 }
+          );
+          setLoading(false);
+          return;
+        }
+
+        // Handle weak password errors
+        if (
+          errorMessage.includes("password") && (
+            errorMessage.includes("weak") ||
+            errorMessage.includes("short") ||
+            errorMessage.includes("simple")
+          )
+        ) {
+          toast.error("Senha muito fraca. Use uma senha mais forte.");
           setLoading(false);
           return;
         }
