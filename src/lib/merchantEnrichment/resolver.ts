@@ -10,10 +10,11 @@ import {
   isBankFeePattern,
   NormalizedDescriptor,
   DetectedEntities,
+  KNOWN_PLATFORMS,
 } from "./normalizer";
 
 export interface EvidenceItem {
-  type: 'CACHE_MATCH' | 'PLATFORM_DETECTED' | 'HEURISTIC' | 'USER_CONFIRMED' | 'FAMILY_HISTORY' | 'BANK_FEE';
+  type: 'CACHE_MATCH' | 'PLATFORM_DETECTED' | 'HEURISTIC' | 'USER_CONFIRMED' | 'FAMILY_HISTORY' | 'BANK_FEE' | 'INTERMEDIARY_WARNING';
   detail: string;
   confidence?: number;
 }
@@ -39,6 +40,9 @@ export interface MerchantResolution {
   
   // Source tracking
   source: 'CACHE' | 'PLATFORM' | 'HEURISTIC' | 'UNKNOWN';
+  
+  // Flag for requiring user confirmation
+  requiresConfirmation?: boolean;
 }
 
 interface MerchantDirectoryEntry {
@@ -57,6 +61,24 @@ interface MerchantDirectoryEntry {
   detected_platform: string | null;
   is_intermediary: boolean;
 }
+
+// Context patterns for category refinement
+const CONTEXT_PATTERNS = {
+  // Education context patterns
+  CERTIFICATION: /MBA|CERT|CERTIF|EXAME|PROVA|CERTIFICACAO/i,
+  
+  // Clothing/Fashion context
+  CLOTHING: /ROUPA|ROPA|SHOES|MODA|VESTUARIO|CALCA|CAMISA|VESTIDO|TENIS|SAPATO/i,
+  
+  // Electronics context
+  ELECTRONICS: /ELETR|INFO|NOTE|NOTEBOOK|IPHONE|TV|TABLET|CELULAR|SMARTPHONE|COMPUTER|PC/i,
+  
+  // Fee/Tax context (for gateway transactions)
+  FEE_CONTEXT: /TARIFA|TAXA|FEE|COMISSAO|MDR/i,
+  
+  // Internet/Fiber context (for telecom)
+  INTERNET_CONTEXT: /INTERNET|FIBRA|BANDA\s*LARGA|WIFI|WI-FI/i,
+};
 
 /**
  * Main resolver function - attempts to identify a merchant from a descriptor
@@ -80,9 +102,9 @@ export async function resolveMerchant(
     return createBankFeeResolution(normalized);
   }
   
-  // Step 4: Platform detection (if not already resolved by cache)
+  // Step 4: Platform detection with context-aware category mapping
   if (normalized.entities.platform) {
-    return createPlatformResolution(normalized);
+    return createPlatformResolution(normalized, rawDescriptor);
   }
   
   // Step 5: If we have a low-confidence cache result, return it
@@ -90,16 +112,17 @@ export async function resolveMerchant(
     return cacheResult;
   }
   
-  // Step 6: Unknown - return minimal info
+  // Step 6: Unknown - return minimal info with confirmation flag
   return {
     merchantLabel: null,
-    suggestedCategoryId: null,
-    suggestedSubcategoryId: null,
+    suggestedCategoryId: 'desconhecidas',
+    suggestedSubcategoryId: 'desconhecidas-outros',
     confidence: 0,
     evidence: [],
     isIntermediary: false,
     normalizedKey: normalized.normalizedKey,
     source: 'UNKNOWN',
+    requiresConfirmation: true,
   };
 }
 
@@ -201,35 +224,101 @@ async function tryMerchantCache(
 }
 
 /**
- * Create resolution for detected platform
+ * Create resolution for detected platform with context-aware category mapping
  */
-function createPlatformResolution(normalized: NormalizedDescriptor): MerchantResolution {
+function createPlatformResolution(normalized: NormalizedDescriptor, rawDescriptor: string): MerchantResolution {
   const platform = normalized.entities.platform!;
   const isIntermediary = normalized.entities.isIntermediary ?? false;
+  
+  // Get platform config for category hints
+  const platformConfig = Object.values(KNOWN_PLATFORMS).find(p => p.platform === platform);
+  
+  let suggestedCategoryId: string | null = platformConfig?.categoryHint || null;
+  let suggestedSubcategoryId: string | null = platformConfig?.subcategoryHint || null;
+  let confidence = isIntermediary ? 0.50 : 0.85;
+  
+  // Context-aware refinements
+  const upperDescriptor = rawDescriptor.toUpperCase();
+  
+  // For infoproduct platforms, check for certification context
+  if (['HOTMART', 'EDUZZ', 'MONETIZZE', 'KIWIFY', 'BRAIP', 'TICTO', 'PERFECTPAY'].includes(platform)) {
+    if (CONTEXT_PATTERNS.CERTIFICATION.test(upperDescriptor)) {
+      suggestedSubcategoryId = 'educacao-certificacoes';
+      confidence = 0.75;
+    }
+  }
+  
+  // For marketplaces, try to detect product type
+  if (['AMAZON', 'MERCADOLIVRE', 'SHOPEE', 'ALIEXPRESS', 'MAGALU', 'AMERICANAS'].includes(platform)) {
+    if (CONTEXT_PATTERNS.CLOTHING.test(upperDescriptor)) {
+      suggestedCategoryId = 'roupa-estetica';
+      suggestedSubcategoryId = 'roupa-estetica-roupas';
+      confidence = 0.70;
+    } else if (CONTEXT_PATTERNS.ELECTRONICS.test(upperDescriptor)) {
+      suggestedCategoryId = 'diversos';
+      suggestedSubcategoryId = 'diversos-equipamentos-eletronicos';
+      confidence = 0.75;
+    } else {
+      // Generic marketplace purchase - low confidence, needs confirmation
+      suggestedCategoryId = 'desconhecidas';
+      suggestedSubcategoryId = 'desconhecidas-outros';
+      confidence = 0.45;
+    }
+  }
+  
+  // For payment gateways, check if it's a fee
+  if (['MERCADOPAGO', 'PAGSEGURO', 'STONE', 'CIELO', 'GETNET', 'REDE', 'PAYPAL', 'PICPAY'].includes(platform)) {
+    if (CONTEXT_PATTERNS.FEE_CONTEXT.test(upperDescriptor)) {
+      suggestedCategoryId = 'despesas-financeiras';
+      suggestedSubcategoryId = 'despesas-financeiras-outras';
+      confidence = 0.75;
+    } else {
+      // Gateway without lojista info - needs confirmation
+      suggestedCategoryId = 'desconhecidas';
+      suggestedSubcategoryId = 'desconhecidas-outros';
+      confidence = 0.40;
+    }
+  }
+  
+  // For telecom, check if it's internet or mobile
+  if (['VIVO', 'CLARO', 'TIM', 'OI'].includes(platform)) {
+    if (CONTEXT_PATTERNS.INTERNET_CONTEXT.test(upperDescriptor)) {
+      suggestedSubcategoryId = 'casa-internet---tv---streamings';
+      confidence = 0.85;
+    } else {
+      // Default to mobile
+      suggestedSubcategoryId = 'casa-telefone-celular';
+      confidence = 0.80;
+    }
+  }
   
   const evidence: EvidenceItem[] = [{
     type: 'PLATFORM_DETECTED',
     detail: `Plataforma identificada: ${platform}`,
-    confidence: isIntermediary ? 0.6 : 0.9,
+    confidence,
   }];
   
   if (isIntermediary) {
     evidence.push({
-      type: 'PLATFORM_DETECTED',
+      type: 'INTERMEDIARY_WARNING',
       detail: 'Este é um intermediador - o lojista real pode ser diferente',
     });
   }
   
+  // Flag for requiring confirmation on low confidence
+  const requiresConfirmation = confidence < 0.55 || (isIntermediary && !CONTEXT_PATTERNS.FEE_CONTEXT.test(upperDescriptor));
+  
   return {
     merchantLabel: platform,
-    suggestedCategoryId: null, // Will be resolved from cache or left for user
-    suggestedSubcategoryId: null,
-    confidence: isIntermediary ? 0.5 : 0.8,
+    suggestedCategoryId,
+    suggestedSubcategoryId,
+    confidence,
     evidence,
     isIntermediary,
     detectedPlatform: platform,
     normalizedKey: normalized.normalizedKey,
     source: 'PLATFORM',
+    requiresConfirmation,
   };
 }
 
