@@ -48,7 +48,7 @@ import { SelectContextPage } from "./pages/SelectContextPage";
 import { SelectFamilyPage } from "./pages/SelectFamilyPage";
 import { InviteAcceptPage } from "./pages/InviteAcceptPage";
 import { OnboardingFlowPage } from "./pages/OnboardingFlowPage";
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 
 // Auth timeout configuration (in milliseconds)
 const AUTH_TIMEOUT_MS = 10000; // 10 seconds
@@ -116,17 +116,25 @@ focusManager.setEventListener((handleFocus) => {
   };
 });
 
-function LoadingSpinner() {
-  return <ScreenLoader label="Carregando..." />
+function LoadingSpinner({ className }: { className?: string }) {
+  return <ScreenLoader label="Carregando..." className={className} />
 }
 
-function SessionOverlay({ label }: { label: string }) {
+/**
+ * Soft session overlay - less intrusive, doesn't block scroll
+ * Only shows after delay when session verification is taking longer than expected
+ */
+function SoftSessionOverlay() {
   return (
-    <ScreenLoader
-      overlay
-      label={label}
-      className="pointer-events-auto touch-none overscroll-contain"
-    />
+    <div 
+      className="fixed inset-0 z-40 bg-background/30 backdrop-blur-[2px] flex items-center justify-center pointer-events-auto animate-in fade-in duration-300"
+      style={{ touchAction: 'none' }}
+    >
+      <div className="bg-background/90 backdrop-blur-sm rounded-lg px-6 py-4 shadow-lg flex items-center gap-3">
+        <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm text-muted-foreground">Verificando sessão…</span>
+      </div>
+    </div>
   );
 }
 
@@ -138,7 +146,16 @@ function SessionOverlay({ label }: { label: string }) {
  * NEW: Includes auth timeout failsafe to prevent infinite loading
  */
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { isLoading, isAuthTransition, session, user, bootstrapStatus, profileStatus, shouldRedirectToLogin } = useStableAuth();
+  const { 
+    session, 
+    user, 
+    bootstrapStatus, 
+    profileStatus,
+    isLoading,
+    isAuthTransition,
+    shouldShowSessionOverlay,
+    shouldRedirectToLogin,
+  } = useStableAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const lastRouteRef = useRef<string | null>(null);
@@ -146,11 +163,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   // Auth timeout failsafe
   const handleTimeoutRetry = useCallback(() => {
-    // Trigger a hard reload to restart auth flow
     window.location.reload();
   }, []);
 
-  const { hasTimedOut, resetTimeout } = useAuthTimeout({
+  const { hasTimedOut } = useAuthTimeout({
     timeoutMs: AUTH_TIMEOUT_MS,
     isLoading: isLoading || bootstrapStatus === 'initializing',
     onTimeout: () => {
@@ -170,7 +186,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     hasSession: !!session,
     hasUser: !!user,
   });
-  
+
+  // Check if we have an active session (for overlay logic)
+  const hasSession = !!session || !!user;
+
   // Log transition state for debugging
   useEffect(() => {
     if (isAuthTransition) {
@@ -180,29 +199,23 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   // React-side fallback: If pre-React restore didn't work, try here
   useEffect(() => {
-    // Only attempt once per session
     if (fallbackAttemptedRef.current) return;
-    
-    // Wait until auth is ready
     if (isLoading || isAuthTransition || bootstrapStatus !== 'ready') return;
     
-    // Only attempt if authenticated
     const isAuthenticated = !!session && !!user;
     if (!isAuthenticated) return;
     
-    // Try fallback restore
     const restorePath = tryFallbackRestore(location.pathname, isAuthenticated);
     if (restorePath) {
       fallbackAttemptedRef.current = true;
       console.log('[AuthGate] Fallback restore to:', restorePath);
       navigate(restorePath, { replace: true });
     } else {
-      // Mark restore as completed even if no restore was needed
       markRestoreCompleted();
     }
   }, [isLoading, isAuthTransition, bootstrapStatus, session, user, location.pathname, navigate]);
 
-  // Router-level route change logging (closest thing to routeChangeStart/Complete)
+  // Router-level route change logging
   useEffect(() => {
     const current = `${location.pathname}${location.search ?? ""}${location.hash ?? ""}`;
     const prev = lastRouteRef.current;
@@ -212,7 +225,6 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       console.log("[Router] Route changed", { from: prev, to: current });
     }
 
-    // CRITICAL: if we ever land on '/', capture a trace immediately
     if (current === "/" && prev !== "/") {
       console.error("[Router] UNEXPECTED_HOME_ROUTE", {
         from: prev,
@@ -228,13 +240,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [location.pathname, location.search, location.hash, isLoading, isAuthTransition, bootstrapStatus, profileStatus, session, user]);
   
-  // CRITICAL FIX: Only show overlay when there's an active session/user
-  // This prevents blocking public routes (e.g., /login) when user is not logged in
-  const hasSession = !!session || !!user;
-  
   // Safety net: track stuck transitions
   const transitionStartRef = useRef<number | null>(null);
-  const TRANSITION_STUCK_TIMEOUT_MS = 5000; // 5 seconds
+  const TRANSITION_STUCK_TIMEOUT_MS = 5000;
   
   useEffect(() => {
     if (isAuthTransition) {
@@ -242,11 +250,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         transitionStartRef.current = Date.now();
       }
       
-      // Check for stuck transition
       const checkStuck = setTimeout(() => {
         if (transitionStartRef.current && (Date.now() - transitionStartRef.current) >= TRANSITION_STUCK_TIMEOUT_MS) {
           console.error('[AuthGate] AUTH_TRANSITION_STUCK - transition active for >', TRANSITION_STUCK_TIMEOUT_MS, 'ms');
-          // Log for observability
           try {
             const { captureEvent } = require('@/lib/observability');
             captureEvent({
@@ -271,15 +277,21 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       transitionStartRef.current = null;
     }
   }, [isAuthTransition, hasSession, location.pathname]);
-  
-  // Only show session overlay if:
-  // 1. Auth has timed out (always show fallback UI), OR
-  // 2. There IS a session AND (loading OR transitioning OR restoring)
-  const shouldShowSessionOverlay = hasSession && (
-    isLoading ||
-    isAuthTransition ||
-    isRouteRestoreInProgress()
-  );
+
+  // Route state preservation logging
+  useEffect(() => {
+    if (isLifecycleDebugEnabled()) {
+      console.log('[AuthGate] State:', {
+        path: location.pathname,
+        bootstrapStatus,
+        profileStatus,
+        isLoading,
+        isAuthTransition,
+        hasSession,
+        shouldShowSessionOverlay,
+      });
+    }
+  }, [location.pathname, isLoading, isAuthTransition, bootstrapStatus, profileStatus, session, user, shouldShowSessionOverlay, hasSession]);
 
   return (
     <>
@@ -291,8 +303,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
             timeoutSeconds={Math.ceil(AUTH_TIMEOUT_MS / 1000)}
           />
         </div>
-      ) : shouldShowSessionOverlay ? (
-        <SessionOverlay label="Verificando sessão…" />
+      ) : hasSession && shouldShowSessionOverlay ? (
+        <SoftSessionOverlay />
       ) : null}
     </>
   );
@@ -365,7 +377,7 @@ function ProtectedRoute({
     return (
       <>
         {children}
-        <SessionOverlay label="Verificando sessão…" />
+        <SoftSessionOverlay />
       </>
     );
   }
@@ -455,7 +467,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     return (
       <>
         {children}
-        <SessionOverlay label="Verificando sessão…" />
+        <SoftSessionOverlay />
       </>
     );
   }
@@ -497,7 +509,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     return (
       <>
         {children}
-        <SessionOverlay label="Verificando sessão…" />
+        <SoftSessionOverlay />
       </>
     );
   }
