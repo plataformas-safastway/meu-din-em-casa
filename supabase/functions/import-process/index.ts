@@ -95,6 +95,19 @@ function rateLimitResponse(result: RateLimitResult): Response {
 // TYPES
 // ============================================
 
+type PDFStructureType = "structured" | "semi-structured" | "image-based" | "unknown";
+
+interface PDFStructureAnalysis {
+  type: PDFStructureType;
+  textLength: number;
+  textDensity: number; // chars per estimated page
+  hasTabularData: boolean;
+  hasDatePatterns: boolean;
+  hasAmountPatterns: boolean;
+  confidence: number;
+  reason: string;
+}
+
 interface ParsedTransaction {
   date: string;
   description: string;
@@ -104,7 +117,20 @@ interface ParsedTransaction {
   classification?: "income" | "expense" | "transfer" | "reimbursement" | "adjustment";
   paymentMethod?: "pix" | "boleto" | "debit" | "credit" | "cheque" | "cash" | "transfer" | "other";
   fitid?: string;
+  installmentInfo?: { current: number; total: number };
   raw_data?: Record<string, unknown>;
+}
+
+interface CreditCardInvoiceInfo {
+  issuer: string;
+  invoiceTotal: number | null;
+  dueDate: string | null;
+  closingDate: string | null;
+  last4: string | null;
+  transactionsSum: number;
+  discrepancy: number | null;
+  discrepancyPercent: number | null;
+  needsReview: boolean;
 }
 
 interface ProcessResponse {
@@ -114,6 +140,8 @@ interface ProcessResponse {
   needs_password?: boolean;
   error?: string;
   error_code?: string;
+  invoiceInfo?: CreditCardInvoiceInfo;
+  pdfStructure?: PDFStructureType;
 }
 
 // Month name to number mapping for Brazilian formats
@@ -136,7 +164,10 @@ const MONTH_MAP: Record<string, string> = {
 // BANK DETECTION (FINGERPRINTING)
 // ============================================
 
-type DetectedBank = "bradesco" | "btg" | "itau" | "santander" | "nubank" | "inter" | "c6" | "bb" | "caixa" | "unknown";
+type DetectedBank = "bradesco" | "btg" | "itau" | "santander" | "nubank" | "inter" | "c6" | "bb" | "caixa" | "xp" | "pan" | "original" | "unknown";
+
+// Supported banks for credit card invoice parsing
+const SUPPORTED_CREDIT_CARD_BANKS: DetectedBank[] = ["nubank", "itau", "inter", "bradesco", "santander", "c6", "btg"];
 
 // Detected source info (agency, account, etc.)
 interface DetectedSourceInfo {
@@ -509,6 +540,133 @@ function enrichTransactions(transactions: ParsedTransaction[]): ParsedTransactio
 }
 
 // ============================================
+// PDF STRUCTURE ANALYSIS
+// ============================================
+
+function analyzePDFStructure(text: string, binaryLength: number): PDFStructureAnalysis {
+  // Estimate pages based on binary size (~50KB per page average)
+  const estimatedPages = Math.max(1, Math.ceil(binaryLength / 50000));
+  const textDensity = text.length / estimatedPages;
+  
+  // Count patterns
+  const dateMatches = (text.match(/\d{2}\/\d{2}\/\d{2,4}/g) || []).length;
+  const amountMatches = (text.match(/\d{1,3}(?:[.,]\d{3})*[.,]\d{2}/g) || []).length;
+  const hasTabularIndicators = /\|\s*\w+\s*\|/.test(text) || 
+                               /^\s*\w+\s+\w+\s+\d/.test(text) ||
+                               dateMatches > 3;
+  
+  // Scoring
+  let score = 0;
+  let reason = "";
+  
+  // Text length analysis
+  if (text.length < 100) {
+    return {
+      type: "image-based",
+      textLength: text.length,
+      textDensity,
+      hasTabularData: false,
+      hasDatePatterns: false,
+      hasAmountPatterns: false,
+      confidence: 0.95,
+      reason: "Texto extraído muito curto (< 100 chars) - PDF provavelmente é imagem/escaneado"
+    };
+  }
+  
+  if (text.length < 500) {
+    score -= 30;
+    reason = "Pouco texto extraído - pode ser PDF com imagens";
+  } else if (text.length > 2000) {
+    score += 40;
+  }
+  
+  // Date patterns (essential for financial documents)
+  if (dateMatches >= 10) {
+    score += 30;
+  } else if (dateMatches >= 5) {
+    score += 20;
+  } else if (dateMatches >= 2) {
+    score += 10;
+  } else {
+    score -= 20;
+    reason += " Poucos padrões de data encontrados.";
+  }
+  
+  // Amount patterns
+  if (amountMatches >= 10) {
+    score += 30;
+  } else if (amountMatches >= 5) {
+    score += 20;
+  } else if (amountMatches >= 2) {
+    score += 10;
+  } else {
+    score -= 20;
+    reason += " Poucos valores monetários encontrados.";
+  }
+  
+  // Text density per page
+  if (textDensity > 1000) {
+    score += 20;
+  } else if (textDensity < 200) {
+    score -= 30;
+    reason += " Densidade de texto muito baixa.";
+  }
+  
+  // Determine type
+  let type: PDFStructureType;
+  if (score >= 50) {
+    type = "structured";
+    reason = "PDF estruturado com dados tabulares legíveis";
+  } else if (score >= 20) {
+    type = "semi-structured";
+    reason = reason.trim() || "PDF semi-estruturado - pode precisar de revisão manual";
+  } else if (text.length < 200) {
+    type = "image-based";
+    reason = "PDF baseado em imagem ou escaneado - não suportado para importação automática";
+  } else {
+    type = "unknown";
+    reason = reason.trim() || "Estrutura do PDF não reconhecida";
+  }
+  
+  console.log(`[PDF Structure] Type: ${type}, Score: ${score}, TextLen: ${text.length}, Dates: ${dateMatches}, Amounts: ${amountMatches}`);
+  
+  return {
+    type,
+    textLength: text.length,
+    textDensity,
+    hasTabularData: hasTabularIndicators,
+    hasDatePatterns: dateMatches >= 2,
+    hasAmountPatterns: amountMatches >= 2,
+    confidence: Math.min(0.95, Math.max(0.3, 0.5 + score / 100)),
+    reason
+  };
+}
+
+// ============================================
+// INSTALLMENT DETECTION
+// ============================================
+
+const INSTALLMENT_PATTERNS = [
+  /(\d{1,2})\s*(?:\/|de)\s*(\d{1,2})\s*(?:parcelas?)?/i, // "01/12", "1 de 12", "2/6 parcelas"
+  /parc(?:ela)?\s*(\d{1,2})\s*(?:\/|de)\s*(\d{1,2})/i, // "PARC 1/12", "parcela 2 de 6"
+  /(\d{1,2})\s*x\s*de\s*\d/i, // "12x de" (just to detect it's installment)
+];
+
+function detectInstallment(description: string): { current: number; total: number } | null {
+  for (const pattern of INSTALLMENT_PATTERNS) {
+    const match = description.match(pattern);
+    if (match) {
+      const current = parseInt(match[1]);
+      const total = parseInt(match[2]);
+      if (current >= 1 && current <= 48 && total >= 1 && total <= 48 && current <= total) {
+        return { current, total };
+      }
+    }
+  }
+  return null;
+}
+
+// ============================================
 // NOISE FILTERS (lines to ignore)
 // ============================================
 
@@ -529,6 +687,8 @@ const NOISE_PATTERNS = [
   /^data\s+histórico/i,
   /^data\s+lançamentos/i,
   /^data\s+e\s+hora/i,
+  /^valor\s*total\s*da\s*fatura/i,
+  /^pagamento\s*m[ií]nimo/i,
 ];
 
 function isNoiseLine(text: string): boolean {
@@ -989,6 +1149,472 @@ function parseBradescoText(text: string): ParsedTransaction[] {
   dedupedTxs.sort((a, b) => a.date.localeCompare(b.date));
   
   return dedupedTxs;
+}
+
+// ============================================
+// CREDIT CARD INVOICE PARSERS
+// ============================================
+
+interface InvoiceParseResult {
+  transactions: ParsedTransaction[];
+  invoiceTotal: number | null;
+  dueDate: string | null;
+  closingDate: string | null;
+  last4: string | null;
+}
+
+/**
+ * Parse Nubank credit card invoice
+ * Format: DD MMM YYYY | Description | Amount
+ */
+function parseNubankInvoice(text: string): InvoiceParseResult {
+  const transactions: ParsedTransaction[] = [];
+  let invoiceTotal: number | null = null;
+  let dueDate: string | null = null;
+  let last4: string | null = null;
+  
+  // Extract invoice total
+  const totalMatch = text.match(/valor\s*(?:total\s*)?(?:da\s*)?fatura[:\s]*R?\$?\s*([\d.,]+)/i) ||
+                     text.match(/total\s*fatura[:\s]*R?\$?\s*([\d.,]+)/i);
+  if (totalMatch) {
+    invoiceTotal = parseBrazilianAmount(totalMatch[1]);
+  }
+  
+  // Extract due date
+  const dueDateMatch = text.match(/vencimento[:\s]*(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4})/i) ||
+                       text.match(/vence\s*(?:em|dia)[:\s]*(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4})/i);
+  if (dueDateMatch) {
+    dueDate = parseFlexibleDate(dueDateMatch[1]);
+  }
+  
+  // Extract last 4 digits
+  const last4Match = text.match(/final[:\s]+(\d{4})/i) || text.match(/\*{4}(\d{4})/);
+  if (last4Match) {
+    last4 = last4Match[1];
+  }
+  
+  // Nubank format: date followed by description and amount
+  // Example: "15 NOV 2024 Uber *UBER *TRIP R$ 25,90"
+  const lines = text.split(/\n/);
+  const monthNames = "jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez";
+  const datePattern = new RegExp(`^(\\d{1,2})\\s+(${monthNames})(?:\\w*)\\s+(\\d{2,4})\\s+(.+?)\\s+R?\\$?\\s*([\\d.,]+)$`, 'i');
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || isNoiseLine(trimmed)) continue;
+    
+    const match = trimmed.match(datePattern);
+    if (match) {
+      const [, day, monthName, year, description, amountStr] = match;
+      const monthNum = MONTH_MAP[monthName.toLowerCase().substring(0, 3)];
+      if (!monthNum) continue;
+      
+      const fullYear = year.length === 2 ? `20${year}` : year;
+      const date = `${fullYear}-${monthNum}-${day.padStart(2, '0')}`;
+      
+      const amount = parseBrazilianAmount(amountStr);
+      if (!amount || amount < 0.01) continue;
+      
+      const installment = detectInstallment(description);
+      
+      transactions.push({
+        date,
+        description: description.trim().substring(0, 500),
+        amount,
+        type: "expense",
+        paymentMethod: "credit",
+        installmentInfo: installment || undefined,
+        raw_data: { source: "nubank-invoice" },
+      });
+    }
+  }
+  
+  // Fallback: more lenient pattern
+  if (transactions.length === 0) {
+    const lenientPattern = /(\d{1,2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\w*\s+(\d{2,4})?[^\d]*([A-Za-zÀ-ÿ\s\*\-]+?)\s+(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})/gi;
+    let match;
+    while ((match = lenientPattern.exec(text)) !== null) {
+      const [, day, monthName, year, description, amountStr] = match;
+      const monthNum = MONTH_MAP[monthName.toLowerCase().substring(0, 3)];
+      if (!monthNum) continue;
+      
+      const fullYear = year?.length === 2 ? `20${year}` : (year || new Date().getFullYear().toString());
+      const date = `${fullYear}-${monthNum}-${day.padStart(2, '0')}`;
+      
+      const amount = parseBrazilianAmount(amountStr);
+      if (!amount || amount < 0.01) continue;
+      
+      if (isNoiseLine(description)) continue;
+      
+      transactions.push({
+        date,
+        description: description.trim().substring(0, 500),
+        amount,
+        type: "expense",
+        paymentMethod: "credit",
+        raw_data: { source: "nubank-invoice-fallback" },
+      });
+    }
+  }
+  
+  console.log(`[parseNubankInvoice] Found ${transactions.length} transactions, total: ${invoiceTotal}`);
+  
+  return { transactions, invoiceTotal, dueDate, closingDate: null, last4 };
+}
+
+/**
+ * Parse Itaú credit card invoice
+ * Format: DD/MM Description Amount
+ */
+function parseItauInvoice(text: string): InvoiceParseResult {
+  const transactions: ParsedTransaction[] = [];
+  let invoiceTotal: number | null = null;
+  let dueDate: string | null = null;
+  let closingDate: string | null = null;
+  let last4: string | null = null;
+  
+  // Extract totals and dates
+  const totalMatch = text.match(/total\s*(?:da\s*)?fatura[:\s]*R?\$?\s*([\d.,]+)/i) ||
+                     text.match(/valor\s*total[:\s]*R?\$?\s*([\d.,]+)/i);
+  if (totalMatch) {
+    invoiceTotal = parseBrazilianAmount(totalMatch[1]);
+  }
+  
+  const dueDateMatch = text.match(/vencimento[:\s]*(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4})/i);
+  if (dueDateMatch) {
+    dueDate = parseFlexibleDate(dueDateMatch[1]);
+  }
+  
+  const closingMatch = text.match(/fechamento[:\s]*(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4})/i);
+  if (closingMatch) {
+    closingDate = parseFlexibleDate(closingMatch[1]);
+  }
+  
+  const last4Match = text.match(/final[:\s]+(\d{4})/i) || text.match(/\*{4}(\d{4})/);
+  if (last4Match) {
+    last4 = last4Match[1];
+  }
+  
+  // Determine default year from closing date or due date
+  const defaultYear = closingDate?.substring(0, 4) || 
+                      dueDate?.substring(0, 4) || 
+                      new Date().getFullYear().toString();
+  
+  // Itaú format: DD/MM followed by description and amount
+  const lines = text.split(/\n/);
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || isNoiseLine(trimmed)) continue;
+    
+    // Pattern: DD/MM description amount
+    const match = trimmed.match(/^(\d{2})\/(\d{2})\s+(.+?)\s+(-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2})$/);
+    if (match) {
+      const [, day, month, description, amountStr] = match;
+      
+      const dayNum = parseInt(day);
+      const monthNum = parseInt(month);
+      if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) continue;
+      
+      const date = `${defaultYear}-${month}-${day}`;
+      const amount = parseBrazilianAmount(amountStr);
+      if (!amount) continue;
+      
+      // Skip credit (negative = payment received)
+      const isCredit = amountStr.startsWith('-') || amount < 0;
+      
+      const installment = detectInstallment(description);
+      
+      transactions.push({
+        date,
+        description: description.trim().substring(0, 500),
+        amount: Math.abs(amount),
+        type: isCredit ? "income" : "expense",
+        paymentMethod: "credit",
+        installmentInfo: installment || undefined,
+        raw_data: { source: "itau-invoice" },
+      });
+    }
+  }
+  
+  console.log(`[parseItauInvoice] Found ${transactions.length} transactions, total: ${invoiceTotal}`);
+  
+  return { transactions, invoiceTotal, dueDate, closingDate, last4 };
+}
+
+/**
+ * Parse Inter credit card invoice
+ */
+function parseInterInvoice(text: string): InvoiceParseResult {
+  const transactions: ParsedTransaction[] = [];
+  let invoiceTotal: number | null = null;
+  let dueDate: string | null = null;
+  let last4: string | null = null;
+  
+  // Extract totals
+  const totalMatch = text.match(/(?:valor|total)\s*(?:da\s*)?fatura[:\s]*R?\$?\s*([\d.,]+)/i);
+  if (totalMatch) {
+    invoiceTotal = parseBrazilianAmount(totalMatch[1]);
+  }
+  
+  const dueDateMatch = text.match(/vencimento[:\s]*(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4})/i);
+  if (dueDateMatch) {
+    dueDate = parseFlexibleDate(dueDateMatch[1]);
+  }
+  
+  const last4Match = text.match(/final[:\s]+(\d{4})/i) || text.match(/\*{4}(\d{4})/);
+  if (last4Match) {
+    last4 = last4Match[1];
+  }
+  
+  const defaultYear = dueDate?.substring(0, 4) || new Date().getFullYear().toString();
+  
+  // Inter format: similar to Itaú, DD/MM Description Amount
+  const lines = text.split(/\n/);
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || isNoiseLine(trimmed)) continue;
+    
+    const match = trimmed.match(/^(\d{2})\/(\d{2})(?:\/(\d{2,4}))?\s+(.+?)\s+R?\$?\s*(-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2})$/);
+    if (match) {
+      const [, day, month, year, description, amountStr] = match;
+      
+      const fullYear = year ? (year.length === 2 ? `20${year}` : year) : defaultYear;
+      const date = `${fullYear}-${month}-${day}`;
+      
+      const amount = parseBrazilianAmount(amountStr);
+      if (!amount) continue;
+      
+      const isCredit = amountStr.startsWith('-') || amount < 0;
+      const installment = detectInstallment(description);
+      
+      transactions.push({
+        date,
+        description: description.trim().substring(0, 500),
+        amount: Math.abs(amount),
+        type: isCredit ? "income" : "expense",
+        paymentMethod: "credit",
+        installmentInfo: installment || undefined,
+        raw_data: { source: "inter-invoice" },
+      });
+    }
+  }
+  
+  console.log(`[parseInterInvoice] Found ${transactions.length} transactions, total: ${invoiceTotal}`);
+  
+  return { transactions, invoiceTotal, dueDate, closingDate: null, last4 };
+}
+
+/**
+ * Parse Bradesco credit card invoice
+ */
+function parseBradescoInvoice(text: string): InvoiceParseResult {
+  const transactions: ParsedTransaction[] = [];
+  let invoiceTotal: number | null = null;
+  let dueDate: string | null = null;
+  let closingDate: string | null = null;
+  let last4: string | null = null;
+  
+  // Extract totals
+  const totalMatch = text.match(/total\s*(?:da\s*)?fatura[:\s]*R?\$?\s*([\d.,]+)/i) ||
+                     text.match(/valor\s*total[:\s]*R?\$?\s*([\d.,]+)/i);
+  if (totalMatch) {
+    invoiceTotal = parseBrazilianAmount(totalMatch[1]);
+  }
+  
+  const dueDateMatch = text.match(/vencimento[:\s]*(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4})/i);
+  if (dueDateMatch) {
+    dueDate = parseFlexibleDate(dueDateMatch[1]);
+  }
+  
+  const closingMatch = text.match(/fechamento[:\s]*(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4})/i);
+  if (closingMatch) {
+    closingDate = parseFlexibleDate(closingMatch[1]);
+  }
+  
+  const last4Match = text.match(/final[:\s]+(\d{4})/i) || text.match(/\*{4}(\d{4})/);
+  if (last4Match) {
+    last4 = last4Match[1];
+  }
+  
+  const defaultYear = closingDate?.substring(0, 4) || 
+                      dueDate?.substring(0, 4) || 
+                      new Date().getFullYear().toString();
+  
+  // Bradesco invoice format
+  const lines = text.split(/\n/);
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || isNoiseLine(trimmed)) continue;
+    
+    // Pattern: DD/MM or DD/MM/YY followed by description and amount
+    const match = trimmed.match(/^(\d{2})\/(\d{2})(?:\/(\d{2,4}))?\s+(.+?)\s+(-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2})$/);
+    if (match) {
+      const [, day, month, year, description, amountStr] = match;
+      
+      const fullYear = year ? (year.length === 2 ? `20${year}` : year) : defaultYear;
+      const date = `${fullYear}-${month}-${day}`;
+      
+      const amount = parseBrazilianAmount(amountStr);
+      if (!amount) continue;
+      
+      const isCredit = amountStr.startsWith('-');
+      const installment = detectInstallment(description);
+      
+      transactions.push({
+        date,
+        description: description.trim().substring(0, 500),
+        amount: Math.abs(amount),
+        type: isCredit ? "income" : "expense",
+        paymentMethod: "credit",
+        installmentInfo: installment || undefined,
+        raw_data: { source: "bradesco-invoice" },
+      });
+    }
+  }
+  
+  console.log(`[parseBradescoInvoice] Found ${transactions.length} transactions, total: ${invoiceTotal}`);
+  
+  return { transactions, invoiceTotal, dueDate, closingDate, last4 };
+}
+
+/**
+ * Parse generic credit card invoice (fallback)
+ */
+function parseGenericCreditCardInvoice(text: string): InvoiceParseResult {
+  const transactions: ParsedTransaction[] = [];
+  let invoiceTotal: number | null = null;
+  let dueDate: string | null = null;
+  let last4: string | null = null;
+  
+  // Extract totals
+  const totalMatch = text.match(/(?:total|valor)\s*(?:da\s*)?fatura[:\s]*R?\$?\s*([\d.,]+)/i);
+  if (totalMatch) {
+    invoiceTotal = parseBrazilianAmount(totalMatch[1]);
+  }
+  
+  const dueDateMatch = text.match(/vencimento[:\s]*(\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4})/i);
+  if (dueDateMatch) {
+    dueDate = parseFlexibleDate(dueDateMatch[1]);
+  }
+  
+  const last4Match = text.match(/final[:\s]+(\d{4})/i) || text.match(/\*{4}(\d{4})/);
+  if (last4Match) {
+    last4 = last4Match[1];
+  }
+  
+  const defaultYear = dueDate?.substring(0, 4) || new Date().getFullYear().toString();
+  
+  // Generic: find date + description + amount patterns
+  const combinedPattern = /(\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?)\s+([A-Za-zÀ-ÿ\s\*\-\d]+?)\s+R?\$?\s*(-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2})/g;
+  
+  let match;
+  while ((match = combinedPattern.exec(text)) !== null) {
+    const [, dateStr, description, amountStr] = match;
+    
+    let date = parseFlexibleDate(dateStr);
+    if (!date) {
+      // Try DD/MM format
+      const shortMatch = dateStr.match(/^(\d{2})[\/\-\.](\d{2})$/);
+      if (shortMatch) {
+        const [, day, month] = shortMatch;
+        date = `${defaultYear}-${month}-${day}`;
+      }
+    }
+    if (!date) continue;
+    
+    const amount = parseBrazilianAmount(amountStr);
+    if (!amount || Math.abs(amount) < 0.01) continue;
+    
+    const cleanDesc = description.trim();
+    if (isNoiseLine(cleanDesc) || cleanDesc.length < 3) continue;
+    
+    const isCredit = amountStr.startsWith('-') || amount < 0;
+    const installment = detectInstallment(cleanDesc);
+    
+    transactions.push({
+      date,
+      description: cleanDesc.substring(0, 500),
+      amount: Math.abs(amount),
+      type: isCredit ? "income" : "expense",
+      paymentMethod: "credit",
+      installmentInfo: installment || undefined,
+      raw_data: { source: "generic-invoice" },
+    });
+  }
+  
+  console.log(`[parseGenericCreditCardInvoice] Found ${transactions.length} transactions, total: ${invoiceTotal}`);
+  
+  return { transactions, invoiceTotal, dueDate, closingDate: null, last4 };
+}
+
+/**
+ * Main credit card invoice parser router
+ */
+function parseCreditCardInvoice(text: string, bank: DetectedBank): InvoiceParseResult {
+  console.log(`[parseCreditCardInvoice] Parsing invoice for bank: ${bank}`);
+  
+  switch (bank) {
+    case "nubank":
+      return parseNubankInvoice(text);
+    case "itau":
+      return parseItauInvoice(text);
+    case "inter":
+      return parseInterInvoice(text);
+    case "bradesco":
+      return parseBradescoInvoice(text);
+    case "santander":
+    case "c6":
+    case "btg":
+      // These use similar formats to Itaú
+      return parseItauInvoice(text);
+    default:
+      return parseGenericCreditCardInvoice(text);
+  }
+}
+
+/**
+ * Validate invoice consistency
+ */
+function validateInvoice(result: InvoiceParseResult, bankName: string): CreditCardInvoiceInfo {
+  const transactionsSum = result.transactions
+    .filter(tx => tx.type === "expense")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+  
+  const creditsSum = result.transactions
+    .filter(tx => tx.type === "income")
+    .reduce((sum, tx) => sum + tx.amount, 0);
+  
+  const netSum = transactionsSum - creditsSum;
+  
+  let discrepancy: number | null = null;
+  let discrepancyPercent: number | null = null;
+  let needsReview = false;
+  
+  if (result.invoiceTotal !== null && result.invoiceTotal > 0) {
+    discrepancy = Math.abs(result.invoiceTotal - netSum);
+    discrepancyPercent = (discrepancy / result.invoiceTotal) * 100;
+    
+    // Flag for review if discrepancy > 1% or > R$10
+    if (discrepancyPercent > 1 || discrepancy > 10) {
+      needsReview = true;
+      console.log(`[validateInvoice] Discrepancy detected: Total=${result.invoiceTotal}, Sum=${netSum}, Diff=${discrepancy} (${discrepancyPercent.toFixed(1)}%)`);
+    }
+  }
+  
+  return {
+    issuer: bankName,
+    invoiceTotal: result.invoiceTotal,
+    dueDate: result.dueDate,
+    closingDate: result.closingDate,
+    last4: result.last4,
+    transactionsSum: netSum,
+    discrepancy,
+    discrepancyPercent,
+    needsReview
+  };
 }
 
 function parseBtgText(text: string): ParsedTransaction[] {
@@ -2764,6 +3390,25 @@ serve(async (req) => {
       rawTextContent = extractPDFTextRobust(binaryString);
       console.log(`[PDF] Extracted text length: ${rawTextContent.length} chars`);
       
+      // ============================================
+      // PDF STRUCTURE ANALYSIS
+      // ============================================
+      const pdfStructure = analyzePDFStructure(rawTextContent, fileBytes.length);
+      console.log(`[PDF] Structure analysis: ${pdfStructure.type} (confidence: ${pdfStructure.confidence.toFixed(2)})`);
+      
+      // Reject image-based PDFs
+      if (pdfStructure.type === "image-based") {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: "Este PDF parece ser baseado em imagem ou escaneado. A importação automática requer PDFs estruturados com texto selecionável. Tente exportar o extrato diretamente do internet banking em formato OFX ou PDF estruturado.",
+          error_code: "IMPORT_PDF_IMAGE_BASED",
+          pdfStructure: pdfStructure.type
+        } as ProcessResponse), {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+      
       // Log first 500 chars for debugging (no sensitive data)
       if (rawTextContent.length > 0) {
         console.log(`[PDF] Text preview (first 500): ${rawTextContent.substring(0, 500).replace(/\s+/g, ' ')}`);
@@ -2774,7 +3419,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ 
           success: false, 
           error: "Não foi possível extrair texto do PDF. O arquivo pode estar escaneado ou em formato de imagem.",
-          error_code: "IMPORT_PDF_TEXT_EXTRACTION_FAILED"
+          error_code: "IMPORT_PDF_TEXT_EXTRACTION_FAILED",
+          pdfStructure: "image-based"
         } as ProcessResponse), {
           status: 200,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -2788,7 +3434,44 @@ serve(async (req) => {
       
       console.log(`[PDF] Detected bank: ${detectedBankName}`);
       
-      transactions = parseTextContent(rawTextContent, detectedBank);
+      // ============================================
+      // DETECT IF CREDIT CARD INVOICE
+      // ============================================
+      const isCreditCardInvoice = /fatura|invoice|cart[ãa]o\s+de\s+cr[ée]dito|credit\s+card/i.test(rawTextContent.substring(0, 3000));
+      
+      if (isCreditCardInvoice) {
+        console.log(`[PDF] Detected as credit card invoice`);
+        
+        // Check if bank is supported for invoice parsing
+        const isBankSupported = SUPPORTED_CREDIT_CARD_BANKS.includes(detectedBank);
+        
+        if (!isBankSupported && detectedBank !== "unknown") {
+          console.log(`[PDF] Bank ${detectedBank} not in supported list for invoice parsing`);
+        }
+        
+        // Parse credit card invoice
+        const invoiceResult = parseCreditCardInvoice(rawTextContent, detectedBank);
+        transactions = invoiceResult.transactions;
+        
+        // Validate invoice consistency
+        const invoiceInfo = validateInvoice(invoiceResult, detectedBankName || "Cartão");
+        
+        // Store invoice info for response
+        // @ts-ignore - will be used in response
+        (globalThis as any).__invoiceInfo = invoiceInfo;
+        
+        // Also update detected source info with invoice details
+        if (invoiceResult.last4) {
+          // Will be used in source detection
+          (globalThis as any).__invoiceLast4 = invoiceResult.last4;
+        }
+        
+        console.log(`[PDF] Invoice parser found ${transactions.length} transactions, total: ${invoiceInfo.invoiceTotal}, needs review: ${invoiceInfo.needsReview}`);
+      } else {
+        // Regular bank statement
+        transactions = parseTextContent(rawTextContent, detectedBank);
+      }
+      
       console.log(`[PDF] Final transaction count: ${transactions.length}`);
     }
 
@@ -3117,6 +3800,16 @@ serve(async (req) => {
     
     if (detectedSourceInfo) {
       responseData.detected = detectedSourceInfo;
+    }
+    
+    // Include invoice validation info if available
+    // @ts-ignore
+    const invoiceInfo = (globalThis as any).__invoiceInfo as CreditCardInvoiceInfo | undefined;
+    if (invoiceInfo) {
+      responseData.invoiceInfo = invoiceInfo;
+      // Clean up global
+      // @ts-ignore
+      delete (globalThis as any).__invoiceInfo;
     }
 
     return new Response(JSON.stringify(responseData), {
