@@ -34,6 +34,10 @@ import {
   Bug,
   User,
   ChevronDown,
+  Sparkles,
+  MessageCircle,
+  TrendingUp,
+  ThumbsUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -177,6 +181,15 @@ export function AdminLayout() {
     { path: "/admin/integrations/keys", label: "Chaves API", icon: Key },
   ] : [];
 
+  // OIK AI menu (product monitoring)
+  const oikAIMenuItems: MenuItem[] = (isAdmin || hasTechAccess) ? [
+    { path: "/admin/oik-ai", label: "Visão Geral", icon: Sparkles },
+    { path: "/admin/oik-ai/conversations", label: "Conversas", icon: MessageCircle },
+    { path: "/admin/oik-ai/analytics", label: "Analytics", icon: TrendingUp },
+    { path: "/admin/oik-ai/feedback", label: "Feedback", icon: ThumbsUp },
+    { path: "/admin/oik-ai/config", label: "Configuração", icon: Settings },
+  ] : [];
+
   // Render menu section helper
   const renderMenuSection = (title: string, items: MenuItem[]) => {
     if (items.length === 0) return null;
@@ -299,6 +312,7 @@ export function AdminLayout() {
             })}
 
             {/* Modular sections */}
+            {renderMenuSection("OIK AI", oikAIMenuItems)}
             {renderMenuSection("FINANCEIRO", financialMenuItems)}
             {renderMenuSection("SUPORTE", supportMenuItems)}
             {renderMenuSection("CUSTOMER SUCCESS", csMenuItems)}

@@ -61,6 +61,9 @@ const IntegrationOneDrivePage = lazy(() => import("./integrations/IntegrationOne
 const IntegrationLovableAIPage = lazy(() => import("./integrations/IntegrationLovableAIPage").then(m => ({ default: m.IntegrationLovableAIPage })));
 const IntegrationOpenStreetMapPage = lazy(() => import("./integrations/IntegrationOpenStreetMapPage").then(m => ({ default: m.IntegrationOpenStreetMapPage })));
 
+// OIK AI module
+const OikAIPage = lazy(() => import("./OikAIPage"));
+
 // Profile page
 const AdminProfilePage = lazy(() => import("./AdminProfilePage").then(m => ({ default: m.AdminProfilePage })));
 
@@ -173,6 +176,13 @@ export function AdminRoutes() {
         <Route path="integrations/lovable-ai" element={<LazyPage Component={IntegrationLovableAIPage} />} />
         <Route path="integrations/openstreetmap" element={<LazyPage Component={IntegrationOpenStreetMapPage} />} />
         <Route path="integrations/keys" element={<LazyPage Component={TechApiKeysPage} />} />
+
+        {/* OIK AI module */}
+        <Route path="oik-ai" element={<LazyPage Component={OikAIPage} />} />
+        <Route path="oik-ai/conversations" element={<LazyPage Component={OikAIPage} />} />
+        <Route path="oik-ai/analytics" element={<LazyPage Component={OikAIPage} />} />
+        <Route path="oik-ai/feedback" element={<LazyPage Component={OikAIPage} />} />
+        <Route path="oik-ai/config" element={<LazyPage Component={OikAIPage} />} />
 
         {/* Executive module */}
         <Route path="executive" element={<LazyPage Component={ExecutiveReportsPage} />} />
