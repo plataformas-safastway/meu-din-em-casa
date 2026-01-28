@@ -3,6 +3,7 @@
  * Uses React Router v6 <Outlet /> for rendering child routes
  */
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { 
   Users, 
   BarChart3, 
@@ -39,6 +40,7 @@ import { useUserAccessProfile } from "@/hooks/useUserAccessProfile";
 import { useMustChangePassword } from "@/hooks/useMasterUserSetup";
 import { ForcePasswordChangeModal } from "@/components/auth/ForcePasswordChangeModal";
 import { cn } from "@/lib/utils";
+import { logLifecycle } from "@/lib/lifecycleTracer";
 
 type MenuItem = {
   path: string;
@@ -53,6 +55,12 @@ export function AdminLayout() {
   const { role, isAdmin } = useIsAdmin();
   const { data: accessProfile } = useUserAccessProfile();
   const { data: mustChangePassword, refetch: refetchPasswordCheck } = useMustChangePassword();
+
+  // Lifecycle tracing
+  useEffect(() => {
+    logLifecycle('MOUNT', 'AdminLayout');
+    return () => logLifecycle('UNMOUNT', 'AdminLayout');
+  }, []);
 
   // Extract access flags
   const hasFinancialAccess = accessProfile?.has_financial_access ?? false;
