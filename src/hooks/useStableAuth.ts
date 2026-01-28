@@ -27,11 +27,15 @@ const MIN_HIDDEN_FOR_HARD_CHECK = 3000;
 // NEW: Threshold before showing overlay (600ms)
 const OVERLAY_DELAY_MS = 600;
 
+// NEW: Maximum transition duration before auto-clear (prevents stuck state)
+const MAX_TRANSITION_DURATION_MS = 20000;
+
 // NEW: Track if we're in a "soft" resume (no overlay needed)
 let globalIsSoftResume = false;
 let globalResumeStartTime = 0;
 let globalTokenRefreshInProgress = false;
 let globalHardCheckInProgress = false;
+let globalTransitionStartTime = 0;
 
 function getSnapshot(): boolean {
   return globalIsInTransition;
@@ -185,6 +189,7 @@ if (typeof document !== 'undefined') {
       // Only enable protection if hidden for meaningful time
       if (hiddenDuration >= MIN_HIDDEN_FOR_PROTECTION) {
         globalIsInTransition = true;
+        globalTransitionStartTime = Date.now(); // Track start time
         // Notify synchronously to ensure React sees the new state
         notifyListeners();
         
@@ -197,6 +202,7 @@ if (typeof document !== 'undefined') {
           globalIsInTransition = false;
           globalIsSoftResume = false;
           globalResumeStartTime = 0;
+          globalTransitionStartTime = 0;
           console.log('[StableAuth] Transition period ended after', TRANSITION_WINDOW_MS, 'ms');
           addBreadcrumb('auth', 'transition_ended');
           notifyListeners();
@@ -261,6 +267,26 @@ if (typeof document !== 'undefined') {
 }
 
 /**
+ * Check if transition is stuck (exceeded max duration)
+ */
+export function isTransitionStuck(): boolean {
+  if (!globalIsInTransition || globalTransitionStartTime === 0) {
+    return false;
+  }
+  return (Date.now() - globalTransitionStartTime) > MAX_TRANSITION_DURATION_MS;
+}
+
+/**
+ * Get transition duration in milliseconds
+ */
+export function getTransitionDuration(): number {
+  if (!globalIsInTransition || globalTransitionStartTime === 0) {
+    return 0;
+  }
+  return Date.now() - globalTransitionStartTime;
+}
+
+/**
  * Clear transition state (called when auth is verified)
  */
 export function clearTransition(): void {
@@ -271,6 +297,7 @@ export function clearTransition(): void {
   globalIsInTransition = false;
   globalIsSoftResume = false;
   globalResumeStartTime = 0;
+  globalTransitionStartTime = 0;
   globalTokenRefreshInProgress = false;
   globalHardCheckInProgress = false;
   notifyListeners();
@@ -352,6 +379,25 @@ export function useStableAuth() {
         clearTimeout(overlayTimerRef.current);
       }
     };
+  }, [isAuthTransition, auth.session]);
+
+  // NEW: Safety mechanism to auto-clear stuck transitions
+  useEffect(() => {
+    if (!isAuthTransition) return;
+    
+    // Check periodically if transition is stuck
+    const checkStuckInterval = setInterval(() => {
+      if (isTransitionStuck()) {
+        console.warn('[StableAuth] Transition stuck for >', MAX_TRANSITION_DURATION_MS, 'ms - auto-clearing');
+        addBreadcrumb('auth', 'transition_stuck_auto_clear', { 
+          duration: getTransitionDuration(),
+          hasSession: !!auth.session,
+        });
+        clearTransition();
+      }
+    }, 5000); // Check every 5 seconds
+    
+    return () => clearInterval(checkStuckInterval);
   }, [isAuthTransition, auth.session]);
 
   // Computed stable values
