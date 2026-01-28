@@ -14,6 +14,7 @@ import {
   Building2,
   FileText,
   HardDrive,
+  Cloud,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -52,6 +53,7 @@ const PROVIDER_ICONS: Record<IntegrationProvider, React.ReactNode> = {
   RESEND: <Mail className="w-4 h-4" />,
   ENOTAS: <FileText className="w-4 h-4" />,
   GOOGLE_DRIVE: <HardDrive className="w-4 h-4" />,
+  ONEDRIVE: <Cloud className="w-4 h-4" />,
 };
 
 export function IntegrationLogsCard({ provider }: IntegrationLogsCardProps) {
