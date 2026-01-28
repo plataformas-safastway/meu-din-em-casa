@@ -42,6 +42,7 @@ const TechLogsPage = lazy(() => import("./tech/TechLogsPage").then(m => ({ defau
 const TechApiKeysPage = lazy(() => import("./tech/TechApiKeysPage").then(m => ({ default: m.TechApiKeysPage })));
 const TechFeatureFlagsPage = lazy(() => import("./tech/TechFeatureFlagsPage").then(m => ({ default: m.TechFeatureFlagsPage })));
 const TechAuditPage = lazy(() => import("./tech/TechAuditPage").then(m => ({ default: m.TechAuditPage })));
+const TechObservabilityPage = lazy(() => import("./tech/TechObservabilityPage").then(m => ({ default: m.TechObservabilityPage })));
 
 // LGPD module
 const LGPDOverviewPage = lazy(() => import("./lgpd/LGPDOverviewPage").then(m => ({ default: m.LGPDOverviewPage })));
@@ -146,6 +147,7 @@ export function AdminRoutes() {
         {/* Tech module */}
         <Route path="tech/health" element={<LazyPage Component={TechHealthPage} />} />
         <Route path="tech/logs" element={<LazyPage Component={TechLogsPage} />} />
+        <Route path="tech/observability" element={<LazyPage Component={TechObservabilityPage} />} />
         <Route path="tech/flags" element={<LazyPage Component={TechFeatureFlagsPage} />} />
         <Route path="tech/audit" element={<LazyPage Component={TechAuditPage} />} />
 

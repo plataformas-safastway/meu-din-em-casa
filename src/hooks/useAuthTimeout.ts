@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { logAuthStage } from '@/lib/authDebug';
+import { recordAuthStage } from '@/lib/authInstrumentation';
+import { captureEvent, addBreadcrumb } from '@/lib/observability';
 
 interface UseAuthTimeoutOptions {
   /** Timeout in milliseconds (default: 10000 = 10s) */
@@ -48,6 +50,7 @@ export function useAuthTimeout({
   }, []);
 
   const resetTimeout = useCallback(() => {
+    addBreadcrumb('auth', 'timeout_reset');
     setHasTimedOut(false);
     setRemainingSeconds(Math.ceil(timeoutMs / 1000));
     startTimeRef.current = null;
@@ -60,6 +63,8 @@ export function useAuthTimeout({
       clearTimers();
       if (startTimeRef.current !== null) {
         // Auth completed successfully
+        const elapsed = Date.now() - startTimeRef.current;
+        addBreadcrumb('auth', 'loading_complete', { elapsed });
         setHasTimedOut(false);
         startTimeRef.current = null;
       }
@@ -75,6 +80,7 @@ export function useAuthTimeout({
     if (startTimeRef.current === null) {
       startTimeRef.current = Date.now();
       setRemainingSeconds(Math.ceil(timeoutMs / 1000));
+      addBreadcrumb('auth', 'timeout_started', { timeoutMs });
     }
 
     // Set up countdown interval
@@ -88,10 +94,26 @@ export function useAuthTimeout({
 
     // Set up timeout
     timeoutIdRef.current = setTimeout(() => {
-      logAuthStage('AUTH_TIMEOUT', {
+      const context = {
         timeoutMs,
         startTime: startTimeRef.current,
         path: window.location.pathname,
+        search: window.location.search,
+      };
+      
+      // Log to legacy debug system
+      logAuthStage('AUTH_TIMEOUT', context);
+      
+      // Log to production observability
+      recordAuthStage('timeout');
+      
+      // Capture as fatal event
+      captureEvent({
+        category: 'auth',
+        name: 'timeout_triggered',
+        severity: 'fatal',
+        message: `Auth loading timed out after ${timeoutMs}ms`,
+        data: context,
       });
       
       setHasTimedOut(true);

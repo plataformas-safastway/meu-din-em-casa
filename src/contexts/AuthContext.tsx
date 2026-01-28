@@ -4,6 +4,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { isInFocusTransition } from '@/hooks/useStableAuth';
 import { clearRouteResumeState } from '@/lib/routeResumeGuard';
 import { logAuthStage, isAuthDebugEnabled, installAuthErrorHandlers } from '@/lib/authDebug';
+import { 
+  startAuthFlow, 
+  recordAuthStage, 
+  recordAuthError,
+  wrapAuthRequest 
+} from '@/lib/authInstrumentation';
+import { setUserContext, addBreadcrumb } from '@/lib/observability';
 interface Family {
   id: string;
   name: string;
@@ -179,7 +186,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     const initializeAuth = async () => {
+      // Start production instrumentation (always active)
+      startAuthFlow();
+      
       logAuthStage('AUTH_INIT_START', { path: window.location.pathname });
+      addBreadcrumb('auth', 'init_start', { path: window.location.pathname });
       console.log('[Auth] Initializing...');
       
       // Set up auth state change listener
@@ -188,10 +199,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!mounted) return;
           
           logAuthStage('AUTH_STATE_CHANGE', { event, hasSession: !!newSession });
+          addBreadcrumb('auth', 'state_change', { event, hasSession: !!newSession });
           console.log('[Auth] Auth state change:', event, 'inFocusTransition:', isInFocusTransition());
 
           // Instrumentation: if we ever transition to a null session, capture full context.
           if (!newSession) {
+            recordAuthStage('null_session', {
+              event,
+              path: `${window.location.pathname}${window.location.search ?? ''}${window.location.hash ?? ''}`,
+              inFocusTransition: isInFocusTransition(),
+              bootstrapStatus,
+              profileStatus,
+            });
             console.warn('[Auth] onAuthStateChange received null session', {
               event,
               path: `${window.location.pathname}${window.location.search ?? ''}${window.location.hash ?? ''}`,
@@ -206,6 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // this is likely a temporary state during token refresh. Don't reset state.
           if (!newSession && isInFocusTransition()) {
             console.log('[Auth] Ignoring null session during focus transition - likely token refresh');
+            addBreadcrumb('auth', 'null_session_ignored_focus_transition');
             return;
           }
           
@@ -217,18 +237,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const newUserId = newSession?.user?.id ?? null;
           currentUserIdRef.current = newUserId;
           
+          // Update user context for observability
+          setUserContext(newUserId);
+          
           if (newSession?.user) {
             // Set profile to loading while we fetch
             setProfileStatus('loading');
+            recordAuthStage('user_ready', { userId: newSession.user.id });
             
             // Fetch family data and complete bootstrap when done
             // Use setTimeout(0) to avoid Supabase deadlock
             setTimeout(async () => {
               if (!mounted || currentUserIdRef.current !== newSession.user.id) return;
               
+              recordAuthStage('profile_start');
               await fetchFamilyData(newSession.user.id);
+              recordAuthStage('profile_end', { success: true });
               
               if (mounted && currentUserIdRef.current === newSession.user.id) {
+                recordAuthStage('complete');
                 completeBootstrap();
               }
             }, 0);
@@ -236,6 +263,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // No user - reset everything
             // Only do this if we're NOT in a focus transition
             console.log('[Auth] Session is null, resetting state');
+            recordAuthStage('session_reset', {
+              event,
+              path: `${window.location.pathname}${window.location.search ?? ''}${window.location.hash ?? ''}`,
+            });
 
             // CRITICAL instrumentation: this reset is the usual precursor to any logout redirect.
             console.error('[Auth] RESET_STATE_DUE_TO_NULL_SESSION', {
@@ -251,20 +282,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setFamily(null);
             setFamilyMember(null);
             setProfileStatus('unknown');
+            setUserContext(null);
+            recordAuthStage('complete', { reason: 'no_session' });
             completeBootstrap();
           }
         }
       );
 
-      // Get initial session
+      // Get initial session with instrumentation
       logAuthStage('AUTH_SESSION_READ', { context: 'initial' });
-      const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+      recordAuthStage('getSession_start');
+      
+      const { data: { session: initialSession }, error: sessionError } = await wrapAuthRequest(
+        'getSession',
+        () => supabase.auth.getSession()
+      );
+      
+      recordAuthStage('getSession_end', { 
+        hasSession: !!initialSession, 
+        error: sessionError?.message,
+      });
       
       if (sessionError) {
         logAuthStage('AUTH_ERROR', { 
           context: 'getSession',
           error: sessionError.message,
         });
+        recordAuthError(sessionError.message, { context: 'getSession' });
         console.error('[Auth] Error getting session:', sessionError);
       }
       
@@ -283,14 +327,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(initialSession?.user ?? null);
       currentUserIdRef.current = initialSession?.user?.id ?? null;
       
+      // Set user context for observability
+      if (initialSession?.user) {
+        setUserContext(initialSession.user.id);
+        recordAuthStage('user_ready', { userId: initialSession.user.id });
+      }
+      
       if (initialSession?.user) {
         setProfileStatus('loading');
+        recordAuthStage('profile_start');
         await fetchFamilyData(initialSession.user.id);
+        recordAuthStage('profile_end', { success: true });
       } else {
         setProfileStatus('unknown');
       }
       
       if (mounted) {
+        recordAuthStage('complete', { 
+          hasSession: !!initialSession,
+          source: 'initial_load',
+        });
         completeBootstrap();
       }
       
