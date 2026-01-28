@@ -228,28 +228,72 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [location.pathname, location.search, location.hash, isLoading, isAuthTransition, bootstrapStatus, profileStatus, session, user]);
   
-  // CRITICAL: Show timeout fallback if auth has been loading too long
-  const shouldShowAuthOverlay =
-    hasTimedOut ||
+  // CRITICAL FIX: Only show overlay when there's an active session/user
+  // This prevents blocking public routes (e.g., /login) when user is not logged in
+  const hasSession = !!session || !!user;
+  
+  // Safety net: track stuck transitions
+  const transitionStartRef = useRef<number | null>(null);
+  const TRANSITION_STUCK_TIMEOUT_MS = 5000; // 5 seconds
+  
+  useEffect(() => {
+    if (isAuthTransition) {
+      if (!transitionStartRef.current) {
+        transitionStartRef.current = Date.now();
+      }
+      
+      // Check for stuck transition
+      const checkStuck = setTimeout(() => {
+        if (transitionStartRef.current && (Date.now() - transitionStartRef.current) >= TRANSITION_STUCK_TIMEOUT_MS) {
+          console.error('[AuthGate] AUTH_TRANSITION_STUCK - transition active for >', TRANSITION_STUCK_TIMEOUT_MS, 'ms');
+          // Log for observability
+          try {
+            const { captureEvent } = require('@/lib/observability');
+            captureEvent({
+              category: 'auth',
+              name: 'AUTH_TRANSITION_STUCK',
+              severity: 'error',
+              message: `Auth transition stuck for more than ${TRANSITION_STUCK_TIMEOUT_MS}ms`,
+              data: {
+                path: location.pathname,
+                hasSession,
+                duration: Date.now() - (transitionStartRef.current || 0),
+              },
+            });
+          } catch (e) {
+            // Ignore import errors
+          }
+        }
+      }, TRANSITION_STUCK_TIMEOUT_MS);
+      
+      return () => clearTimeout(checkStuck);
+    } else {
+      transitionStartRef.current = null;
+    }
+  }, [isAuthTransition, hasSession, location.pathname]);
+  
+  // Only show session overlay if:
+  // 1. Auth has timed out (always show fallback UI), OR
+  // 2. There IS a session AND (loading OR transitioning OR restoring)
+  const shouldShowSessionOverlay = hasSession && (
     isLoading ||
     isAuthTransition ||
-    isRouteRestoreInProgress();
+    isRouteRestoreInProgress()
+  );
 
   return (
     <>
       {children}
-      {shouldShowAuthOverlay && (
-        hasTimedOut ? (
-          <div className="fixed inset-0 z-50 pointer-events-auto touch-none overscroll-contain">
-            <AuthTimeoutFallback
-              onRetry={handleTimeoutRetry}
-              timeoutSeconds={Math.ceil(AUTH_TIMEOUT_MS / 1000)}
-            />
-          </div>
-        ) : (
-          <SessionOverlay label="Verificando sessão…" />
-        )
-      )}
+      {hasTimedOut ? (
+        <div className="fixed inset-0 z-50 pointer-events-auto touch-none overscroll-contain">
+          <AuthTimeoutFallback
+            onRetry={handleTimeoutRetry}
+            timeoutSeconds={Math.ceil(AUTH_TIMEOUT_MS / 1000)}
+          />
+        </div>
+      ) : shouldShowSessionOverlay ? (
+        <SessionOverlay label="Verificando sessão…" />
+      ) : null}
     </>
   );
 }
