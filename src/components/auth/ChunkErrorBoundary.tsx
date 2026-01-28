@@ -2,6 +2,8 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import oikMarca from '@/assets/oik-marca.png';
+import { isChunkError, handleChunkError, forceRefresh } from '@/lib/chunkErrorHandler';
+import { captureEvent, addBreadcrumb } from '@/lib/observability';
 
 interface ChunkErrorBoundaryState {
   hasChunkError: boolean;
@@ -32,15 +34,7 @@ export class ChunkErrorBoundary extends React.Component<
   };
 
   static getDerivedStateFromError(error: Error): ChunkErrorBoundaryState | null {
-    // Check if this is a chunk loading error
-    const isChunkError = 
-      error.name === 'ChunkLoadError' ||
-      error.message.includes('Failed to fetch dynamically imported module') ||
-      error.message.includes('Loading chunk') ||
-      error.message.includes('Loading CSS chunk') ||
-      error.message.includes('Unable to preload CSS');
-    
-    if (isChunkError) {
+    if (isChunkError(error)) {
       return {
         hasChunkError: true,
         error,
@@ -52,6 +46,25 @@ export class ChunkErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Log via centralized handler
+    handleChunkError(error, 'unknown');
+    
+    // Also capture in observability
+    captureEvent({
+      category: 'chunk',
+      name: 'boundary_caught',
+      severity: 'fatal',
+      message: `ChunkErrorBoundary caught: ${error.message}`,
+      error,
+      data: {
+        componentStack: errorInfo.componentStack?.substring(0, 1000),
+      },
+    });
+    
+    addBreadcrumb('chunk', 'error_boundary_triggered', {
+      message: error.message,
+    });
+    
     console.error('[ChunkError] Caught chunk loading error:', {
       message: error.message,
       stack: error.stack,
@@ -60,20 +73,12 @@ export class ChunkErrorBoundary extends React.Component<
   }
 
   handleHardReload = () => {
-    // Clear service worker cache if possible
-    if ('caches' in window) {
-      caches.keys().then(names => {
-        names.forEach(name => {
-          caches.delete(name);
-        });
-      });
-    }
-    
-    // Force a hard reload bypassing cache
-    window.location.reload();
+    addBreadcrumb('chunk', 'user_clicked_reload');
+    forceRefresh();
   };
 
   handleSoftReload = () => {
+    addBreadcrumb('chunk', 'user_clicked_soft_reload');
     // Just try to re-render
     this.setState({ hasChunkError: false, error: null });
   };

@@ -30,6 +30,7 @@ import {
   CreditCard,
   Key,
   Flag,
+  Bug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -111,6 +112,7 @@ export function AdminLayout() {
   const techMenuItems: MenuItem[] = hasTechAccess ? [
     { path: "/admin/tech/health", label: "Saúde do Sistema", icon: Activity },
     { path: "/admin/tech/logs", label: "Logs", icon: FileText },
+    { path: "/admin/tech/observability", label: "Observabilidade", icon: Bug },
     { path: "/admin/tech/flags", label: "Feature Flags", icon: Flag },
     { path: "/admin/tech/audit", label: "Auditoria Tech", icon: ClipboardList },
   ] : [];
