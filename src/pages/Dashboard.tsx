@@ -18,6 +18,7 @@ import { WelcomeModal, OnboardingChecklist } from "@/components/onboarding";
 import { BudgetAlertsWidget } from "@/components/budget";
 import { ProjectionPreviewWidget } from "@/components/projection";
 import { UpcomingDuesCard } from "@/components/alerts";
+import { FixedCostSummaryCard } from "@/components/expense-nature";
 import { ReceiptCaptureSheet, ReceiptReviewSheet } from "@/components/receipt";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions, useFinanceSummary, useTransactionsLast6Months } from "@/hooks/useTransactions";
@@ -428,7 +429,7 @@ export const Dashboard = memo(function Dashboard({
           onViewAll={ctaActions.onUpcomingDuesViewAll}
         />
 
-        {/* Budget & Projection Widgets */}
+        {/* Budget, Projection & Fixed Costs Widgets */}
         <div className="grid gap-4 md:grid-cols-2">
           <MemoizedBudgetAlertsWidget 
             month={selectedMonth} 
@@ -439,6 +440,12 @@ export const Dashboard = memo(function Dashboard({
           />
           <MemoizedProjectionPreviewWidget onViewAll={ctaActions.onProjectionViewAll} />
         </div>
+        
+        {/* Fixed Cost Summary Card */}
+        <FixedCostSummaryCard 
+          monthRef={`${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`}
+          onViewDetails={ctaActions.onProjectionViewAll}
+        />
 
         {/* Charts Grid - only render when we have data */}
         {categoryExpenses.length > 0 && (

@@ -1651,6 +1651,50 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_nature_overrides: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          created_by: string | null
+          expense_nature: Database["public"]["Enums"]["expense_nature"]
+          family_id: string
+          id: string
+          merchant_key: string | null
+          subcategory_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          expense_nature: Database["public"]["Enums"]["expense_nature"]
+          family_id: string
+          id?: string
+          merchant_key?: string | null
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          expense_nature?: Database["public"]["Enums"]["expense_nature"]
+          family_id?: string
+          id?: string
+          merchant_key?: string | null
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_nature_overrides_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       families: {
         Row: {
           budget_mode: string | null
@@ -3324,6 +3368,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "monthly_ai_reports_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monthly_fixed_costs: {
+        Row: {
+          calculated_at: string
+          category_breakdown: Json | null
+          created_at: string
+          family_id: string
+          id: string
+          month_ref: string
+          total_fixed_amount: number
+          updated_at: string
+        }
+        Insert: {
+          calculated_at?: string
+          category_breakdown?: Json | null
+          created_at?: string
+          family_id: string
+          id?: string
+          month_ref: string
+          total_fixed_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          calculated_at?: string
+          category_breakdown?: Json | null
+          created_at?: string
+          family_id?: string
+          id?: string
+          month_ref?: string
+          total_fixed_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_fixed_costs_family_id_fkey"
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
@@ -5107,6 +5192,10 @@ export type Database = {
           description: string | null
           direction: Database["public"]["Enums"]["transaction_direction"] | null
           event_date: string
+          expense_nature: Database["public"]["Enums"]["expense_nature"] | null
+          expense_nature_source:
+            | Database["public"]["Enums"]["expense_nature_source"]
+            | null
           family_id: string
           goal_id: string | null
           id: string
@@ -5160,6 +5249,10 @@ export type Database = {
             | Database["public"]["Enums"]["transaction_direction"]
             | null
           event_date?: string
+          expense_nature?: Database["public"]["Enums"]["expense_nature"] | null
+          expense_nature_source?:
+            | Database["public"]["Enums"]["expense_nature_source"]
+            | null
           family_id: string
           goal_id?: string | null
           id?: string
@@ -5213,6 +5306,10 @@ export type Database = {
             | Database["public"]["Enums"]["transaction_direction"]
             | null
           event_date?: string
+          expense_nature?: Database["public"]["Enums"]["expense_nature"] | null
+          expense_nature_source?:
+            | Database["public"]["Enums"]["expense_nature_source"]
+            | null
           family_id?: string
           goal_id?: string | null
           id?: string
@@ -6014,6 +6111,8 @@ export type Database = {
       card_charge_type: "ONE_SHOT" | "INSTALLMENT" | "RECURRENT"
       card_type: "credit" | "debit" | "both"
       confidence_level: "HIGH" | "MEDIUM" | "LOW"
+      expense_nature: "FIXED" | "VARIABLE" | "EVENTUAL" | "UNKNOWN"
+      expense_nature_source: "USER" | "SYSTEM_RULE" | "AI_INFERENCE"
       family_role: "owner" | "member"
       fingerprint_type: "strong" | "weak"
       import_file_type: "ofx" | "xls" | "xlsx" | "pdf"
@@ -6198,6 +6297,8 @@ export const Constants = {
       card_charge_type: ["ONE_SHOT", "INSTALLMENT", "RECURRENT"],
       card_type: ["credit", "debit", "both"],
       confidence_level: ["HIGH", "MEDIUM", "LOW"],
+      expense_nature: ["FIXED", "VARIABLE", "EVENTUAL", "UNKNOWN"],
+      expense_nature_source: ["USER", "SYSTEM_RULE", "AI_INFERENCE"],
       family_role: ["owner", "member"],
       fingerprint_type: ["strong", "weak"],
       import_file_type: ["ofx", "xls", "xlsx", "pdf"],

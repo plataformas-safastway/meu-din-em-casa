@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format, subMonths } from "date-fns";
+import { formatCurrency } from "@/lib/formatters";
+import { getCategoryById } from "@/data/categories";
 
 export interface MonthlyReportSummary {
   income: number;
@@ -518,6 +520,109 @@ export function useContextualInsights(month: number, year: number) {
             percentage: topCategoryPct,
             actionLabel: "Ver categorias",
             actionUrl: "/categorias",
+          });
+        }
+      }
+
+      // 7. Fixed cost insights - fetch fixed expenses and calculate ratio
+      const fixedExpenses = (currentTx || []).filter(
+        (t: any) => t.type === 'expense' && t.expense_nature === 'FIXED'
+      );
+      const totalFixedCost = fixedExpenses.reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+      
+      if (currentIncome > 0 && totalFixedCost > 0) {
+        const fixedRatio = (totalFixedCost / currentIncome) * 100;
+        
+        if (fixedRatio > 70) {
+          insights.push({
+            id: "fixed-cost-ratio-high",
+            type: "warning",
+            title: "Comprometimento alto",
+            description: `${fixedRatio.toFixed(0)}% da sua renda está comprometida com custos fixos estruturais.`,
+            reason: "Isso reduz muito sua flexibilidade financeira e capacidade de investir.",
+            priority: 1,
+            percentage: fixedRatio,
+            amount: totalFixedCost,
+            actionLabel: "Ver custos fixos",
+            actionUrl: "/projecao",
+          });
+        } else if (fixedRatio > 50) {
+          insights.push({
+            id: "fixed-cost-ratio-medium",
+            type: "tip",
+            title: "Atenção ao custo fixo",
+            description: `${fixedRatio.toFixed(0)}% da sua renda está em custos fixos estruturais.`,
+            reason: "Idealmente, mantenha abaixo de 50% para ter mais margem de manobra.",
+            priority: 3,
+            percentage: fixedRatio,
+            amount: totalFixedCost,
+          });
+        } else if (fixedRatio <= 40) {
+          insights.push({
+            id: "fixed-cost-ratio-good",
+            type: "success",
+            title: "Boa estrutura de custos",
+            description: `Apenas ${fixedRatio.toFixed(0)}% da renda está comprometida com custos fixos.`,
+            reason: "Isso dá mais flexibilidade para investir e realizar objetivos.",
+            priority: 8,
+            percentage: fixedRatio,
+            amount: totalFixedCost,
+          });
+        }
+      }
+
+      // 8. Fixed cost change vs previous month
+      const prevFixedExpenses = (prevTx || []).filter(
+        (t: any) => t.type === 'expense' && t.expense_nature === 'FIXED'
+      );
+      const totalPrevFixed = prevFixedExpenses.reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+      
+      if (totalPrevFixed > 0 && totalFixedCost > 0) {
+        const fixedChange = totalFixedCost - totalPrevFixed;
+        const fixedChangePct = (fixedChange / totalPrevFixed) * 100;
+        
+        if (fixedChangePct > 5) {
+          // Calculate top changes by category
+          const currentByCat: Record<string, number> = {};
+          const prevByCat: Record<string, number> = {};
+          
+          fixedExpenses.forEach((t: any) => {
+            currentByCat[t.category_id] = (currentByCat[t.category_id] || 0) + Number(t.amount);
+          });
+          prevFixedExpenses.forEach((t: any) => {
+            prevByCat[t.category_id] = (prevByCat[t.category_id] || 0) + Number(t.amount);
+          });
+          
+          const changes = Object.keys({ ...currentByCat, ...prevByCat }).map(catId => ({
+            categoryId: catId,
+            diff: (currentByCat[catId] || 0) - (prevByCat[catId] || 0),
+          })).filter(c => c.diff > 0).sort((a, b) => b.diff - a.diff).slice(0, 3);
+          
+          const topChangesText = changes.map(c => {
+            const cat = getCategoryById(c.categoryId);
+            return `• ${cat?.name || c.categoryId} (+${formatCurrency(c.diff)})`;
+          }).join('\n');
+          
+          insights.push({
+            id: "fixed-cost-increase",
+            type: "warning",
+            title: "Custo fixo aumentou",
+            description: `Seu custo fixo estrutural aumentou ${formatCurrency(fixedChange)} (${fixedChangePct.toFixed(0)}%) este mês.${topChangesText ? '\n\nPrincipais aumentos:\n' + topChangesText : ''}`,
+            reason: "Mudanças no custo fixo afetam seu padrão de vida estrutural.",
+            priority: 2,
+            amount: fixedChange,
+            percentage: fixedChangePct,
+          });
+        } else if (fixedChangePct < -5) {
+          insights.push({
+            id: "fixed-cost-decrease",
+            type: "success",
+            title: "Custo fixo reduziu! 🎉",
+            description: `Seu custo fixo estrutural diminuiu ${formatCurrency(Math.abs(fixedChange))} (${Math.abs(fixedChangePct).toFixed(0)}%) este mês.`,
+            reason: "Parabéns! Isso aumenta sua flexibilidade financeira.",
+            priority: 6,
+            amount: Math.abs(fixedChange),
+            percentage: Math.abs(fixedChangePct),
           });
         }
       }
