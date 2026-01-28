@@ -56,6 +56,7 @@ const IntegrationAcquirerPage = lazy(() => import("./integrations/IntegrationAcq
 const IntegrationResendPage = lazy(() => import("./integrations/IntegrationResendPage").then(m => ({ default: m.IntegrationResendPage })));
 const IntegrationEnotasPage = lazy(() => import("./integrations/IntegrationEnotasPage").then(m => ({ default: m.IntegrationEnotasPage })));
 const IntegrationGoogleDrivePage = lazy(() => import("./integrations/IntegrationGoogleDrivePage").then(m => ({ default: m.IntegrationGoogleDrivePage })));
+const IntegrationOneDrivePage = lazy(() => import("./integrations/IntegrationOneDrivePage").then(m => ({ default: m.IntegrationOneDrivePage })));
 
 // Executive reports
 const ExecutiveReportsPage = lazy(() => import("./executive/ExecutiveReportsPage"));
@@ -89,6 +90,7 @@ function IntegrationsOverviewWrapper() {
       RESEND: "/admin/integrations/resend",
       ENOTAS: "/admin/integrations/enotas",
       GOOGLE_DRIVE: "/admin/integrations/googledrive",
+      ONEDRIVE: "/admin/integrations/onedrive",
     };
     navigate(routes[provider] || "/admin/integrations");
   };
@@ -157,6 +159,7 @@ export function AdminRoutes() {
         <Route path="integrations/resend" element={<LazyPage Component={IntegrationResendPage} />} />
         <Route path="integrations/enotas" element={<LazyPage Component={IntegrationEnotasPage} />} />
         <Route path="integrations/googledrive" element={<LazyPage Component={IntegrationGoogleDrivePage} />} />
+        <Route path="integrations/onedrive" element={<LazyPage Component={IntegrationOneDrivePage} />} />
         <Route path="integrations/keys" element={<LazyPage Component={TechApiKeysPage} />} />
 
         {/* Executive module */}

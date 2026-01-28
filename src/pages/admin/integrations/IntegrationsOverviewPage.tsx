@@ -1,4 +1,4 @@
-import { Building2, CreditCard, Mail, FileText, CheckCircle, AlertTriangle, Clock, XCircle, ArrowRight, HardDrive } from "lucide-react";
+import { Building2, CreditCard, Mail, FileText, CheckCircle, AlertTriangle, Clock, XCircle, ArrowRight, HardDrive, Cloud } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ const PROVIDER_ICONS: Record<IntegrationProvider, React.ReactNode> = {
   RESEND: <Mail className="w-8 h-8" />,
   ENOTAS: <FileText className="w-8 h-8" />,
   GOOGLE_DRIVE: <HardDrive className="w-8 h-8" />,
+  ONEDRIVE: <Cloud className="w-8 h-8" />,
 };
 
 const STATUS_ICONS: Record<IntegrationStatus, React.ReactNode> = {
@@ -37,6 +38,7 @@ const PROVIDER_DESCRIPTIONS: Record<IntegrationProvider, string> = {
   RESEND: "Envio de e-mails transacionais e notificações",
   ENOTAS: "Emissão automática de notas fiscais de serviço (NFS-e)",
   GOOGLE_DRIVE: "Importação de arquivos financeiros diretamente do Google Drive",
+  ONEDRIVE: "Importação de arquivos financeiros diretamente do Microsoft OneDrive",
 };
 
 export function IntegrationsOverviewPage({ onNavigate }: IntegrationsOverviewPageProps) {
@@ -64,7 +66,7 @@ export function IntegrationsOverviewPage({ onNavigate }: IntegrationsOverviewPag
     );
   }
 
-  const providers: IntegrationProvider[] = ['OPEN_FINANCE', 'GOOGLE_DRIVE', 'ACQUIRER', 'RESEND', 'ENOTAS'];
+  const providers: IntegrationProvider[] = ['OPEN_FINANCE', 'GOOGLE_DRIVE', 'ONEDRIVE', 'ACQUIRER', 'RESEND', 'ENOTAS'];
 
   return (
     <div className="space-y-6">

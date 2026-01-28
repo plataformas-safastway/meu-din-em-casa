@@ -8,7 +8,7 @@ import type { Json } from '@/integrations/supabase/types';
 // Types
 // =====================================================
 
-export type IntegrationProvider = 'OPEN_FINANCE' | 'ACQUIRER' | 'RESEND' | 'ENOTAS' | 'GOOGLE_DRIVE';
+export type IntegrationProvider = 'OPEN_FINANCE' | 'ACQUIRER' | 'RESEND' | 'ENOTAS' | 'GOOGLE_DRIVE' | 'ONEDRIVE';
 export type IntegrationStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'ERROR';
 
 export interface IntegrationConfig {
@@ -70,6 +70,12 @@ export interface EnotasConfig {
 export interface GoogleDriveConfig {
   client_id?: string;
   api_key?: string;
+  picker_enabled?: boolean;
+}
+
+export interface OneDriveConfig {
+  client_id?: string;
+  tenant_id?: string;
   picker_enabled?: boolean;
 }
 
@@ -290,6 +296,12 @@ export function useTestIntegrationConnection() {
             success = false;
             errorMessage = 'Teste de conexão não implementado';
             break;
+
+          case 'ONEDRIVE':
+            // Check if OneDrive Client ID is configured
+            success = false;
+            errorMessage = 'Teste de conexão não implementado';
+            break;
         }
       } catch (err) {
         errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -428,6 +440,8 @@ export function getProviderDisplayName(provider: IntegrationProvider): string {
       return 'eNotas';
     case 'GOOGLE_DRIVE':
       return 'Google Drive';
+    case 'ONEDRIVE':
+      return 'OneDrive';
     default:
       return provider;
   }
