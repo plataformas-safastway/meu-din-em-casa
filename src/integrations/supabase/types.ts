@@ -59,6 +59,7 @@ export type Database = {
       admin_users: {
         Row: {
           admin_role: Database["public"]["Enums"]["admin_role"]
+          avatar_url: string | null
           created_at: string
           created_by: string | null
           display_name: string | null
@@ -69,12 +70,15 @@ export type Database = {
           mfa_required: boolean
           mfa_verified: boolean
           must_change_password: boolean
+          phone_country: string | null
+          phone_number: string | null
           updated_at: string
           updated_by: string | null
           user_id: string
         }
         Insert: {
           admin_role?: Database["public"]["Enums"]["admin_role"]
+          avatar_url?: string | null
           created_at?: string
           created_by?: string | null
           display_name?: string | null
@@ -85,12 +89,15 @@ export type Database = {
           mfa_required?: boolean
           mfa_verified?: boolean
           must_change_password?: boolean
+          phone_country?: string | null
+          phone_number?: string | null
           updated_at?: string
           updated_by?: string | null
           user_id: string
         }
         Update: {
           admin_role?: Database["public"]["Enums"]["admin_role"]
+          avatar_url?: string | null
           created_at?: string
           created_by?: string | null
           display_name?: string | null
@@ -101,6 +108,8 @@ export type Database = {
           mfa_required?: boolean
           mfa_verified?: boolean
           must_change_password?: boolean
+          phone_country?: string | null
+          phone_number?: string | null
           updated_at?: string
           updated_by?: string | null
           user_id?: string

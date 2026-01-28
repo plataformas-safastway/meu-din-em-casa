@@ -1165,6 +1165,65 @@ export const helpArticles: HelpArticle[] = [
     ],
     keywords: ["carregamento", "lento", "timeout", "sessão", "verificando", "overlay", "travou", "loading"],
   },
+  {
+    id: "admin-profile",
+    title: "Meu Perfil no Dashboard",
+    category: "access-control",
+    icon: "👤",
+    summary: "Como gerenciar seus dados pessoais e credenciais no Dashboard administrativo",
+    steps: [
+      {
+        title: "Acessando Meu Perfil",
+        description: "Clique no seu avatar no canto superior esquerdo do Dashboard. Um menu dropdown aparecerá com a opção 'Meu Perfil'.",
+        tip: "Seu avatar mostra suas iniciais se você ainda não configurou uma foto.",
+      },
+      {
+        title: "Editando Dados Pessoais",
+        description: "Na tela de perfil, você pode editar seu nome completo e telefone. O email e tipo de usuário são campos somente leitura.",
+      },
+      {
+        title: "Alterando sua Senha",
+        description: "Na seção 'Alterar Senha', informe sua senha atual e escolha uma nova senha. A nova senha deve ter pelo menos 8 caracteres, 1 letra maiúscula e 1 número.",
+        tip: "Sua sessão permanece ativa após a alteração de senha — não é necessário fazer login novamente.",
+      },
+      {
+        title: "Por que não posso alterar meu email?",
+        description: "Por segurança, o email de login não pode ser alterado diretamente. Se precisar mudar seu email, entre em contato com o administrador Master.",
+      },
+    ],
+    keywords: ["perfil", "meu perfil", "dashboard", "admin", "dados pessoais", "editar", "alterar"],
+  },
+  {
+    id: "admin-change-password",
+    title: "Como Alterar sua Senha (Dashboard)",
+    category: "access-control",
+    icon: "🔑",
+    summary: "Passo a passo para atualizar sua senha de acesso ao Dashboard",
+    steps: [
+      {
+        title: "Acesse Meu Perfil",
+        description: "Clique no seu avatar no topo do Dashboard e selecione 'Meu Perfil'.",
+      },
+      {
+        title: "Localize a seção 'Alterar Senha'",
+        description: "Na tela de perfil, você verá um card dedicado à alteração de senha no lado direito (desktop) ou abaixo dos dados pessoais (mobile).",
+      },
+      {
+        title: "Informe a senha atual",
+        description: "Digite sua senha atual no primeiro campo. Isso é necessário para confirmar sua identidade.",
+        tip: "Se esqueceu sua senha atual, use a opção 'Esqueci minha senha' na tela de login.",
+      },
+      {
+        title: "Escolha uma nova senha segura",
+        description: "A nova senha deve atender aos requisitos: mínimo 8 caracteres, pelo menos 1 letra maiúscula e 1 número. O indicador visual mostra quando cada requisito é atendido.",
+      },
+      {
+        title: "Confirme e salve",
+        description: "Confirme a nova senha e clique em 'Alterar Senha'. Uma mensagem de sucesso aparecerá e sua sessão continuará ativa.",
+      },
+    ],
+    keywords: ["senha", "alterar senha", "trocar senha", "password", "dashboard", "segurança"],
+  },
 ];
 
 export const faqItems: FAQItem[] = [
