@@ -410,8 +410,16 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     return <LoadingSpinner />;
   }
   
-  // Still loading - don't render anything (AuthGate handles this)
-  if (roleLoading || checkingAdmin || profileStatus === 'loading' || profileStatus === 'unknown') {
+  // IMPORTANT: Do NOT block the public/login UI when user is logged out.
+  // After logout, profileStatus can remain 'unknown' and would otherwise cause an infinite spinner.
+  const shouldBlockForAuthChecks = !!user && (
+    roleLoading ||
+    checkingAdmin ||
+    profileStatus === 'loading' ||
+    profileStatus === 'unknown'
+  );
+
+  if (shouldBlockForAuthChecks) {
     return <LoadingSpinner />;
   }
   
