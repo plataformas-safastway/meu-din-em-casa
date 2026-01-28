@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { ArrowLeft, Search, Loader2, Filter, CheckSquare, Plus } from "lucide-react";
+import { ArrowLeft, Search, Loader2, Filter, CheckSquare, Plus, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getCategoryById } from "@/data/categories";
@@ -15,6 +15,7 @@ import { useCreateTransactionWithInstallments } from "@/hooks/useTransactionWith
 import { EditTransactionSheet } from "@/components/EditTransactionSheet";
 import { AddTransactionSheet } from "@/components/AddTransactionSheet";
 import { TransactionDetailSheet, TransactionDetail } from "@/components/TransactionDetailSheet";
+import { InvoicePaymentSheet } from "@/components/cash-basis/InvoicePaymentSheet";
 import { 
   TransactionFiltersSheet, 
   defaultFilters, 
@@ -33,6 +34,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatFullDate } from "@/lib/formatters";
 import { toast } from "sonner";
 import { useCTADestination } from "@/hooks/useCTARouter";
@@ -57,10 +64,13 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>("expense");
   
+  // Invoice payment sheet
+  const [invoicePaymentOpen, setInvoicePaymentOpen] = useState(false);
+  
   // Selection mode
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  
+
   // Bulk category change
   const [categoryChangeOpen, setCategoryChangeOpen] = useState(false);
   
@@ -567,17 +577,43 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
         defaultType={defaultTransactionType}
       />
 
-      {/* FAB for quick add */}
-      <Button
-        onClick={() => {
-          setDefaultTransactionType("expense");
-          setAddSheetOpen(true);
-        }}
-        className="fixed right-4 bottom-20 z-50 w-14 h-14 rounded-full shadow-xl shadow-primary/30"
-        size="icon"
-      >
-        <Plus className="w-6 h-6" />
-      </Button>
+      {/* Invoice Payment Sheet */}
+      <InvoicePaymentSheet
+        open={invoicePaymentOpen}
+        onOpenChange={setInvoicePaymentOpen}
+      />
+
+      {/* FAB with dropdown for quick actions */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            className="fixed right-4 bottom-20 z-50 w-14 h-14 rounded-full shadow-xl shadow-primary/30"
+            size="icon"
+          >
+            <Plus className="w-6 h-6" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem onClick={() => {
+            setDefaultTransactionType("expense");
+            setAddSheetOpen(true);
+          }}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Despesa
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => {
+            setDefaultTransactionType("income");
+            setAddSheetOpen(true);
+          }}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Receita
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setInvoicePaymentOpen(true)}>
+            <Receipt className="w-4 h-4 mr-2" />
+            Pagamento de Fatura
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
