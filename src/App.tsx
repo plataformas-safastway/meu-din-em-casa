@@ -49,6 +49,7 @@ import { SelectContextPage } from "./pages/SelectContextPage";
 import { SelectFamilyPage } from "./pages/SelectFamilyPage";
 import { InviteAcceptPage } from "./pages/InviteAcceptPage";
 import { OnboardingFlowPage } from "./pages/OnboardingFlowPage";
+import { AppAccessBlockedPage } from "./pages/AppAccessBlockedPage";
 import { useEffect, useRef, useCallback, useState } from "react";
 
 // Auth timeout configuration (in milliseconds)
@@ -611,6 +612,9 @@ function AppRoutes() {
         <Route path="/privacidade" element={<PrivacidadePage />} />
         <Route path="/qa-report" element={<QAReportPage />} />
         <Route path="/invite" element={<InviteAcceptPage />} />
+        
+        {/* App access blocked - for admin users without consumer profile */}
+        <Route path="/app-access-blocked" element={<AppAccessBlockedPage />} />
         
         {/* User app routes */}
         <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
