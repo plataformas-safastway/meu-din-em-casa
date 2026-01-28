@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useSyncExternalStore, useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { addBreadcrumb } from '@/lib/observability';
 import { logLifecycle, isLifecycleDebugEnabled, logTabEvent } from '@/lib/lifecycleTracer';
@@ -20,6 +20,18 @@ const TRANSITION_WINDOW_MS = 15000;
 
 // Minimum hidden time to trigger protection (500ms - covers quick tab switches)
 const MIN_HIDDEN_FOR_PROTECTION = 500;
+
+// NEW: Minimum hidden time to trigger hard check (3 seconds)
+const MIN_HIDDEN_FOR_HARD_CHECK = 3000;
+
+// NEW: Threshold before showing overlay (600ms)
+const OVERLAY_DELAY_MS = 600;
+
+// NEW: Track if we're in a "soft" resume (no overlay needed)
+let globalIsSoftResume = false;
+let globalResumeStartTime = 0;
+let globalTokenRefreshInProgress = false;
+let globalHardCheckInProgress = false;
 
 function getSnapshot(): boolean {
   return globalIsInTransition;
@@ -75,6 +87,56 @@ export function getTimeSinceLastVisible(): number {
   return Date.now() - lastVisibleTimestamp;
 }
 
+/**
+ * Get duration since resume started (for overlay delay logic)
+ */
+export function getResumeDuration(): number {
+  return globalResumeStartTime > 0 ? Date.now() - globalResumeStartTime : 0;
+}
+
+/**
+ * Check if we're in a soft resume (no overlay needed yet)
+ */
+export function isSoftResume(): boolean {
+  return globalIsSoftResume;
+}
+
+/**
+ * Check if token refresh is in progress
+ */
+export function isTokenRefreshInProgress(): boolean {
+  return globalTokenRefreshInProgress;
+}
+
+/**
+ * Mark token refresh status
+ */
+export function setTokenRefreshInProgress(inProgress: boolean): void {
+  globalTokenRefreshInProgress = inProgress;
+  if (isLifecycleDebugEnabled()) {
+    console.log('[StableAuth] Token refresh:', inProgress);
+  }
+  notifyListeners();
+}
+
+/**
+ * Check if hard auth check is in progress
+ */
+export function isHardCheckInProgress(): boolean {
+  return globalHardCheckInProgress;
+}
+
+/**
+ * Mark hard check status (used during boot or forced re-auth)
+ */
+export function setHardCheckInProgress(inProgress: boolean): void {
+  globalHardCheckInProgress = inProgress;
+  if (isLifecycleDebugEnabled()) {
+    console.log('[StableAuth] Hard check:', inProgress);
+  }
+  notifyListeners();
+}
+
 // Initialize visibility listener once - SYNCHRONOUSLY set transition BEFORE any React render
 if (typeof document !== 'undefined') {
   let lastVisibility = document.visibilityState;
@@ -104,6 +166,22 @@ if (typeof document !== 'undefined') {
       console.log('[StableAuth] Tab became visible after', hiddenDuration, 'ms hidden');
       addBreadcrumb('auth', 'tab_visible', { hiddenDuration, hadSession: hadSessionBeforeHidden });
       
+      // NEW: Determine if this is a soft resume (short hide, no overlay needed)
+      if (hiddenDuration < MIN_HIDDEN_FOR_HARD_CHECK) {
+        // Short hide - soft resume, no overlay
+        globalIsSoftResume = true;
+        console.log('[StableAuth] Soft resume - hidden only', hiddenDuration, 'ms, no overlay needed');
+        
+        // Don't trigger full transition for short hides
+        if (hiddenDuration < MIN_HIDDEN_FOR_PROTECTION) {
+          return;
+        }
+      } else {
+        // Longer hide - may need overlay if verification takes time
+        globalIsSoftResume = false;
+        globalResumeStartTime = Date.now();
+      }
+      
       // Only enable protection if hidden for meaningful time
       if (hiddenDuration >= MIN_HIDDEN_FOR_PROTECTION) {
         globalIsInTransition = true;
@@ -117,6 +195,8 @@ if (typeof document !== 'undefined') {
         // Extended window for slow networks/token refresh
         globalTransitionTimeout = setTimeout(() => {
           globalIsInTransition = false;
+          globalIsSoftResume = false;
+          globalResumeStartTime = 0;
           console.log('[StableAuth] Transition period ended after', TRANSITION_WINDOW_MS, 'ms');
           addBreadcrumb('auth', 'transition_ended');
           notifyListeners();
@@ -139,7 +219,26 @@ if (typeof document !== 'undefined') {
     if (!globalIsInTransition && document.visibilityState === 'visible') {
       const hiddenDuration = Date.now() - lastHiddenTimestamp;
       
-      if (hiddenDuration >= MIN_HIDDEN_FOR_PROTECTION) {
+      // Only trigger for longer hides
+      if (hiddenDuration >= MIN_HIDDEN_FOR_HARD_CHECK) {
+        globalIsInTransition = true;
+        globalIsSoftResume = false;
+        globalResumeStartTime = Date.now();
+        notifyListeners();
+        
+        if (globalTransitionTimeout) {
+          clearTimeout(globalTransitionTimeout);
+        }
+        
+        globalTransitionTimeout = setTimeout(() => {
+          globalIsInTransition = false;
+          globalIsSoftResume = false;
+          globalResumeStartTime = 0;
+          notifyListeners();
+        }, TRANSITION_WINDOW_MS);
+      } else if (hiddenDuration >= MIN_HIDDEN_FOR_PROTECTION) {
+        // Medium hide - soft resume
+        globalIsSoftResume = true;
         globalIsInTransition = true;
         notifyListeners();
         
@@ -149,6 +248,7 @@ if (typeof document !== 'undefined') {
         
         globalTransitionTimeout = setTimeout(() => {
           globalIsInTransition = false;
+          globalIsSoftResume = false;
           notifyListeners();
         }, TRANSITION_WINDOW_MS);
       }
@@ -158,6 +258,22 @@ if (typeof document !== 'undefined') {
   window.addEventListener('blur', () => {
     logTabEvent('blur');
   });
+}
+
+/**
+ * Clear transition state (called when auth is verified)
+ */
+export function clearTransition(): void {
+  if (globalTransitionTimeout) {
+    clearTimeout(globalTransitionTimeout);
+    globalTransitionTimeout = null;
+  }
+  globalIsInTransition = false;
+  globalIsSoftResume = false;
+  globalResumeStartTime = 0;
+  globalTokenRefreshInProgress = false;
+  globalHardCheckInProgress = false;
+  notifyListeners();
 }
 
 /**
@@ -174,23 +290,76 @@ export function useStableAuth() {
   
   const lastValidSessionRef = useRef<boolean>(!!auth.session);
   
+  // NEW: Track if overlay should be shown based on timing
+  const [shouldShowOverlay, setShouldShowOverlay] = useState(false);
+  const overlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
   // Track last valid session and update global state
   useEffect(() => {
     if (auth.session) {
       lastValidSessionRef.current = true;
       // Mark for visibility change detection
       markSessionBeforeHide(true);
+      
+      // Session confirmed - clear transition if we were in one
+      if (isAuthTransition && !globalTokenRefreshInProgress) {
+        console.log('[StableAuth] Session confirmed, clearing transition');
+        clearTransition();
+      }
     } else if (auth.bootstrapStatus === 'ready' && !isAuthTransition) {
       // Only clear if truly logged out (not during transition)
       lastValidSessionRef.current = false;
       markSessionBeforeHide(false);
     }
   }, [auth.session, auth.bootstrapStatus, isAuthTransition]);
+  
+  // NEW: Delayed overlay logic - only show after OVERLAY_DELAY_MS
+  useEffect(() => {
+    if (overlayTimerRef.current) {
+      clearTimeout(overlayTimerRef.current);
+      overlayTimerRef.current = null;
+    }
+    
+    const hasSession = auth.session !== null || lastValidSessionRef.current;
+    
+    // Immediate overlay for token refresh or hard check
+    if (hasSession && (globalTokenRefreshInProgress || globalHardCheckInProgress)) {
+      setShouldShowOverlay(true);
+      return;
+    }
+    
+    // Soft resume or no transition - no overlay
+    if (!isAuthTransition || globalIsSoftResume) {
+      setShouldShowOverlay(false);
+      return;
+    }
+    
+    // In transition with session - delay overlay
+    if (hasSession && isAuthTransition) {
+      overlayTimerRef.current = setTimeout(() => {
+        // Only show if still in transition after delay
+        if (globalIsInTransition && !globalIsSoftResume) {
+          console.log('[StableAuth] Showing overlay after', OVERLAY_DELAY_MS, 'ms delay');
+          setShouldShowOverlay(true);
+        }
+      }, OVERLAY_DELAY_MS);
+    } else {
+      setShouldShowOverlay(false);
+    }
+    
+    return () => {
+      if (overlayTimerRef.current) {
+        clearTimeout(overlayTimerRef.current);
+      }
+    };
+  }, [isAuthTransition, auth.session]);
 
   // Computed stable values
   const isLoading = auth.bootstrapStatus === 'initializing' || 
-                    auth.profileStatus === 'loading' || 
-                    isAuthTransition;
+                    auth.profileStatus === 'loading';
+  
+  // NEW: Separate loading from overlay decision
+  const isVerifying = isAuthTransition && !globalIsSoftResume;
 
   // CRITICAL: Consider session valid if:
   // 1. We have a session now, OR
@@ -199,7 +368,7 @@ export function useStableAuth() {
                           (isAuthTransition && lastValidSessionRef.current);
 
   // Log when shouldRedirectToLogin would be true
-  const shouldRedirectToLogin = !isLoading && !hasValidSession && auth.bootstrapStatus === 'ready';
+  const shouldRedirectToLogin = !isLoading && !hasValidSession && auth.bootstrapStatus === 'ready' && !isAuthTransition;
   
   if (shouldRedirectToLogin) {
     console.warn('[StableAuth] shouldRedirectToLogin=true', {
@@ -216,9 +385,13 @@ export function useStableAuth() {
   return {
     ...auth,
     isLoading,
+    isVerifying,
     hasValidSession,
     isAuthTransition,
     shouldRedirectToLogin,
+    // NEW: Fine-grained overlay control
+    shouldShowSessionOverlay: shouldShowOverlay,
+    isSoftResume: globalIsSoftResume,
   };
 }
 
