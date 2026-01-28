@@ -51,7 +51,7 @@ export interface HomeSummaryData {
 }
 
 export function useHomeSummary(month: number, year: number) {
-  const { user } = useAuth();
+  const { user, family } = useAuth();
   // month is 0-indexed (0 = January), so add 1 for the API
   const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
 
@@ -79,7 +79,7 @@ export function useHomeSummary(month: number, year: number) {
 
       return data;
     },
-    enabled: !!user,
+    enabled: !!user && !!family,
     staleTime: STALE_TIMES.homeSummary,
     // Keep previous data while refetching to avoid flicker
     placeholderData: (previousData) => previousData,
