@@ -1,13 +1,16 @@
-import { useState } from "react";
-import { Edit2, Trash2, AlertTriangle, Check, X, Info } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Edit2, Trash2, AlertTriangle, Check, X, Info, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { defaultCategories, getCategoryById, getSubcategoryById } from "@/data/categories";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { ClassificationSelector, TransactionClassification } from "./ClassificationSelector";
+import { MerchantSuggestionBadge } from "@/components/merchant";
+import type { MerchantResolution } from "@/lib/merchantEnrichment";
 
 export interface TransactionReviewItemProps {
   transaction: {
@@ -33,6 +36,9 @@ export interface TransactionReviewItemProps {
   onClassificationChange: (classification: TransactionClassification) => void;
   onDescriptionChange: (description: string) => void;
   onDelete: () => void;
+  // Merchant enrichment
+  merchantResolution?: MerchantResolution | null;
+  onAcceptMerchantSuggestion?: (categoryId: string, subcategoryId: string | null) => void;
 }
 
 export function TransactionReviewItem({
@@ -46,6 +52,8 @@ export function TransactionReviewItem({
   onClassificationChange,
   onDescriptionChange,
   onDelete,
+  merchantResolution,
+  onAcceptMerchantSuggestion,
 }: TransactionReviewItemProps) {
   const [isEditingCategory, setIsEditingCategory] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -196,7 +204,19 @@ export function TransactionReviewItem({
         </div>
       </div>
       
-      {/* Row 2: Classification Selector */}
+      {/* Row 2: Merchant Suggestion (if available) */}
+      {merchantResolution && merchantResolution.confidence > 0 && (
+        <div className="ml-[44px]">
+          <MerchantSuggestionBadge
+            resolution={merchantResolution}
+            originalDescriptor={transaction.description || ""}
+            onAccept={onAcceptMerchantSuggestion}
+            showEvidence={true}
+          />
+        </div>
+      )}
+      
+      {/* Row 3: Classification Selector */}
       <div className="ml-[44px]">
         <ClassificationSelector
           value={effectiveClassification}
