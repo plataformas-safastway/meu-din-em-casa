@@ -43,6 +43,7 @@ import { ImportUploadPage } from "./pages/import/ImportUploadPage";
 import { ImportReviewPage } from "./pages/import/ImportReviewPage";
 import { SpreadsheetImportPage } from "./pages/import/SpreadsheetImportPage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AppAuthGate } from "@/components/auth/AppAuthGate";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { SelectContextPage } from "./pages/SelectContextPage";
@@ -552,16 +553,18 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/admin" replace />;
   }
   
-  // User with family - go to app
+  // User with family - go to app (AppAuthGate will validate properly)
   if (user && family) {
     logNavigationAttempt('PublicRoute:UserWithFamily', '/app', { user: !!user, family: !!family });
     return <Navigate to="/app" replace />;
   }
   
-  // User logged in but without family - redirect to signup/onboarding
-  // EXCEPT if they're already on signup page (to avoid redirect loop)
-  if (user && !family && location.pathname !== '/signup' && location.pathname !== '/onboarding') {
-    logNavigationAttempt('PublicRoute:UserWithoutFamily', '/signup', { user: !!user, family: !!family });
+  // User logged in but without family AND not an admin
+  // Redirect to signup ONLY for non-admin users
+  // CRITICAL: Admin/master users without family should NOT be redirected to /signup
+  // They should stay on public routes or go to /admin
+  if (user && !family && !isAdminRole && location.pathname !== '/signup' && location.pathname !== '/onboarding') {
+    logNavigationAttempt('PublicRoute:UserWithoutFamily', '/signup', { user: !!user, family: !!family, isAdminRole });
     return <Navigate to="/signup" replace />;
   }
   
@@ -616,18 +619,18 @@ function AppRoutes() {
         {/* App access blocked - for admin users without consumer profile */}
         <Route path="/app-access-blocked" element={<AppAccessBlockedPage />} />
         
-        {/* User app routes */}
-        <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-        <Route path="/app/import" element={<ProtectedRoute><ImportUploadPage /></ProtectedRoute>} />
-        <Route path="/app/import/spreadsheet" element={<ProtectedRoute><SpreadsheetImportPage /></ProtectedRoute>} />
+        {/* User app routes - AppAuthGate is the SINGLE SOURCE OF TRUTH for App authorization */}
+        <Route path="/app" element={<AppAuthGate><Index /></AppAuthGate>} />
+        <Route path="/app/import" element={<AppAuthGate><ImportUploadPage /></AppAuthGate>} />
+        <Route path="/app/import/spreadsheet" element={<AppAuthGate><SpreadsheetImportPage /></AppAuthGate>} />
         <Route
           path="/app/import/:importId/review"
           element={
-            <ProtectedRoute>
+            <AppAuthGate>
               <ErrorBoundary logContext={{ page: "import-review" }}>
                 <ImportReviewPage />
               </ErrorBoundary>
-            </ProtectedRoute>
+            </AppAuthGate>
           }
         />
         
