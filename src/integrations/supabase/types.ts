@@ -3204,6 +3204,92 @@ export type Database = {
           },
         ]
       }
+      merchant_directory: {
+        Row: {
+          address: string | null
+          category_id_suggested: string | null
+          city: string | null
+          cnpj: string | null
+          confidence_default: number
+          created_at: string
+          detected_platform: string | null
+          evidence_details: Json | null
+          evidence_summary: string | null
+          family_id: string | null
+          id: string
+          is_intermediary: boolean | null
+          last_matched_at: string | null
+          legal_name: string | null
+          match_count: number | null
+          merchant_name_display: string | null
+          normalized_key: string
+          sample_descriptors: string[] | null
+          scope: string
+          source: string
+          state: string | null
+          subcategory_id_suggested: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          category_id_suggested?: string | null
+          city?: string | null
+          cnpj?: string | null
+          confidence_default?: number
+          created_at?: string
+          detected_platform?: string | null
+          evidence_details?: Json | null
+          evidence_summary?: string | null
+          family_id?: string | null
+          id?: string
+          is_intermediary?: boolean | null
+          last_matched_at?: string | null
+          legal_name?: string | null
+          match_count?: number | null
+          merchant_name_display?: string | null
+          normalized_key: string
+          sample_descriptors?: string[] | null
+          scope?: string
+          source?: string
+          state?: string | null
+          subcategory_id_suggested?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          category_id_suggested?: string | null
+          city?: string | null
+          cnpj?: string | null
+          confidence_default?: number
+          created_at?: string
+          detected_platform?: string | null
+          evidence_details?: Json | null
+          evidence_summary?: string | null
+          family_id?: string | null
+          id?: string
+          is_intermediary?: boolean | null
+          last_matched_at?: string | null
+          legal_name?: string | null
+          match_count?: number | null
+          merchant_name_display?: string | null
+          normalized_key?: string
+          sample_descriptors?: string[] | null
+          scope?: string
+          source?: string
+          state?: string | null
+          subcategory_id_suggested?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_directory_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monthly_ai_reports: {
         Row: {
           created_at: string
