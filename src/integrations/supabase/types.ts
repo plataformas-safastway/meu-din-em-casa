@@ -345,6 +345,100 @@ export type Database = {
           },
         ]
       }
+      budget_version_items: {
+        Row: {
+          budget_version_id: string
+          category_id: string
+          confidence: number | null
+          created_at: string
+          id: string
+          max_amount: number | null
+          min_amount: number | null
+          rationale: string | null
+          subcategory_id: string | null
+          suggested_amount: number
+        }
+        Insert: {
+          budget_version_id: string
+          category_id: string
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          max_amount?: number | null
+          min_amount?: number | null
+          rationale?: string | null
+          subcategory_id?: string | null
+          suggested_amount: number
+        }
+        Update: {
+          budget_version_id?: string
+          category_id?: string
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          max_amount?: number | null
+          min_amount?: number | null
+          rationale?: string | null
+          subcategory_id?: string | null
+          suggested_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_version_items_budget_version_id_fkey"
+            columns: ["budget_version_id"]
+            isOneToOne: false
+            referencedRelation: "budget_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_month: string
+          family_id: string
+          id: string
+          input_snapshot: Json | null
+          notes: string | null
+          source_type: Database["public"]["Enums"]["budget_version_source_type"]
+          status: Database["public"]["Enums"]["budget_version_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_month: string
+          family_id: string
+          id?: string
+          input_snapshot?: Json | null
+          notes?: string | null
+          source_type: Database["public"]["Enums"]["budget_version_source_type"]
+          status?: Database["public"]["Enums"]["budget_version_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_month?: string
+          family_id?: string
+          id?: string
+          input_snapshot?: Json | null
+          notes?: string | null
+          source_type?: Database["public"]["Enums"]["budget_version_source_type"]
+          status?: Database["public"]["Enums"]["budget_version_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_versions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budgets: {
         Row: {
           average_spending: number | null
@@ -5628,6 +5722,10 @@ export type Database = {
         Returns: undefined
       }
       expire_old_imports: { Args: never; Returns: undefined }
+      get_active_budget_for_month: {
+        Args: { p_family_id: string; p_month: string }
+        Returns: string
+      }
       get_admin_role: { Args: { _user_id: string }; Returns: string }
       get_category_transaction_count: {
         Args: { p_category_id: string; p_family_id: string }
@@ -5815,6 +5913,8 @@ export type Database = {
         | "gestao_estrategica"
         | "legal"
       bank_account_type: "checking" | "savings" | "digital" | "salary"
+      budget_version_source_type: "onboarding_only" | "transactions_based"
+      budget_version_status: "draft" | "active" | "archived"
       card_brand: "visa" | "mastercard" | "elo" | "amex" | "hipercard"
       card_charge_type: "ONE_SHOT" | "INSTALLMENT" | "RECURRENT"
       card_type: "credit" | "debit" | "both"
@@ -5997,6 +6097,8 @@ export const Constants = {
         "legal",
       ],
       bank_account_type: ["checking", "savings", "digital", "salary"],
+      budget_version_source_type: ["onboarding_only", "transactions_based"],
+      budget_version_status: ["draft", "active", "archived"],
       card_brand: ["visa", "mastercard", "elo", "amex", "hipercard"],
       card_charge_type: ["ONE_SHOT", "INSTALLMENT", "RECURRENT"],
       card_type: ["credit", "debit", "both"],
