@@ -168,6 +168,7 @@ export function useCreateBudgetVersion() {
 }
 
 // Hook to get categorization quality for transactions-based generation
+// Uses cash_date for cash-basis accounting (regime de caixa)
 export function useCategorizationQuality(periodDays: number = 90) {
   const { family } = useAuth();
 
@@ -181,12 +182,15 @@ export function useCategorizationQuality(periodDays: number = 90) {
         "yyyy-MM-dd"
       );
 
+      // Use cash_date for budget-relevant queries (regime de caixa)
+      // Exclude transactions without cash_date (credit card purchases, pending cheques)
       const { data: transactions, error } = await supabase
         .from("transactions")
-        .select("id, category_id, type")
+        .select("id, category_id, type, payment_method, cash_date")
         .eq("family_id", family.id)
         .eq("type", "expense")
-        .gte("date", startDate);
+        .not("cash_date", "is", null)
+        .gte("cash_date", startDate);
 
       if (error) throw error;
 
@@ -194,12 +198,22 @@ export function useCategorizationQuality(periodDays: number = 90) {
       const categorized = transactions.filter((t) => t.category_id).length;
       const percentage = total > 0 ? (categorized / total) * 100 : 0;
 
+      // Count pending items (credit card purchases without cash_date)
+      const { count: pendingCount } = await supabase
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("family_id", family.id)
+        .eq("type", "expense")
+        .is("cash_date", null)
+        .gte("event_date", startDate);
+
       return {
         total,
         categorized,
         percentage,
         isEligible: percentage >= 80,
         periodDays,
+        pendingCashItems: pendingCount || 0,
       };
     },
     enabled: !!family,
@@ -207,6 +221,7 @@ export function useCategorizationQuality(periodDays: number = 90) {
 }
 
 // Hook to calculate suggested budget from transactions
+// Uses cash_date for cash-basis accounting (regime de caixa)
 export function useTransactionBasedSuggestion(periodDays: number = 90) {
   const { family } = useAuth();
 
@@ -220,53 +235,66 @@ export function useTransactionBasedSuggestion(periodDays: number = 90) {
         "yyyy-MM-dd"
       );
 
+      // Use cash_date for budget calculations (regime de caixa)
+      // Only include transactions with cash_date (actual money flow)
       const { data: transactions, error } = await supabase
         .from("transactions")
-        .select("category_id, subcategory_id, amount, date")
+        .select("category_id, subcategory_id, amount, cash_date, budget_month, payment_method")
         .eq("family_id", family.id)
         .eq("type", "expense")
-        .gte("date", startDate);
+        .not("cash_date", "is", null)
+        .gte("cash_date", startDate);
 
       if (error) throw error;
 
-      // Group by category
-      const categoryTotals: Record<string, { amounts: number[]; subcategories: Record<string, number[]> }> = {};
+      // Check for pending credit card purchases (no invoice payment yet)
+      const { data: pendingCredit } = await supabase
+        .from("transactions")
+        .select("id, amount")
+        .eq("family_id", family.id)
+        .eq("type", "expense")
+        .eq("payment_method", "credit")
+        .is("cash_date", null)
+        .gte("event_date", startDate);
+
+      const hasPendingCreditPurchases = (pendingCredit?.length || 0) > 0;
+
+      // Group by category using budget_month for proper monthly grouping
+      const categoryMonthlyTotals: Record<string, Record<string, number>> = {};
 
       transactions.forEach((t) => {
-        if (!t.category_id) return;
+        if (!t.category_id || !t.budget_month) return;
 
-        if (!categoryTotals[t.category_id]) {
-          categoryTotals[t.category_id] = { amounts: [], subcategories: {} };
+        if (!categoryMonthlyTotals[t.category_id]) {
+          categoryMonthlyTotals[t.category_id] = {};
         }
 
-        categoryTotals[t.category_id].amounts.push(Number(t.amount));
-
-        if (t.subcategory_id) {
-          if (!categoryTotals[t.category_id].subcategories[t.subcategory_id]) {
-            categoryTotals[t.category_id].subcategories[t.subcategory_id] = [];
-          }
-          categoryTotals[t.category_id].subcategories[t.subcategory_id].push(Number(t.amount));
+        if (!categoryMonthlyTotals[t.category_id][t.budget_month]) {
+          categoryMonthlyTotals[t.category_id][t.budget_month] = 0;
         }
+
+        categoryMonthlyTotals[t.category_id][t.budget_month] += Number(t.amount);
       });
 
-      // Calculate monthly median per category
-      const monthsInPeriod = periodDays / 30;
-      const suggestions = Object.entries(categoryTotals).map(([categoryId, data]) => {
-        const totalAmount = data.amounts.reduce((a, b) => a + b, 0);
-        const monthlyAvg = totalAmount / monthsInPeriod;
+      // Calculate monthly MEDIAN per category (more robust than average)
+      const suggestions = Object.entries(categoryMonthlyTotals).map(([categoryId, monthlyTotals]) => {
+        const monthlyAmounts = Object.values(monthlyTotals);
+        monthlyAmounts.sort((a, b) => a - b);
         
-        // Calculate subcategory suggestions
-        const subcategorySuggestions = Object.entries(data.subcategories).map(([subId, amounts]) => ({
-          subcategory_id: subId,
-          suggested_amount: amounts.reduce((a, b) => a + b, 0) / monthsInPeriod,
-        }));
+        // Calculate median
+        const mid = Math.floor(monthlyAmounts.length / 2);
+        const median = monthlyAmounts.length % 2 !== 0
+          ? monthlyAmounts[mid]
+          : (monthlyAmounts[mid - 1] + monthlyAmounts[mid]) / 2;
+
+        const monthCount = monthlyAmounts.length;
 
         return {
           category_id: categoryId,
-          suggested_amount: monthlyAvg,
-          confidence: Math.min(0.5 + (data.amounts.length / 20) * 0.5, 0.95),
-          rationale: `Baseado na média dos últimos ${Math.round(monthsInPeriod)} meses`,
-          subcategories: subcategorySuggestions,
+          suggested_amount: median,
+          confidence: Math.min(0.5 + (monthCount / 6) * 0.4, 0.95),
+          rationale: `Mediana mensal de ${monthCount} mês(es) (regime de caixa)`,
+          monthlyBreakdown: monthlyTotals,
         };
       });
 
@@ -274,6 +302,8 @@ export function useTransactionBasedSuggestion(periodDays: number = 90) {
         suggestions,
         periodDays,
         transactionCount: transactions.length,
+        hasPendingCreditPurchases,
+        pendingCreditCount: pendingCredit?.length || 0,
       };
     },
     enabled: !!family,

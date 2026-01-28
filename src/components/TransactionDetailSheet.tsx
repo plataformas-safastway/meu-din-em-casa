@@ -37,6 +37,9 @@ import {
   Target,
   Loader2,
   Lock,
+  CreditCard,
+  AlertTriangle,
+  Wallet,
 } from "lucide-react";
 import { useDeleteTransaction } from "@/hooks/useTransactions";
 import { useMyPermissions } from "@/hooks/useFamilyPermissions";
@@ -51,6 +54,10 @@ export interface TransactionDetail {
   category: string;
   subcategory?: string;
   date: string;
+  event_date?: string;      // When event occurred (cash-basis)
+  cash_date?: string | null; // When money moved (cash-basis) - null for pending
+  budget_month?: string | null; // YYYY-MM for budget allocation
+  payment_method?: string;
   description?: string;
   created_at: string;
   // Audit fields
@@ -171,6 +178,45 @@ export function TransactionDetailSheet({
                 {isExpense ? "Despesa" : "Receita"}
               </p>
             </div>
+
+            {/* Cash-basis dates info */}
+            {(transaction.payment_method === "credit" || transaction.payment_method === "cheque") && (
+              <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Wallet className="w-4 h-4 text-primary" />
+                  <span>Regime de Caixa</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <p className="text-muted-foreground">Data do Evento</p>
+                    <p className="font-medium">{formatDate(transaction.event_date || transaction.date)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Mês do Orçamento</p>
+                    {transaction.cash_date ? (
+                      <p className="font-medium">{transaction.budget_month || "—"}</p>
+                    ) : (
+                      <div className="flex items-center gap-1 text-warning">
+                        <AlertTriangle className="w-3 h-3" />
+                        <span className="font-medium">Pendente</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {!transaction.cash_date && transaction.payment_method === "credit" && (
+                  <p className="text-xs text-muted-foreground">
+                    Compras no cartão entram no orçamento no mês do pagamento da fatura.
+                  </p>
+                )}
+                {!transaction.cash_date && transaction.payment_method === "cheque" && (
+                  <p className="text-xs text-muted-foreground">
+                    Cheques entram no orçamento após informar a data de compensação.
+                  </p>
+                )}
+              </div>
+            )}
 
             <Separator />
 

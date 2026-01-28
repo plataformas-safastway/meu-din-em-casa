@@ -14,7 +14,9 @@ export interface TransactionInput {
   subcategory_id?: string | null;
   description?: string | null;
   date: string;
-  payment_method: "cash" | "debit" | "credit" | "pix" | "transfer" | "boleto" | "cheque";
+  event_date?: string; // When the event occurred (auto-set if not provided)
+  cash_date?: string | null; // When money actually moved (null for credit purchases)
+  payment_method: "cash" | "debit" | "credit" | "pix" | "transfer" | "cheque";
   bank_account_id?: string;
   credit_card_id?: string;
   is_recurring?: boolean;
@@ -52,7 +54,14 @@ export function useTransactions(month?: number, year?: number, options?: { enabl
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      
+      // Transform to include cash-basis fields
+      return data.map((t: any) => ({
+        ...t,
+        event_date: t.event_date || t.date,
+        cash_date: t.cash_date,
+        budget_month: t.budget_month,
+      }));
     },
     enabled: !!family && isEnabled,
     staleTime: STALE_TIMES.transactions,
@@ -266,15 +275,16 @@ export function useFinanceSummary(month?: number, year?: number, options?: { ena
     queryFn: async () => {
       if (!family) return null;
 
-      const startDate = new Date(currentYear, currentMonth, 1).toISOString().split("T")[0];
-      const endDate = new Date(currentYear, currentMonth + 1, 0).toISOString().split("T")[0];
+      // Calculate budget_month string for cash-basis filtering
+      const budgetMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
 
+      // Use budget_month for cash-basis accounting (regime de caixa)
+      // Only include transactions with cash_date (actual money flow)
       const { data: transactions, error } = await supabase
         .from("transactions")
-        .select("type, amount, category_id")
+        .select("type, amount, category_id, cash_date, budget_month, payment_method")
         .eq("family_id", family.id)
-        .gte("date", startDate)
-        .lte("date", endDate);
+        .eq("budget_month", budgetMonthStr);
 
       if (error) throw error;
 
@@ -297,6 +307,19 @@ export function useFinanceSummary(month?: number, year?: number, options?: { ena
           expensesByCategory[t.category_id] = (expensesByCategory[t.category_id] || 0) + Number(t.amount);
         });
 
+      // Also count pending items (credit card purchases without cash_date in this period)
+      const startDate = new Date(currentYear, currentMonth, 1).toISOString().split("T")[0];
+      const endDate = new Date(currentYear, currentMonth + 1, 0).toISOString().split("T")[0];
+      
+      const { count: pendingCount } = await supabase
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("family_id", family.id)
+        .eq("type", "expense")
+        .is("cash_date", null)
+        .gte("event_date", startDate)
+        .lte("event_date", endDate);
+
       return {
         income,
         expenses,
@@ -304,6 +327,8 @@ export function useFinanceSummary(month?: number, year?: number, options?: { ena
         savingsRate,
         expensesByCategory,
         transactionCount: transactions.length,
+        pendingCashItems: pendingCount || 0,
+        isCashBasis: true,
       };
     },
     enabled: !!family && isEnabled,
