@@ -120,6 +120,16 @@ function LoadingSpinner() {
   return <ScreenLoader label="Carregando..." />
 }
 
+function SessionOverlay({ label }: { label: string }) {
+  return (
+    <ScreenLoader
+      overlay
+      label={label}
+      className="pointer-events-auto touch-none overscroll-contain"
+    />
+  );
+}
+
 /**
  * AuthGate - Bootstrap guard that prevents routing until auth is fully resolved
  * This prevents the "flash" of signup/onboarding screens during login
@@ -219,22 +229,29 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }, [location.pathname, location.search, location.hash, isLoading, isAuthTransition, bootstrapStatus, profileStatus, session, user]);
   
   // CRITICAL: Show timeout fallback if auth has been loading too long
-  if (hasTimedOut) {
-    return (
-      <AuthTimeoutFallback 
-        onRetry={handleTimeoutRetry}
-        timeoutSeconds={Math.ceil(AUTH_TIMEOUT_MS / 1000)}
-      />
-    );
-  }
+  const shouldShowAuthOverlay =
+    hasTimedOut ||
+    isLoading ||
+    isAuthTransition ||
+    isRouteRestoreInProgress();
 
-  // Wait until auth is fully stable (not loading AND not in transition)
-  // Also wait during route restoration
-  if (isLoading || isRouteRestoreInProgress()) {
-    return <ScreenLoader label="Carregando..." />;
-  }
-  
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      {shouldShowAuthOverlay && (
+        hasTimedOut ? (
+          <div className="fixed inset-0 z-50 pointer-events-auto touch-none overscroll-contain">
+            <AuthTimeoutFallback
+              onRetry={handleTimeoutRetry}
+              timeoutSeconds={Math.ceil(AUTH_TIMEOUT_MS / 1000)}
+            />
+          </div>
+        ) : (
+          <SessionOverlay label="Verificando sessão…" />
+        )
+      )}
+    </>
+  );
 }
 
 function ProtectedRoute({
@@ -264,9 +281,10 @@ function ProtectedRoute({
 
   // CRITICAL: Never redirect during auth transition (tab switch, token refresh)
   // Also never redirect during route restoration
+  // IMPORTANT: Do NOT replace the current route with a loader. Keep children mounted.
   if (isAuthTransition || isRouteRestoreInProgress()) {
-    console.log('[ProtectedRoute] In transition/restore - showing loader, NOT redirecting');
-    return <LoadingSpinner />;
+    console.log('[ProtectedRoute] In transition/restore - keeping children mounted');
+    return <>{children}</>;
   }
 
   // Only redirect when we're CERTAIN there's no session
@@ -298,9 +316,14 @@ function ProtectedRoute({
     );
   }
   
-  // Profile still loading - show loader (shouldn't happen often due to AuthGate)
+  // Profile still loading - keep children mounted + overlay
   if (profileStatus === 'loading' || profileStatus === 'unknown') {
-    return <LoadingSpinner />;
+    return (
+      <>
+        {children}
+        <SessionOverlay label="Verificando sessão…" />
+      </>
+    );
   }
   
   // Need family but don't have one - redirect to signup
@@ -348,14 +371,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   }, [location.pathname, isAuthTransition, shouldRedirectToLogin, session, user, profileStatus, bootstrapStatus, role, roleLoading]);
 
   // CRITICAL: Never redirect during auth transition or route restoration
+  // IMPORTANT: Do NOT replace the current route with a loader. Keep children mounted.
   if (isAuthTransition || isRouteRestoreInProgress()) {
-    console.log('[AdminRoute] In transition/restore - showing loader, NOT redirecting');
-    return <LoadingSpinner />;
-  }
-
-  // Still loading role
-  if (roleLoading || profileStatus === 'loading') {
-    return <LoadingSpinner />;
+    console.log('[AdminRoute] In transition/restore - keeping children mounted');
+    return <>{children}</>;
   }
   
   // Only redirect when we're CERTAIN there's no session
@@ -387,6 +406,16 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Still loading role/profile - keep children mounted + overlay
+  if (roleLoading || profileStatus === 'loading') {
+    return (
+      <>
+        {children}
+        <SessionOverlay label="Verificando sessão…" />
+      </>
+    );
+  }
+
   // Admin users (admin, cs, admin_master) don't need a family - they access dashboard directly
   const isAdminRole = role === "admin" || role === "cs" || role === "admin_master";
   
@@ -406,8 +435,9 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   
   // CRITICAL: Never redirect during auth transition or route restoration
+  // IMPORTANT: Do NOT replace the current screen with a loader. Keep children mounted.
   if (isAuthTransition || isRouteRestoreInProgress()) {
-    return <LoadingSpinner />;
+    return <>{children}</>;
   }
   
   // IMPORTANT: Do NOT block the public/login UI when user is logged out.
@@ -420,7 +450,12 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   );
 
   if (shouldBlockForAuthChecks) {
-    return <LoadingSpinner />;
+    return (
+      <>
+        {children}
+        <SessionOverlay label="Verificando sessão…" />
+      </>
+    );
   }
   
   // Admin users go directly to dashboard (no family required)

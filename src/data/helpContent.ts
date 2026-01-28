@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 28/01/2026 - Add Login Troubleshooting FAQ
-export const HELP_CENTER_VERSION = "28/01/2026 v11";
+// Última atualização: 28/01/2026 - Session overlay (preserve forms on tab switch)
+export const HELP_CENTER_VERSION = "28/01/2026 v12";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -1427,9 +1427,9 @@ export const faqItems: FAQItem[] = [
   {
     id: "faq-form-data-lost",
     question: "Perdi os dados do formulário ao trocar de aba. O que fazer?",
-    answer: "O Oik salva automaticamente rascunhos de formulários importantes (cadastro, onboarding) a cada poucos segundos. Se você perdeu dados, provavelmente: 1) O formulário não era um dos protegidos, 2) Houve um erro de navegação, ou 3) A sessão expirou. Para formulários críticos, recomendamos salvar com frequência. Se o problema persistir, tente limpar a sessão e fazer login novamente.",
+    answer: "Isso não deve mais acontecer: ao alternar de aba, o OIK mantém a tela atual montada e mostra um overlay temporário de 'Verificando sessão…' que bloqueia interação até a sessão estabilizar — sem reiniciar a página. Além disso, formulários críticos continuam com rascunho automático. Se você ainda perder dados, pode ser o navegador descartando a aba por falta de memória; nesse caso, reabra o app e procure pelo aviso de 'Rascunho restaurado'.",
     category: "settings",
-    keywords: ["formulário", "dados", "perdeu", "aba", "trocar", "rascunho", "autosave"],
+    keywords: ["formulário", "dados", "perdeu", "aba", "trocar", "rascunho", "autosave", "overlay", "verificando sessão"],
   },
   {
     id: "faq-draft-restored",
