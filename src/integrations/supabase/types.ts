@@ -5977,12 +5977,12 @@ export type Database = {
         Args: { _family_id?: string; _scope: string; _user_id: string }
         Returns: boolean
       }
-      has_admin_role: {
-        Args: { _role: string; _user_id: string }
-        Returns: boolean
-      }
+      has_admin_role:
+        | { Args: { _role: string; _user_id: string }; Returns: boolean }
+        | { Args: { p_roles: string[] }; Returns: boolean }
       has_any_admin: { Args: never; Returns: boolean }
       has_cs_access: { Args: { _user_id: string }; Returns: boolean }
+      has_cs_access_scoped: { Args: { p_family_id: string }; Returns: boolean }
       has_executive_access: { Args: { _user_id: string }; Returns: boolean }
       has_financial_access: { Args: { _user_id: string }; Returns: boolean }
       has_legal_access: { Args: { _user_id: string }; Returns: boolean }
@@ -5998,7 +5998,9 @@ export type Database = {
       has_tech_access: { Args: { _user_id: string }; Returns: boolean }
       hash_identifier: { Args: { identifier: string }; Returns: string }
       is_admin_master: { Args: { _user_id: string }; Returns: boolean }
-      is_admin_user: { Args: { _user_id: string }; Returns: boolean }
+      is_admin_user:
+        | { Args: never; Returns: boolean }
+        | { Args: { _user_id: string }; Returns: boolean }
       is_family_member: { Args: { f_id: string }; Returns: boolean }
       is_family_owner: { Args: { p_family_id: string }; Returns: boolean }
       is_family_owner_or_manager: {
