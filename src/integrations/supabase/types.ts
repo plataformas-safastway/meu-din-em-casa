@@ -5634,6 +5634,7 @@ export type Database = {
         | "RESEND"
         | "ENOTAS"
         | "GOOGLE_DRIVE"
+        | "ONEDRIVE"
       integration_status: "ACTIVE" | "INACTIVE" | "PENDING" | "ERROR"
       lgpd_request_status: "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED"
       member_status: "INVITED" | "ACTIVE" | "REMOVED" | "DISABLED" | "BLOCKED"
@@ -5809,6 +5810,7 @@ export const Constants = {
         "RESEND",
         "ENOTAS",
         "GOOGLE_DRIVE",
+        "ONEDRIVE",
       ],
       integration_status: ["ACTIVE", "INACTIVE", "PENDING", "ERROR"],
       lgpd_request_status: ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"],
