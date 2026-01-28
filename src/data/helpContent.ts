@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 28/01/2026 - Orçamento Sugerido Versionado
-export const HELP_CENTER_VERSION = "28/01/2026 v15";
+// Última atualização: 28/01/2026 - Regime de Caixa + cash_date
+export const HELP_CENTER_VERSION = "28/01/2026 v16";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -2086,9 +2086,52 @@ export const adminFaqItems: FAQItem[] = [
   {
     id: "faq-suggested-budget-6",
     question: "Como o sistema calcula o orçamento baseado em gastos?",
-    answer: "O Oik calcula a mediana mensal de gastos por categoria no período escolhido (30, 60, 90 ou 180 dias). A mediana é mais estável que a média porque ignora gastos muito altos ou baixos esporádicos.",
+    answer: "O Oik calcula a mediana mensal de gastos por categoria no período escolhido (30, 60, 90 ou 180 dias). A mediana é mais estável que a média porque ignora gastos muito altos ou baixos esporádicos. O cálculo usa a 'data de caixa' (regime de caixa).",
     category: "budgets",
-    keywords: ["calcula", "mediana", "média", "período", "como"],
+    keywords: ["calcula", "mediana", "média", "período", "como", "caixa"],
+  },
+  // ===== REGIME DE CAIXA =====
+  {
+    id: "faq-cash-basis-1",
+    question: "O que é regime de caixa?",
+    answer: "Regime de caixa significa que o Oik conta as transações no mês em que o dinheiro efetivamente sai ou entra. Para Pix, débito, dinheiro e transferência, é a data do pagamento. Para cartão de crédito, é o mês do pagamento da fatura. Para cheque, é a data de compensação.",
+    category: "budgets",
+    keywords: ["regime", "caixa", "quando", "conta", "mês", "orçamento"],
+  },
+  {
+    id: "faq-cash-basis-2",
+    question: "Por que compras no cartão não entram no orçamento do mês?",
+    answer: "O Oik usa regime de caixa: a compra no cartão é um evento, mas o dinheiro só sai quando você paga a fatura. Por isso, compras no cartão entram no orçamento do mês em que a fatura é paga (desembolso real).",
+    category: "budgets",
+    keywords: ["cartão", "crédito", "compra", "fatura", "orçamento", "mês"],
+  },
+  {
+    id: "faq-cash-basis-3",
+    question: "Como funciona o cheque no regime de caixa?",
+    answer: "Cheques emitidos ficam 'pendentes' até você informar a data de compensação. Só então o valor entra no orçamento daquele mês. Isso evita contabilizar gastos que ainda não afetaram seu saldo.",
+    category: "budgets",
+    keywords: ["cheque", "compensação", "pendente", "data", "caixa"],
+  },
+  {
+    id: "faq-cash-basis-4",
+    question: "O que é 'Data do evento' vs 'Mês do orçamento'?",
+    answer: "Data do evento é quando a transação aconteceu (ex: compra no cartão dia 15). Mês do orçamento é quando o dinheiro efetivamente saiu (ex: pagamento da fatura dia 5 do mês seguinte). O Oik mostra ambas as datas para transparência.",
+    category: "budgets",
+    keywords: ["evento", "data", "orçamento", "diferença", "compra", "fatura"],
+  },
+  {
+    id: "faq-cash-basis-5",
+    question: "Por que o aviso de 'compras de cartão sem fatura'?",
+    answer: "Se você tem compras no cartão mas não registrou o pagamento da fatura, o Oik avisa porque essas compras não entram no orçamento até o pagamento. Registre os pagamentos de fatura como despesa normal (Pix/débito) com a categoria 'Cartão'.",
+    category: "budgets",
+    keywords: ["aviso", "compras", "cartão", "fatura", "pagamento", "pendente"],
+  },
+  {
+    id: "faq-cash-basis-6",
+    question: "Qual a diferença entre 'data' e 'data de caixa'?",
+    answer: "A 'data' (ou data do evento) é quando a transação foi realizada. A 'data de caixa' é quando o dinheiro efetivamente movimentou. Para Pix/débito, ambas são iguais. Para cartão, a data de caixa é o pagamento da fatura. Para cheque, é a compensação.",
+    category: "transactions",
+    keywords: ["data", "caixa", "evento", "diferença", "cartão", "cheque"],
   },
 ];
 

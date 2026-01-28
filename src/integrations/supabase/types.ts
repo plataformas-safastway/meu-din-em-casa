@@ -5003,9 +5003,11 @@ export type Database = {
         Row: {
           amount: number
           bank_account_id: string | null
+          budget_month: string | null
           card_charge_type:
             | Database["public"]["Enums"]["card_charge_type"]
             | null
+          cash_date: string | null
           category_id: string
           check_number: string | null
           classification:
@@ -5018,6 +5020,7 @@ export type Database = {
           date: string
           description: string | null
           direction: Database["public"]["Enums"]["transaction_direction"] | null
+          event_date: string
           family_id: string
           goal_id: string | null
           id: string
@@ -5051,9 +5054,11 @@ export type Database = {
         Insert: {
           amount: number
           bank_account_id?: string | null
+          budget_month?: string | null
           card_charge_type?:
             | Database["public"]["Enums"]["card_charge_type"]
             | null
+          cash_date?: string | null
           category_id: string
           check_number?: string | null
           classification?:
@@ -5068,6 +5073,7 @@ export type Database = {
           direction?:
             | Database["public"]["Enums"]["transaction_direction"]
             | null
+          event_date?: string
           family_id: string
           goal_id?: string | null
           id?: string
@@ -5101,9 +5107,11 @@ export type Database = {
         Update: {
           amount?: number
           bank_account_id?: string | null
+          budget_month?: string | null
           card_charge_type?:
             | Database["public"]["Enums"]["card_charge_type"]
             | null
+          cash_date?: string | null
           category_id?: string
           check_number?: string | null
           classification?:
@@ -5118,6 +5126,7 @@ export type Database = {
           direction?:
             | Database["public"]["Enums"]["transaction_direction"]
             | null
+          event_date?: string
           family_id?: string
           goal_id?: string | null
           id?: string

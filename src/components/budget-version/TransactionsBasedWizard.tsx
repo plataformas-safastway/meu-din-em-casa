@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, AlertTriangle, TrendingUp, Clock, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, AlertTriangle, TrendingUp, Clock, Check, Loader2, CreditCard, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useCategorizationQuality, useTransactionBasedSuggestion } from "@/hooks/useBudgetVersions";
@@ -102,6 +103,15 @@ export function TransactionsBasedWizard({
 
   return (
     <div className="min-h-full flex flex-col">
+      {/* Cash-basis microcopy */}
+      <Alert className="mx-6 mt-4 bg-muted/50 border-muted">
+        <Info className="h-4 w-4" />
+        <AlertDescription className="text-xs">
+          <strong>Regime de caixa:</strong> contamos no mês em que o dinheiro sai/entra. 
+          Compras no cartão entram no mês do pagamento da fatura.
+        </AlertDescription>
+      </Alert>
+
       <AnimatePresence mode="wait">
         {/* Step 1: Period Selection */}
         {step === "period" && (
@@ -257,21 +267,35 @@ export function TransactionsBasedWizard({
                 )}
 
                 {quality.isEligible && suggestion && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-muted-foreground">Total analisado</span>
-                        <span className="font-semibold">
-                          {formatCurrency(
-                            suggestion.suggestions.reduce((sum, s) => sum + s.suggested_amount, 0)
-                          )}/mês
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Média mensal dos últimos {periodDays} dias em {suggestion.suggestions.length} categorias
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <>
+                    {/* Warning about pending credit card purchases */}
+                    {suggestion.hasPendingCreditPurchases && (
+                      <Alert className="bg-warning/10 border-warning/30">
+                        <CreditCard className="h-4 w-4 text-warning" />
+                        <AlertDescription className="text-sm">
+                          <strong>Atenção:</strong> Você tem {suggestion.pendingCreditCount} compra(s) no cartão 
+                          sem pagamento de fatura registrado. Seu orçamento é em regime de caixa — 
+                          precisamos dos pagamentos de fatura para refletir o desembolso real.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-muted-foreground">Total analisado</span>
+                          <span className="font-semibold">
+                            {formatCurrency(
+                              suggestion.suggestions.reduce((sum, s) => sum + s.suggested_amount, 0)
+                            )}/mês
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Mediana mensal dos últimos {periodDays} dias em {suggestion.suggestions.length} categorias (regime de caixa)
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </>
                 )}
 
                 {quality.isEligible && (
