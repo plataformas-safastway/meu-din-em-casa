@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { BudgetProposalScreen, type BudgetItem } from "@/components/onboarding/BudgetProposalScreen";
 import { useOnboardingWizard } from "@/hooks/useOnboardingWizard";
 import { type OnboardingData } from "@/data/budgetModes";
+import { useDraftPersistence } from "@/hooks/useDraftPersistence";
+import { DraftRestoredToast } from "@/components/ui/draft-restored-toast";
 
 type FlowStep = 'wizard' | 'budget-proposal';
 
@@ -12,6 +14,34 @@ export function OnboardingFlowPage() {
   const [flowStep, setFlowStep] = useState<FlowStep>('wizard');
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const { saveOnboarding, generateAISuggestions, isLoading } = useOnboardingWizard();
+  
+  // Draft persistence for onboarding data
+  const { 
+    restoredDraft, 
+    wasRestored, 
+    saveDraft, 
+    clearDraft, 
+    dismissRestoreNotice 
+  } = useDraftPersistence<{ data: OnboardingData | null; step: FlowStep }>('onboarding_wizard');
+  
+  // Restore draft on mount
+  useEffect(() => {
+    if (restoredDraft && !onboardingData) {
+      if (restoredDraft.data) {
+        setOnboardingData(restoredDraft.data);
+      }
+      if (restoredDraft.step) {
+        setFlowStep(restoredDraft.step);
+      }
+    }
+  }, [restoredDraft, onboardingData]);
+  
+  // Save draft on changes
+  useEffect(() => {
+    if (onboardingData || flowStep !== 'wizard') {
+      saveDraft({ data: onboardingData, step: flowStep });
+    }
+  }, [onboardingData, flowStep, saveDraft]);
 
   // Handle wizard completion
   const handleWizardComplete = (data: OnboardingData) => {
@@ -33,6 +63,8 @@ export function OnboardingFlowPage() {
       budgets,
     });
 
+    // Clear draft on successful save
+    clearDraft();
     navigate("/app");
   };
 
@@ -49,11 +81,18 @@ export function OnboardingFlowPage() {
 
   if (flowStep === 'wizard') {
     return (
-      <OnboardingWizard
-        onComplete={handleWizardComplete}
-        onSkip={handleWizardSkip}
-        initialData={onboardingData || undefined}
-      />
+      <>
+        <DraftRestoredToast 
+          wasRestored={wasRestored} 
+          onDismiss={dismissRestoreNotice} 
+          entityName="dados do cadastro" 
+        />
+        <OnboardingWizard
+          onComplete={handleWizardComplete}
+          onSkip={handleWizardSkip}
+          initialData={onboardingData || restoredDraft?.data || undefined}
+        />
+      </>
     );
   }
 

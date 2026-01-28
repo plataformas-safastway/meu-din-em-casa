@@ -1424,6 +1424,20 @@ export const faqItems: FAQItem[] = [
     category: "settings",
     keywords: ["aba", "trocar", "logout", "sessão", "pwa", "cache"],
   },
+  {
+    id: "faq-form-data-lost",
+    question: "Perdi os dados do formulário ao trocar de aba. O que fazer?",
+    answer: "O Oik salva automaticamente rascunhos de formulários importantes (cadastro, onboarding) a cada poucos segundos. Se você perdeu dados, provavelmente: 1) O formulário não era um dos protegidos, 2) Houve um erro de navegação, ou 3) A sessão expirou. Para formulários críticos, recomendamos salvar com frequência. Se o problema persistir, tente limpar a sessão e fazer login novamente.",
+    category: "settings",
+    keywords: ["formulário", "dados", "perdeu", "aba", "trocar", "rascunho", "autosave"],
+  },
+  {
+    id: "faq-draft-restored",
+    question: "O que significa 'Rascunho restaurado'?",
+    answer: "Quando você vê essa mensagem, significa que o Oik recuperou dados que você digitou anteriormente mas não salvou (ex: ao fechar a aba acidentalmente). Os rascunhos são mantidos por 24 horas. Você pode continuar de onde parou ou descartar os dados restaurados.",
+    category: "settings",
+    keywords: ["rascunho", "restaurado", "recuperado", "autosave", "dados"],
+  },
 ];
 
 // ===== ADMIN DASHBOARD FAQ (Internal Use) =====

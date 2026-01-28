@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 import { validatePassword } from "@/lib/passwordValidation";
+import { useDraftPersistence } from "@/hooks/useDraftPersistence";
+import { DraftRestoredToast } from "@/components/ui/draft-restored-toast";
 import oikMarca from "@/assets/oik-marca.png";
 
 /**
@@ -33,6 +35,30 @@ export function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [emailAlreadyExists, setEmailAlreadyExists] = useState(false);
+  
+  // Draft persistence for form fields (excluding password for security)
+  const { 
+    restoredDraft, 
+    wasRestored, 
+    saveDraft, 
+    clearDraft, 
+    dismissRestoreNotice 
+  } = useDraftPersistence<{ name: string; email: string }>('signup_form');
+  
+  // Restore draft on mount
+  useEffect(() => {
+    if (restoredDraft) {
+      if (restoredDraft.name) setName(restoredDraft.name);
+      if (restoredDraft.email) setEmail(restoredDraft.email);
+    }
+  }, [restoredDraft]);
+  
+  // Save draft on changes (excluding password)
+  useEffect(() => {
+    if (name || email) {
+      saveDraft({ name, email });
+    }
+  }, [name, email, saveDraft]);
 
   // Redirect to invite flow if token present
   useEffect(() => {
@@ -113,6 +139,9 @@ export function SignupPage() {
       // Store name in session storage for the onboarding flow
       sessionStorage.setItem("onboarding_name", name);
 
+      // Clear draft on successful signup
+      clearDraft();
+      
       // Redirect to onboarding wizard
       navigate("/onboarding", { replace: true });
     } catch (err) {
@@ -125,6 +154,13 @@ export function SignupPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Draft restored notification */}
+      <DraftRestoredToast 
+        wasRestored={wasRestored} 
+        onDismiss={dismissRestoreNotice} 
+        entityName="dados do cadastro" 
+      />
+      
       {/* Header */}
       <header className="p-4 flex items-center">
         <Button
