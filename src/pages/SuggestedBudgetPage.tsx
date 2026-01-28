@@ -10,9 +10,9 @@ import {
   Sparkles,
   History,
   AlertTriangle,
-  Check
+  Check,
+  HelpCircle
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -40,8 +40,12 @@ import { cn } from "@/lib/utils";
 type FlowType = "onboarding" | "transactions" | null;
 type ViewMode = "main" | "wizard" | "preview" | "history";
 
-export function SuggestedBudgetPage() {
-  const navigate = useNavigate();
+interface SuggestedBudgetPageProps {
+  onBack: () => void;
+  onNavigate?: (tab: string) => void;
+}
+
+export function SuggestedBudgetPage({ onBack, onNavigate }: SuggestedBudgetPageProps) {
   const [flowType, setFlowType] = useState<FlowType>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("main");
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
@@ -224,16 +228,28 @@ export function SuggestedBudgetPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="p-6 border-b">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-semibold">Orçamento Sugerido</h1>
-            <p className="text-sm text-muted-foreground">
-              Planejamento inteligente baseado no seu perfil
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={onBack}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-semibold">Orçamento Sugerido</h1>
+              <p className="text-sm text-muted-foreground">
+                Planejamento inteligente baseado no seu perfil
+              </p>
+            </div>
           </div>
+          {onNavigate && (
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => onNavigate("help")}
+              aria-label="Ajuda"
+            >
+              <HelpCircle className="w-5 h-5 text-muted-foreground" />
+            </Button>
+          )}
         </div>
       </header>
 

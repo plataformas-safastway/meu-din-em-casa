@@ -103,7 +103,12 @@ const Index = () => {
         return <GoalsPage onBack={() => setActiveTab(getBackTab("dashboard"))} />;
       case "goals":
         // Budgets page - respects navigation source context
-        return <BudgetsPage onBack={() => setActiveTab(getBackTab("dashboard"))} />;
+        return (
+          <BudgetsPage 
+            onBack={() => setActiveTab(getBackTab("dashboard"))} 
+            onNavigate={setActiveTab}
+          />
+        );
       case "cashflow":
         return <CashflowPage onBack={() => setActiveTab("dashboard")} />;
       case "projection":
@@ -170,6 +175,13 @@ const Index = () => {
         return <InsightsHubPage />;
       case "learned-rules":
         return <LearnedRulesPage onBack={() => setActiveTab(getBackTab("settings"))} />;
+      case "suggested-budget":
+        return (
+          <SuggestedBudgetPage 
+            onBack={() => setActiveTab(getBackTab("goals"))} 
+            onNavigate={setActiveTab}
+          />
+        );
       default:
         return <Dashboard />;
     }

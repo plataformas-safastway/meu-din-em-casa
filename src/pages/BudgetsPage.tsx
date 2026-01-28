@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Target, Plus, Trash2, Edit2, AlertTriangle, CheckCircle, TrendingDown, TrendingUp, Lock } from "lucide-react";
+import { ArrowLeft, Target, Plus, Trash2, Edit2, AlertTriangle, CheckCircle, TrendingDown, TrendingUp, Lock, Sparkles, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,9 +21,10 @@ import { cn } from "@/lib/utils";
 
 interface BudgetsPageProps {
   onBack: () => void;
+  onNavigate?: (tab: string) => void;
 }
 
-export function BudgetsPage({ onBack }: BudgetsPageProps) {
+export function BudgetsPage({ onBack, onNavigate }: BudgetsPageProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState("");
@@ -444,6 +445,27 @@ export function BudgetsPage({ onBack }: BudgetsPageProps) {
               );
             })}
           </div>
+        )}
+
+        {/* Suggested Budget CTA */}
+        {onNavigate && (
+          <Card 
+            className="cursor-pointer hover:border-primary/50 transition-colors bg-gradient-to-r from-primary/5 to-primary/10"
+            onClick={() => onNavigate("suggested-budget")}
+          >
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">Orçamento Sugerido</p>
+                <p className="text-sm text-muted-foreground">
+                  Gerar orçamento inteligente baseado no seu perfil
+                </p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </CardContent>
+          </Card>
         )}
 
         {/* Empty State */}
