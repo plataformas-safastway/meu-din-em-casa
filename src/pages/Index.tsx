@@ -28,6 +28,7 @@ const EbooksAdminPage = lazy(() => import("./EbooksAdminPage"));
 const OpenFinancePage = lazy(() => import("./OpenFinancePage").then(m => ({ default: m.OpenFinancePage })));
 const FamilyPage = lazy(() => import("./FamilyPage").then(m => ({ default: m.FamilyPage })));
 const InsightsHubPage = lazy(() => import("./InsightsHubPage").then(m => ({ default: m.InsightsHubPage })));
+const LearnedRulesPage = lazy(() => import("./settings/LearnedRulesPage"));
 
 // Minimal loading component for lazy modules
 const PageLoader = memo(() => (
@@ -166,6 +167,8 @@ const Index = () => {
         );
       case "insights":
         return <InsightsHubPage />;
+      case "learned-rules":
+        return <LearnedRulesPage onBack={() => setActiveTab(getBackTab("settings"))} />;
       default:
         return <Dashboard />;
     }
