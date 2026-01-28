@@ -25,8 +25,8 @@ const NOISE_TOKENS = new Set([
 ]);
 
 // Known platform patterns (for detection)
-export const KNOWN_PLATFORMS: Record<string, { pattern: RegExp; platform: string; isIntermediary: boolean }> = {
-  // Payment gateways (intermediaries)
+export const KNOWN_PLATFORMS: Record<string, { pattern: RegExp; platform: string; isIntermediary: boolean; categoryHint?: string; subcategoryHint?: string }> = {
+  // ============ PAYMENT GATEWAYS (intermediaries - low confidence) ============
   MERCADOPAGO: { pattern: /MERCADO\s*PAGO|MERCADOPAGO|MP\s*\*/i, platform: 'MERCADOPAGO', isIntermediary: true },
   MERCADOLIVRE: { pattern: /MERCADO\s*LIVRE|MERCADOLIVRE|ML\s*\*/i, platform: 'MERCADOLIVRE', isIntermediary: true },
   PAGSEGURO: { pattern: /PAGSEGURO|PAG\s*SEGURO|UOLPAG/i, platform: 'PAGSEGURO', isIntermediary: true },
@@ -37,56 +37,99 @@ export const KNOWN_PLATFORMS: Record<string, { pattern: RegExp; platform: string
   GETNET: { pattern: /\bGETNET\b/i, platform: 'GETNET', isIntermediary: true },
   REDE: { pattern: /\bREDE\b(?!\s*CELULAR)/i, platform: 'REDE', isIntermediary: true },
   
-  // Digital courses (intermediaries)
-  HOTMART: { pattern: /HOTMART/i, platform: 'HOTMART', isIntermediary: true },
-  EDUZZ: { pattern: /EDUZZ/i, platform: 'EDUZZ', isIntermediary: true },
-  MONETIZZE: { pattern: /MONETIZZE/i, platform: 'MONETIZZE', isIntermediary: true },
-  KIWIFY: { pattern: /KIWIFY/i, platform: 'KIWIFY', isIntermediary: true },
+  // ============ INFOPRODUCTS / COURSES (intermediaries) ============
+  HOTMART: { pattern: /HOTMART/i, platform: 'HOTMART', isIntermediary: true, categoryHint: 'educacao', subcategoryHint: 'educacao-cursos-online' },
+  EDUZZ: { pattern: /EDUZZ/i, platform: 'EDUZZ', isIntermediary: true, categoryHint: 'educacao', subcategoryHint: 'educacao-cursos-online' },
+  MONETIZZE: { pattern: /MONETIZZE/i, platform: 'MONETIZZE', isIntermediary: true, categoryHint: 'educacao', subcategoryHint: 'educacao-cursos-online' },
+  KIWIFY: { pattern: /KIWIFY/i, platform: 'KIWIFY', isIntermediary: true, categoryHint: 'educacao', subcategoryHint: 'educacao-cursos-online' },
+  BRAIP: { pattern: /BRAIP/i, platform: 'BRAIP', isIntermediary: true, categoryHint: 'educacao', subcategoryHint: 'educacao-cursos-online' },
+  TICTO: { pattern: /TICTO/i, platform: 'TICTO', isIntermediary: true, categoryHint: 'educacao', subcategoryHint: 'educacao-cursos-online' },
+  PERFECTPAY: { pattern: /PERFECTPAY|PERFECT\s*PAY/i, platform: 'PERFECTPAY', isIntermediary: true, categoryHint: 'educacao', subcategoryHint: 'educacao-cursos-online' },
   
-  // Transport (not intermediaries)
-  UBER: { pattern: /\bUBER\b/i, platform: 'UBER', isIntermediary: false },
-  UBER_EATS: { pattern: /UBER\s*EATS/i, platform: 'UBER_EATS', isIntermediary: false },
-  NINETYNINE: { pattern: /\b99\b|99\s*APP|99\s*POP|99\s*TAXI/i, platform: '99', isIntermediary: false },
-  CABIFY: { pattern: /CABIFY/i, platform: 'CABIFY', isIntermediary: false },
+  // ============ TRANSPORT (not intermediaries) ============
+  UBER: { pattern: /\bUBER\b(?!\s*EATS)/i, platform: 'UBER', isIntermediary: false, categoryHint: 'transporte', subcategoryHint: 'transporte-taxi-uber' },
+  UBER_EATS: { pattern: /UBER\s*EATS/i, platform: 'UBER_EATS', isIntermediary: false, categoryHint: 'alimentacao', subcategoryHint: 'alimentacao-delivery' },
+  NINETYNINE: { pattern: /\b99\b|99\s*APP|99\s*POP|99\s*TAXI/i, platform: '99', isIntermediary: false, categoryHint: 'transporte', subcategoryHint: 'transporte-taxi-uber' },
+  CABIFY: { pattern: /CABIFY/i, platform: 'CABIFY', isIntermediary: false, categoryHint: 'transporte', subcategoryHint: 'transporte-taxi-uber' },
   
-  // Food delivery
-  IFOOD: { pattern: /IFOOD|I\s*FOOD/i, platform: 'IFOOD', isIntermediary: true },
-  RAPPI: { pattern: /RAPPI/i, platform: 'RAPPI', isIntermediary: true },
-  ZEDELIVERY: { pattern: /ZE\s*DELIVERY|ZDELIVERY/i, platform: 'ZEDELIVERY', isIntermediary: false },
+  // ============ FOOD DELIVERY ============
+  IFOOD: { pattern: /IFOOD|I\s*FOOD/i, platform: 'IFOOD', isIntermediary: true, categoryHint: 'alimentacao', subcategoryHint: 'alimentacao-delivery' },
+  RAPPI: { pattern: /RAPPI/i, platform: 'RAPPI', isIntermediary: true, categoryHint: 'alimentacao', subcategoryHint: 'alimentacao-delivery' },
+  ZEDELIVERY: { pattern: /ZE\s*DELIVERY|ZDELIVERY/i, platform: 'ZEDELIVERY', isIntermediary: false, categoryHint: 'alimentacao', subcategoryHint: 'alimentacao-delivery' },
   
-  // Streaming
-  NETFLIX: { pattern: /NETFLIX/i, platform: 'NETFLIX', isIntermediary: false },
-  SPOTIFY: { pattern: /SPOTIFY/i, platform: 'SPOTIFY', isIntermediary: false },
-  AMAZON_PRIME: { pattern: /AMAZON\s*PRIME|PRIME\s*VIDEO|PRIMEVIDEO/i, platform: 'AMAZON_PRIME', isIntermediary: false },
-  DISNEY: { pattern: /DISNEY\s*+|DISNEY\s*PLUS|DISNEYPLUS/i, platform: 'DISNEY', isIntermediary: false },
-  HBO: { pattern: /HBO\s*MAX|HBOMAX|\bMAX\b/i, platform: 'HBO', isIntermediary: false },
-  GLOBOPLAY: { pattern: /GLOBOPLAY|GLOBO\s*PLAY/i, platform: 'GLOBOPLAY', isIntermediary: false },
-  DEEZER: { pattern: /DEEZER/i, platform: 'DEEZER', isIntermediary: false },
-  YOUTUBE: { pattern: /YOUTUBE|YOU\s*TUBE/i, platform: 'YOUTUBE', isIntermediary: false },
+  // ============ STREAMING ============
+  NETFLIX: { pattern: /NETFLIX/i, platform: 'NETFLIX', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-internet---tv---streamings' },
+  SPOTIFY: { pattern: /SPOTIFY/i, platform: 'SPOTIFY', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-internet---tv---streamings' },
+  AMAZON_PRIME: { pattern: /AMAZON\s*PRIME|PRIME\s*VIDEO|PRIMEVIDEO/i, platform: 'AMAZON_PRIME', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-internet---tv---streamings' },
+  DISNEY: { pattern: /DISNEY\s*\+|DISNEY\s*PLUS|DISNEYPLUS/i, platform: 'DISNEY', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-internet---tv---streamings' },
+  HBO: { pattern: /HBO\s*MAX|HBOMAX|\bHBO\b/i, platform: 'HBO', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-internet---tv---streamings' },
+  GLOBOPLAY: { pattern: /GLOBOPLAY|GLOBO\s*PLAY/i, platform: 'GLOBOPLAY', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-internet---tv---streamings' },
+  DEEZER: { pattern: /DEEZER/i, platform: 'DEEZER', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-internet---tv---streamings' },
+  YOUTUBE: { pattern: /YOUTUBE|YOU\s*TUBE/i, platform: 'YOUTUBE', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-internet---tv---streamings' },
   
-  // E-commerce
+  // ============ APPLE/GOOGLE SUBSCRIPTIONS ============
+  APPLE: { pattern: /APPLE\.COM\/BILL|APPLE\s*STORE|ITUNES/i, platform: 'APPLE', isIntermediary: true, categoryHint: 'casa', subcategoryHint: 'casa-internet---tv---streamings' },
+  GOOGLE_PLAY: { pattern: /GOOGLE\s*\*|GOOGLE\s*PLAY|GOOGLE\s*SERVICOS/i, platform: 'GOOGLE', isIntermediary: true, categoryHint: 'casa', subcategoryHint: 'casa-internet---tv---streamings' },
+  
+  // ============ E-COMMERCE (marketplaces - intermediaries) ============
   AMAZON: { pattern: /\bAMAZON\b(?!\s*PRIME)/i, platform: 'AMAZON', isIntermediary: true },
   SHOPEE: { pattern: /SHOPEE/i, platform: 'SHOPEE', isIntermediary: true },
   ALIEXPRESS: { pattern: /ALIEXPRESS|ALI\s*EXPRESS/i, platform: 'ALIEXPRESS', isIntermediary: true },
   MAGALU: { pattern: /MAGALU|MAGAZINE\s*LUIZA/i, platform: 'MAGALU', isIntermediary: true },
   AMERICANAS: { pattern: /AMERICANAS/i, platform: 'AMERICANAS', isIntermediary: true },
-  SHEIN: { pattern: /\bSHEIN\b/i, platform: 'SHEIN', isIntermediary: false },
+  SHEIN: { pattern: /\bSHEIN\b/i, platform: 'SHEIN', isIntermediary: false, categoryHint: 'roupa-estetica', subcategoryHint: 'roupa-estetica-roupas' },
   
-  // Gas stations
-  SHELL: { pattern: /\bSHELL\b/i, platform: 'SHELL', isIntermediary: false },
-  IPIRANGA: { pattern: /IPIRANGA/i, platform: 'IPIRANGA', isIntermediary: false },
-  PETROBRAS: { pattern: /PETROBRAS|BR\s*DISTRIBUIDORA/i, platform: 'PETROBRAS', isIntermediary: false },
+  // ============ UTILITIES - ELECTRICITY ============
+  ENEL: { pattern: /ENEL/i, platform: 'ENEL', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-energia-eletrica' },
+  CPFL: { pattern: /CPFL/i, platform: 'CPFL', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-energia-eletrica' },
+  CEMIG: { pattern: /CEMIG/i, platform: 'CEMIG', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-energia-eletrica' },
+  LIGHT: { pattern: /\bLIGHT\b/i, platform: 'LIGHT', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-energia-eletrica' },
+  EQUATORIAL: { pattern: /EQUATORIAL/i, platform: 'EQUATORIAL', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-energia-eletrica' },
+  COELBA: { pattern: /COELBA/i, platform: 'COELBA', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-energia-eletrica' },
+  COPEL: { pattern: /COPEL/i, platform: 'COPEL', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-energia-eletrica' },
+  CELESC: { pattern: /CELESC/i, platform: 'CELESC', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-energia-eletrica' },
   
-  // Pharmacies
-  DROGASIL: { pattern: /DROGASIL/i, platform: 'DROGASIL', isIntermediary: false },
-  DROGARAIA: { pattern: /DROGA\s*RAIA|DROGARAIA/i, platform: 'DROGARAIA', isIntermediary: false },
-  PANVEL: { pattern: /PANVEL/i, platform: 'PANVEL', isIntermediary: false },
+  // ============ UTILITIES - WATER ============
+  SABESP: { pattern: /SABESP/i, platform: 'SABESP', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-agua' },
+  COPASA: { pattern: /COPASA/i, platform: 'COPASA', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-agua' },
+  SANEPAR: { pattern: /SANEPAR/i, platform: 'SANEPAR', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-agua' },
+  CEDAE: { pattern: /CEDAE/i, platform: 'CEDAE', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-agua' },
+  AGUAS: { pattern: /AGUAS\s*DE|AGUAS\s*E/i, platform: 'AGUAS', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-agua' },
+  EMBASA: { pattern: /EMBASA/i, platform: 'EMBASA', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-agua' },
   
-  // Supermarkets
-  CARREFOUR: { pattern: /CARREFOUR/i, platform: 'CARREFOUR', isIntermediary: false },
-  PAODEACUCAR: { pattern: /PAO\s*DE\s*ACUCAR|P[ÃA]O\s*DE\s*A[CÇ]UCAR/i, platform: 'PAODEACUCAR', isIntermediary: false },
-  ASSAI: { pattern: /ASSAI|ASSA[IÍ]/i, platform: 'ASSAI', isIntermediary: false },
-  ATACADAO: { pattern: /ATACADAO|ATACAD[ÃA]O/i, platform: 'ATACADAO', isIntermediary: false },
+  // ============ TELECOM ============
+  VIVO: { pattern: /\bVIVO\b/i, platform: 'VIVO', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-telefone-celular' },
+  CLARO: { pattern: /\bCLARO\b/i, platform: 'CLARO', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-telefone-celular' },
+  TIM: { pattern: /\bTIM\b/i, platform: 'TIM', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-telefone-celular' },
+  OI: { pattern: /\bOI\b(?!\s*FIXO)/i, platform: 'OI', isIntermediary: false, categoryHint: 'casa', subcategoryHint: 'casa-telefone-celular' },
+  
+  // ============ TOLL/PARKING TAGS ============
+  SEMPARAR: { pattern: /SEM\s*PARAR|SEMPARAR/i, platform: 'SEMPARAR', isIntermediary: false, categoryHint: 'transporte', subcategoryHint: 'transporte-estacionamento' },
+  CONECTCAR: { pattern: /CONECTCAR|CONECT\s*CAR/i, platform: 'CONECTCAR', isIntermediary: false, categoryHint: 'transporte', subcategoryHint: 'transporte-estacionamento' },
+  VELOE: { pattern: /VELOE/i, platform: 'VELOE', isIntermediary: false, categoryHint: 'transporte', subcategoryHint: 'transporte-estacionamento' },
+  
+  // ============ GAS STATIONS ============
+  SHELL: { pattern: /\bSHELL\b/i, platform: 'SHELL', isIntermediary: false, categoryHint: 'transporte', subcategoryHint: 'transporte-combustivel' },
+  IPIRANGA: { pattern: /IPIRANGA/i, platform: 'IPIRANGA', isIntermediary: false, categoryHint: 'transporte', subcategoryHint: 'transporte-combustivel' },
+  PETROBRAS: { pattern: /PETROBRAS|BR\s*DISTRIBUIDORA/i, platform: 'PETROBRAS', isIntermediary: false, categoryHint: 'transporte', subcategoryHint: 'transporte-combustivel' },
+  
+  // ============ PHARMACIES ============
+  DROGASIL: { pattern: /DROGASIL/i, platform: 'DROGASIL', isIntermediary: false, categoryHint: 'vida-saude', subcategoryHint: 'vida-saude-medicamentos' },
+  DROGARAIA: { pattern: /DROGA\s*RAIA|DROGARAIA/i, platform: 'DROGARAIA', isIntermediary: false, categoryHint: 'vida-saude', subcategoryHint: 'vida-saude-medicamentos' },
+  PANVEL: { pattern: /PANVEL/i, platform: 'PANVEL', isIntermediary: false, categoryHint: 'vida-saude', subcategoryHint: 'vida-saude-medicamentos' },
+  PACHECO: { pattern: /PACHECO/i, platform: 'PACHECO', isIntermediary: false, categoryHint: 'vida-saude', subcategoryHint: 'vida-saude-medicamentos' },
+  
+  // ============ SUPERMARKETS ============
+  CARREFOUR: { pattern: /CARREFOUR/i, platform: 'CARREFOUR', isIntermediary: false, categoryHint: 'alimentacao', subcategoryHint: 'alimentacao-supermercado' },
+  PAODEACUCAR: { pattern: /PAO\s*DE\s*ACUCAR|P[ÃA]O\s*DE\s*A[CÇ]UCAR/i, platform: 'PAODEACUCAR', isIntermediary: false, categoryHint: 'alimentacao', subcategoryHint: 'alimentacao-supermercado' },
+  ASSAI: { pattern: /ASSAI|ASSA[IÍ]/i, platform: 'ASSAI', isIntermediary: false, categoryHint: 'alimentacao', subcategoryHint: 'alimentacao-supermercado' },
+  ATACADAO: { pattern: /ATACADAO|ATACAD[ÃA]O/i, platform: 'ATACADAO', isIntermediary: false, categoryHint: 'alimentacao', subcategoryHint: 'alimentacao-supermercado' },
+  EXTRA: { pattern: /\bEXTRA\b/i, platform: 'EXTRA', isIntermediary: false, categoryHint: 'alimentacao', subcategoryHint: 'alimentacao-supermercado' },
+  
+  // ============ ADS / PROFESSIONAL EXPENSES ============
+  META_ADS: { pattern: /META\s*\*|FACEBOOK\s*\*|FB\s*\*/i, platform: 'META', isIntermediary: false, categoryHint: 'diversos', subcategoryHint: 'diversos-despesas-profissionais' },
+  INSTAGRAM_ADS: { pattern: /INSTAGRAM\s*\*/i, platform: 'INSTAGRAM', isIntermediary: false, categoryHint: 'diversos', subcategoryHint: 'diversos-despesas-profissionais' },
+  GOOGLE_ADS: { pattern: /GOOGLE\s*ADS|ADWORDS/i, platform: 'GOOGLE_ADS', isIntermediary: false, categoryHint: 'diversos', subcategoryHint: 'diversos-despesas-profissionais' },
 };
 
 // CNPJ regex pattern
