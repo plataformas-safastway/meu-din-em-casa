@@ -26,6 +26,11 @@ import {
   markRestoreCompleted
 } from "@/lib/routeResumeGuard";
 import { installDevNavigationInstrumentation, installDevNavigationInstrumentationV2, logNavigationAttempt } from "@/lib/devNavigationInstrumentation";
+import { 
+  logLifecycle, 
+  isLifecycleDebugEnabled,
+  INSTANCE_SIGNATURES 
+} from "@/lib/lifecycleTracer";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { TermosPage } from "./pages/TermosPage";
@@ -65,6 +70,8 @@ if (isNavDebugEnabled()) {
 // If we booted at '/' unexpectedly after a tab discard/resume, restore immediately
 tryInitialRouteRestore();
 
+// SINGLETON: QueryClient created at module level (NOT inside component)
+// This ensures it's never recreated on re-render
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -83,6 +90,15 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Log QueryClient signature to prove it's a singleton
+if (isLifecycleDebugEnabled()) {
+  console.log(
+    '%c[LIFECYCLE] QueryClient created (module level)',
+    'color: #aa00ff; font-weight: bold',
+    { signature: INSTANCE_SIGNATURES.queryClient }
+  );
+}
 
 // Custom focus manager to prevent aggressive refetching
 focusManager.setEventListener((handleFocus) => {
@@ -505,23 +521,66 @@ function AppRoutes() {
   );
 }
 
+// Wrapper components with lifecycle tracing
+function TracedQueryClientProvider({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    logLifecycle('MOUNT', 'QueryClientProvider', INSTANCE_SIGNATURES.queryClient);
+    return () => logLifecycle('UNMOUNT', 'QueryClientProvider', INSTANCE_SIGNATURES.queryClient);
+  }, []);
+  
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  );
+}
+
+function TracedBrowserRouter({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    logLifecycle('MOUNT', 'BrowserRouter', INSTANCE_SIGNATURES.router);
+    return () => logLifecycle('UNMOUNT', 'BrowserRouter', INSTANCE_SIGNATURES.router);
+  }, []);
+  
+  return <BrowserRouter>{children}</BrowserRouter>;
+}
+
+function TracedAuthProvider({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    logLifecycle('MOUNT', 'AuthProvider');
+    return () => logLifecycle('UNMOUNT', 'AuthProvider');
+  }, []);
+  
+  return <AuthProvider>{children}</AuthProvider>;
+}
+
+function TracedApp({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    logLifecycle('MOUNT', 'App', INSTANCE_SIGNATURES.app);
+    return () => logLifecycle('UNMOUNT', 'App', INSTANCE_SIGNATURES.app);
+  }, []);
+  
+  return <>{children}</>;
+}
+
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <ChunkErrorBoundary>
-        <BrowserRouter>
-          <AuthProvider>
-            <AppLifecycleHandler>
-              <AppRoutes />
-              <InstallPrompt />
-            </AppLifecycleHandler>
-          </AuthProvider>
-        </BrowserRouter>
-      </ChunkErrorBoundary>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <TracedApp>
+    <TracedQueryClientProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <ChunkErrorBoundary>
+          <TracedBrowserRouter>
+            <TracedAuthProvider>
+              <AppLifecycleHandler>
+                <AppRoutes />
+                <InstallPrompt />
+              </AppLifecycleHandler>
+            </TracedAuthProvider>
+          </TracedBrowserRouter>
+        </ChunkErrorBoundary>
+      </TooltipProvider>
+    </TracedQueryClientProvider>
+  </TracedApp>
 );
 
 export default App;

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { addBreadcrumb } from '@/lib/observability';
+import { logLifecycle, isLifecycleDebugEnabled, logTabEvent } from '@/lib/lifecycleTracer';
 
 // =====================================================
 // Global state to track tab visibility transitions
@@ -10,11 +11,15 @@ import { addBreadcrumb } from '@/lib/observability';
 let globalIsInTransition = false;
 let globalTransitionTimeout: ReturnType<typeof setTimeout> | null = null;
 let lastVisibleTimestamp = Date.now();
+let lastHiddenTimestamp = 0;
 let hadSessionBeforeHidden = false;
 const transitionListeners = new Set<() => void>();
 
-// Increased transition window to handle slow token refreshes
-const TRANSITION_WINDOW_MS = 5000;
+// Extended transition window for slow token refreshes (15 seconds)
+const TRANSITION_WINDOW_MS = 15000;
+
+// Minimum hidden time to trigger protection (500ms - covers quick tab switches)
+const MIN_HIDDEN_FOR_PROTECTION = 500;
 
 function getSnapshot(): boolean {
   return globalIsInTransition;
@@ -44,9 +49,23 @@ export function markSessionBeforeHide(hasSession: boolean): void {
 
 /**
  * Check if we recently had a valid session before tab was hidden
+ * Uses time-based check to avoid stale state issues
  */
 export function hadRecentValidSession(): boolean {
-  return hadSessionBeforeHidden;
+  // If we had a session when hidden AND it was within the protection window
+  const timeSinceHidden = lastHiddenTimestamp > 0 ? Date.now() - lastHiddenTimestamp : Infinity;
+  const isRecent = timeSinceHidden < TRANSITION_WINDOW_MS;
+  
+  if (isLifecycleDebugEnabled()) {
+    console.log('[StableAuth] hadRecentValidSession check:', {
+      hadSessionBeforeHidden,
+      timeSinceHidden,
+      isRecent,
+      TRANSITION_WINDOW_MS,
+    });
+  }
+  
+  return hadSessionBeforeHidden && isRecent;
 }
 
 /**
@@ -66,51 +85,78 @@ if (typeof document !== 'undefined') {
     const wasHidden = lastVisibility === 'hidden';
     lastVisibility = document.visibilityState;
     
+    // Log for lifecycle debugging
+    logTabEvent('visibilitychange', { visibilityState: document.visibilityState });
+    
     if (!isVisible) {
-      // Tab becoming hidden - mark timestamp
+      // Tab becoming hidden - mark timestamps
+      lastHiddenTimestamp = Date.now();
       lastVisibleTimestamp = Date.now();
       addBreadcrumb('auth', 'tab_hidden');
+      
+      if (isLifecycleDebugEnabled()) {
+        console.log('[StableAuth] Tab hidden at:', lastHiddenTimestamp);
+      }
     }
     
     if (isVisible && wasHidden) {
-      const hiddenDuration = Date.now() - lastVisibleTimestamp;
+      const hiddenDuration = Date.now() - lastHiddenTimestamp;
       console.log('[StableAuth] Tab became visible after', hiddenDuration, 'ms hidden');
       addBreadcrumb('auth', 'tab_visible', { hiddenDuration, hadSession: hadSessionBeforeHidden });
       
-      globalIsInTransition = true;
-      // Notify synchronously to ensure React sees the new state
-      notifyListeners();
-      
-      if (globalTransitionTimeout) {
-        clearTimeout(globalTransitionTimeout);
-      }
-      
-      // Extended window for slow networks/token refresh
-      globalTransitionTimeout = setTimeout(() => {
-        globalIsInTransition = false;
-        console.log('[StableAuth] Transition period ended');
-        addBreadcrumb('auth', 'transition_ended');
+      // Only enable protection if hidden for meaningful time
+      if (hiddenDuration >= MIN_HIDDEN_FOR_PROTECTION) {
+        globalIsInTransition = true;
+        // Notify synchronously to ensure React sees the new state
         notifyListeners();
-      }, TRANSITION_WINDOW_MS);
+        
+        if (globalTransitionTimeout) {
+          clearTimeout(globalTransitionTimeout);
+        }
+        
+        // Extended window for slow networks/token refresh
+        globalTransitionTimeout = setTimeout(() => {
+          globalIsInTransition = false;
+          console.log('[StableAuth] Transition period ended after', TRANSITION_WINDOW_MS, 'ms');
+          addBreadcrumb('auth', 'transition_ended');
+          notifyListeners();
+        }, TRANSITION_WINDOW_MS);
+        
+        if (isLifecycleDebugEnabled()) {
+          console.log('[StableAuth] Protection enabled for', TRANSITION_WINDOW_MS, 'ms');
+        }
+      } else {
+        console.log('[StableAuth] Skipping protection - hidden too briefly:', hiddenDuration, 'ms');
+      }
     }
   }, true); // Use capture phase
   
   // Also track focus for additional safety
   window.addEventListener('focus', () => {
+    logTabEvent('focus');
+    
     // If we're not already in transition but coming back from blur, start one
     if (!globalIsInTransition && document.visibilityState === 'visible') {
-      globalIsInTransition = true;
-      notifyListeners();
+      const hiddenDuration = Date.now() - lastHiddenTimestamp;
       
-      if (globalTransitionTimeout) {
-        clearTimeout(globalTransitionTimeout);
-      }
-      
-      globalTransitionTimeout = setTimeout(() => {
-        globalIsInTransition = false;
+      if (hiddenDuration >= MIN_HIDDEN_FOR_PROTECTION) {
+        globalIsInTransition = true;
         notifyListeners();
-      }, TRANSITION_WINDOW_MS);
+        
+        if (globalTransitionTimeout) {
+          clearTimeout(globalTransitionTimeout);
+        }
+        
+        globalTransitionTimeout = setTimeout(() => {
+          globalIsInTransition = false;
+          notifyListeners();
+        }, TRANSITION_WINDOW_MS);
+      }
     }
+  });
+  
+  window.addEventListener('blur', () => {
+    logTabEvent('blur');
   });
 }
 

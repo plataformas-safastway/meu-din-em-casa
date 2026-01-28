@@ -7,6 +7,13 @@ import { initReloadDiagnostics, logAppBoot } from "./lib/reloadDiagnostics";
 import { cleanupLegacyServiceWorkers } from "./lib/swCleanup";
 import { installGlobalHandlers, addBreadcrumb } from "./lib/observability";
 import { setupViteErrorHandler } from "./lib/chunkErrorHandler";
+import { 
+  installTabEventListeners, 
+  logSingletonSignatures, 
+  logLifecycle,
+  INSTANCE_SIGNATURES,
+  isLifecycleDebugEnabled 
+} from "./lib/lifecycleTracer";
 
 // CRITICAL: Install production observability FIRST
 // This captures all errors including those during boot
@@ -31,11 +38,30 @@ setupViteErrorHandler();
 // Log app boot for reload detection (only when ?debugNav=1)
 logAppBoot();
 
+// LIFECYCLE TRACING: Install tab event listeners (only when ?debugLifecycle=1)
+installTabEventListeners();
+
+// Log singleton signatures to prove they're not recreated
+logSingletonSignatures();
+
 // Log boot breadcrumb
 addBreadcrumb('navigation', 'app_boot', {
   path: window.location.pathname,
   search: window.location.search,
   referrer: document.referrer,
 });
+
+// Log main.tsx execution (should only happen once per hard reload)
+if (isLifecycleDebugEnabled()) {
+  console.error(
+    '%c[LIFECYCLE] main.tsx EXECUTED - React Root Creating',
+    'color: #ff00ff; font-weight: bold; font-size: 14px',
+    {
+      timestamp: new Date().toISOString(),
+      pathname: window.location.pathname,
+      signatures: INSTANCE_SIGNATURES,
+    }
+  );
+}
 
 createRoot(document.getElementById("root")!).render(<App />);

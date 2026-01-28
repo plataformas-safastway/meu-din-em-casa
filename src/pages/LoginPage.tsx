@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,14 @@ import { toast } from "sonner";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 import { validatePassword } from "@/lib/passwordValidation";
 import { logAuthStage } from "@/lib/authDebug";
+import { logLifecycle, isLifecycleDebugEnabled } from "@/lib/lifecycleTracer";
+import { useDraftPersistence } from "@/hooks/useDraftPersistence";
 import oikMarca from "@/assets/oik-marca.png";
 
 type Mode = "login" | "forgot" | "reset";
+
+// Session key for draft persistence
+const LOGIN_DRAFT_KEY = 'login_form_email';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -29,6 +34,49 @@ export function LoginPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [passwordReset, setPasswordReset] = useState(false);
+  
+  // Track component identity to detect remount
+  const instanceIdRef = useRef(`login_${Date.now()}`);
+
+  // Draft persistence for email (not password for security)
+  // Uses localStorage with 5-minute effective window (cleared on successful login)
+  const { restoredDraft, wasRestored, saveDraft, clearDraft } = useDraftPersistence<{ email: string }>(
+    LOGIN_DRAFT_KEY,
+    { debounceMs: 500 }
+  );
+
+  // Lifecycle tracing for debugging tab-switch resets
+  useEffect(() => {
+    logLifecycle('MOUNT', 'LoginPage');
+    
+    if (isLifecycleDebugEnabled()) {
+      console.log('[LoginPage] Instance ID:', instanceIdRef.current);
+    }
+    
+    return () => {
+      logLifecycle('UNMOUNT', 'LoginPage');
+      if (isLifecycleDebugEnabled()) {
+        console.log('[LoginPage] Unmounted, instance:', instanceIdRef.current);
+      }
+    };
+  }, []);
+
+  // Restore draft email on mount
+  useEffect(() => {
+    if (restoredDraft?.email && !email) {
+      setEmail(restoredDraft.email);
+      if (wasRestored) {
+        console.log('[LoginPage] Email restored from draft');
+      }
+    }
+  }, [restoredDraft, wasRestored, email]);
+
+  // Save email draft on change (not password for security)
+  useEffect(() => {
+    if (email) {
+      saveDraft({ email });
+    }
+  }, [email, saveDraft]);
 
   useEffect(() => {
     if (searchParams.get('reset') === 'true') {
