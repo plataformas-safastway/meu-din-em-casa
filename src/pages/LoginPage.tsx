@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useLocation, useSearchParams } from "react-router-dom";
-import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2, AlertCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +11,9 @@ import { validatePassword } from "@/lib/passwordValidation";
 import { logAuthStage } from "@/lib/authDebug";
 import { logLifecycle, isLifecycleDebugEnabled } from "@/lib/lifecycleTracer";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
+import { useTurnstile } from "@/hooks/useTurnstile";
+import { isTurnstileConfigured } from "@/lib/turnstile/config";
+import { recordFailedAttempt, clearFailedAttempts } from "@/lib/turnstile/riskAssessment";
 import oikMarca from "@/assets/oik-marca.png";
 
 type Mode = "login" | "forgot" | "reset";
@@ -34,9 +37,27 @@ export function LoginPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [passwordReset, setPasswordReset] = useState(false);
+  const [verifyingTurnstile, setVerifyingTurnstile] = useState(false);
   
   // Track component identity to detect remount
   const instanceIdRef = useRef(`login_${Date.now()}`);
+
+  // Turnstile integration for bot protection
+  const {
+    token: turnstileToken,
+    isReady: turnstileReady,
+    isLoading: turnstileLoading,
+    error: turnstileError,
+    requiresChallenge,
+    containerRef: turnstileContainerRef,
+    reset: resetTurnstile,
+  } = useTurnstile({
+    action: 'login',
+    invisible: true,
+    onError: (err) => {
+      console.error('[LoginPage] Turnstile error:', err);
+    },
+  });
 
   // Draft persistence for email (not password for security)
   // Uses localStorage with 5-minute effective window (cleared on successful login)
@@ -100,6 +121,34 @@ export function LoginPage() {
     logAuthStage('AUTH_INIT_START', { context: 'login_submit' });
     
     try {
+      // Step 1: Verify Turnstile if required and configured
+      if (isTurnstileConfigured() && requiresChallenge && turnstileToken) {
+        setVerifyingTurnstile(true);
+        console.log('[LoginPage] Verifying Turnstile token...');
+        
+        const { data: verifyResult, error: verifyError } = await supabase.functions.invoke('verify-turnstile', {
+          body: {
+            token: turnstileToken,
+            email,
+            action: 'login',
+          },
+        });
+
+        setVerifyingTurnstile(false);
+
+        if (verifyError || !verifyResult?.valid) {
+          console.error('[LoginPage] Turnstile verification failed:', verifyError || verifyResult);
+          setLoginError('Verificação de segurança falhou. Tente novamente.');
+          toast.error('Verificação de segurança falhou');
+          resetTurnstile();
+          setLoading(false);
+          return;
+        }
+        
+        console.log('[LoginPage] Turnstile verified successfully');
+      }
+
+      // Step 2: Perform login
       // Defensive: in some edge cases (test env / unexpected auth layer failure),
       // signIn can resolve to undefined; never destructure without a guard.
       const result = await signIn(email, password);
@@ -110,6 +159,10 @@ export function LoginPage() {
           context: 'signIn',
           error: error.message,
         });
+        
+        // Record failed attempt for progressive security
+        recordFailedAttempt(email);
+        resetTurnstile();
         
         // Handle specific error types
         if (error.message.includes('Invalid login credentials')) {
@@ -136,6 +189,9 @@ export function LoginPage() {
         return;
       }
 
+      // Clear failed attempts on successful login
+      clearFailedAttempts();
+      
       logAuthStage('AUTH_USER_READY', { context: 'login_success' });
 
       const nextParam = searchParams.get("next");
@@ -198,10 +254,13 @@ export function LoginPage() {
         context: 'login_exception',
         error: err instanceof Error ? err.message : String(err),
       });
+      recordFailedAttempt(email);
+      resetTurnstile();
       setLoginError("Erro ao entrar. Tente novamente.");
       toast.error("Erro ao entrar. Tente novamente.");
     } finally {
       setLoading(false);
+      setVerifyingTurnstile(false);
     }
   };
 
@@ -506,14 +565,37 @@ export function LoginPage() {
               </div>
             )}
 
+            {/* Turnstile error display */}
+            {turnstileError && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{turnstileError}</span>
+              </div>
+            )}
+
+            {/* Security challenge indicator (when required) */}
+            {requiresChallenge && isTurnstileConfigured() && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50 text-muted-foreground text-sm">
+                <ShieldCheck className="w-4 h-4 flex-shrink-0 text-primary" />
+                <span>Verificação de segurança ativa</span>
+              </div>
+            )}
+
+            {/* Invisible Turnstile container */}
+            <div 
+              ref={turnstileContainerRef} 
+              className="turnstile-container"
+              aria-hidden="true"
+            />
+
             <div className="pt-3 space-y-4">
               {/* Premium Button with gradient and shadow */}
               <Button 
                 type="submit" 
                 className="w-full h-12 font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/90 hover:from-primary/95 hover:to-primary/85 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/25 active:scale-[0.98] transition-all duration-300"
-                disabled={loading}
+                disabled={loading || verifyingTurnstile || (requiresChallenge && isTurnstileConfigured() && !turnstileToken && turnstileLoading)}
               >
-                {loading ? (
+                {loading || verifyingTurnstile ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   "Entrar"
