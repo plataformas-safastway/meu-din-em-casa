@@ -15,6 +15,8 @@ import {
   FileText,
   HardDrive,
   Cloud,
+  Sparkles,
+  MapPin,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -54,6 +56,8 @@ const PROVIDER_ICONS: Record<IntegrationProvider, React.ReactNode> = {
   ENOTAS: <FileText className="w-4 h-4" />,
   GOOGLE_DRIVE: <HardDrive className="w-4 h-4" />,
   ONEDRIVE: <Cloud className="w-4 h-4" />,
+  LOVABLE_AI: <Sparkles className="w-4 h-4" />,
+  OPENSTREETMAP: <MapPin className="w-4 h-4" />,
 };
 
 export function IntegrationLogsCard({ provider }: IntegrationLogsCardProps) {

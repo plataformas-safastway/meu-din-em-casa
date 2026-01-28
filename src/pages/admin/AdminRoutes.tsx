@@ -57,6 +57,8 @@ const IntegrationResendPage = lazy(() => import("./integrations/IntegrationResen
 const IntegrationEnotasPage = lazy(() => import("./integrations/IntegrationEnotasPage").then(m => ({ default: m.IntegrationEnotasPage })));
 const IntegrationGoogleDrivePage = lazy(() => import("./integrations/IntegrationGoogleDrivePage").then(m => ({ default: m.IntegrationGoogleDrivePage })));
 const IntegrationOneDrivePage = lazy(() => import("./integrations/IntegrationOneDrivePage").then(m => ({ default: m.IntegrationOneDrivePage })));
+const IntegrationLovableAIPage = lazy(() => import("./integrations/IntegrationLovableAIPage").then(m => ({ default: m.IntegrationLovableAIPage })));
+const IntegrationOpenStreetMapPage = lazy(() => import("./integrations/IntegrationOpenStreetMapPage").then(m => ({ default: m.IntegrationOpenStreetMapPage })));
 
 // Executive reports
 const ExecutiveReportsPage = lazy(() => import("./executive/ExecutiveReportsPage"));
@@ -91,6 +93,8 @@ function IntegrationsOverviewWrapper() {
       ENOTAS: "/admin/integrations/enotas",
       GOOGLE_DRIVE: "/admin/integrations/googledrive",
       ONEDRIVE: "/admin/integrations/onedrive",
+      LOVABLE_AI: "/admin/integrations/lovable-ai",
+      OPENSTREETMAP: "/admin/integrations/openstreetmap",
     };
     navigate(routes[provider] || "/admin/integrations");
   };
@@ -160,6 +164,8 @@ export function AdminRoutes() {
         <Route path="integrations/enotas" element={<LazyPage Component={IntegrationEnotasPage} />} />
         <Route path="integrations/googledrive" element={<LazyPage Component={IntegrationGoogleDrivePage} />} />
         <Route path="integrations/onedrive" element={<LazyPage Component={IntegrationOneDrivePage} />} />
+        <Route path="integrations/lovable-ai" element={<LazyPage Component={IntegrationLovableAIPage} />} />
+        <Route path="integrations/openstreetmap" element={<LazyPage Component={IntegrationOpenStreetMapPage} />} />
         <Route path="integrations/keys" element={<LazyPage Component={TechApiKeysPage} />} />
 
         {/* Executive module */}

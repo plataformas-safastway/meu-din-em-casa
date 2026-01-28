@@ -5819,6 +5819,8 @@ export type Database = {
         | "ENOTAS"
         | "GOOGLE_DRIVE"
         | "ONEDRIVE"
+        | "LOVABLE_AI"
+        | "OPENSTREETMAP"
       integration_status: "ACTIVE" | "INACTIVE" | "PENDING" | "ERROR"
       learning_scope: "user" | "family" | "global"
       lgpd_request_status: "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED"
@@ -5998,6 +6000,8 @@ export const Constants = {
         "ENOTAS",
         "GOOGLE_DRIVE",
         "ONEDRIVE",
+        "LOVABLE_AI",
+        "OPENSTREETMAP",
       ],
       integration_status: ["ACTIVE", "INACTIVE", "PENDING", "ERROR"],
       learning_scope: ["user", "family", "global"],
