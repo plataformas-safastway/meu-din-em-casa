@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation, useSearchParams } from "react-router-dom";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 import { validatePassword } from "@/lib/passwordValidation";
+import { logAuthStage } from "@/lib/authDebug";
 import oikMarca from "@/assets/oik-marca.png";
 
 type Mode = "login" | "forgot" | "reset";
@@ -25,6 +26,7 @@ export function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [passwordReset, setPasswordReset] = useState(false);
 
@@ -39,6 +41,7 @@ export function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null);
 
     if (!email || !password) {
       toast.error("Preencha todos os campos");
@@ -46,6 +49,8 @@ export function LoginPage() {
     }
 
     setLoading(true);
+    logAuthStage('AUTH_INIT_START', { context: 'login_submit' });
+    
     try {
       // Defensive: in some edge cases (test env / unexpected auth layer failure),
       // signIn can resolve to undefined; never destructure without a guard.
@@ -53,66 +58,99 @@ export function LoginPage() {
       const error = result?.error ?? null;
 
       if (error) {
-        toast.error("E-mail ou senha incorretos");
+        logAuthStage('AUTH_ERROR', { 
+          context: 'signIn',
+          error: error.message,
+        });
+        
+        // Handle specific error types
+        if (error.message.includes('Invalid login credentials')) {
+          setLoginError("E-mail ou senha incorretos");
+          toast.error("E-mail ou senha incorretos");
+        } else if (error.message.includes('Email not confirmed')) {
+          setLoginError("Por favor, confirme seu e-mail antes de entrar");
+          toast.error("Por favor, confirme seu e-mail");
+        } else if (error.message.includes('refresh_token')) {
+          // Refresh token error - try to clear and retry
+          setLoginError("Sessão anterior expirada. Tentando reconectar...");
+          localStorage.removeItem('sb-wnagybpurqweowmievji-auth-token');
+          // Retry login after clearing
+          const retryResult = await signIn(email, password);
+          if (retryResult?.error) {
+            setLoginError("Erro ao entrar. Tente novamente.");
+            toast.error("Erro ao entrar. Tente novamente.");
+            return;
+          }
+        } else {
+          setLoginError("Erro ao entrar. Verifique suas credenciais.");
+          toast.error("E-mail ou senha incorretos");
+        }
         return;
       }
 
-    const nextParam = searchParams.get("next");
-    const safeNext = nextParam && nextParam.startsWith("/") ? nextParam : null;
+      logAuthStage('AUTH_USER_READY', { context: 'login_success' });
 
-    const from = (location.state as any)?.from as
-      | { pathname?: string; search?: string }
-      | undefined;
+      const nextParam = searchParams.get("next");
+      const safeNext = nextParam && nextParam.startsWith("/") ? nextParam : null;
 
-    let redirectTo = safeNext ?? (from?.pathname ? `${from.pathname}${from.search ?? ""}` : null);
+      const from = (location.state as any)?.from as
+        | { pathname?: string; search?: string }
+        | undefined;
 
-    // If no explicit redirect, check user access and decide
-    if (!redirectTo) {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
+      let redirectTo = safeNext ?? (from?.pathname ? `${from.pathname}${from.search ?? ""}` : null);
 
-      if (userId) {
-        // Check dashboard access
-        const { data: roleData } = await supabase.rpc("get_user_role", { _user_id: userId });
-        const dashboardRoles = ['admin', 'admin_master', 'cs', 'customer_success', 'financeiro', 'tecnologia', 'suporte', 'diretoria', 'gestao_estrategica'];
-        const hasDashboardAccess = roleData ? dashboardRoles.includes(roleData) : false;
+      // If no explicit redirect, check user access and decide
+      if (!redirectTo) {
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData.user?.id;
 
-        // Check app access - get ALL families for the user
-        const { data: familyMembers } = await supabase
-          .from('family_members')
-          .select('id, family_id')
-          .eq('user_id', userId);
-        
-        const familiesCount = familyMembers?.length ?? 0;
-        const hasAppAccess = familiesCount > 0;
-        const hasMultipleFamilies = familiesCount > 1;
+        if (userId) {
+          // Check dashboard access
+          const { data: roleData } = await supabase.rpc("get_user_role", { _user_id: userId });
+          const dashboardRoles = ['admin', 'admin_master', 'cs', 'customer_success', 'financeiro', 'tecnologia', 'suporte', 'diretoria', 'gestao_estrategica'];
+          const hasDashboardAccess = roleData ? dashboardRoles.includes(roleData) : false;
 
-        // Decide redirect based on access
-        if (hasAppAccess && hasDashboardAccess) {
-          // Both accesses - show context selector
-          redirectTo = "/select-context";
-        } else if (hasDashboardAccess) {
-          // Only dashboard
-          redirectTo = "/admin";
-        } else if (hasMultipleFamilies) {
-          // Multiple families - show family selector
-          redirectTo = "/select-family";
-        } else if (hasAppAccess) {
-          // Only one family - go directly to app
-          redirectTo = "/app";
+          // Check app access - get ALL families for the user
+          const { data: familyMembers } = await supabase
+            .from('family_members')
+            .select('id, family_id')
+            .eq('user_id', userId);
+          
+          const familiesCount = familyMembers?.length ?? 0;
+          const hasAppAccess = familiesCount > 0;
+          const hasMultipleFamilies = familiesCount > 1;
+
+          // Decide redirect based on access
+          if (hasAppAccess && hasDashboardAccess) {
+            // Both accesses - show context selector
+            redirectTo = "/select-context";
+          } else if (hasDashboardAccess) {
+            // Only dashboard
+            redirectTo = "/admin";
+          } else if (hasMultipleFamilies) {
+            // Multiple families - show family selector
+            redirectTo = "/select-family";
+          } else if (hasAppAccess) {
+            // Only one family - go directly to app
+            redirectTo = "/app";
+          } else {
+            // No family yet - go to signup to create/join family
+            redirectTo = "/signup";
+          }
         } else {
-          // No family yet - go to signup to create/join family
-          redirectTo = "/signup";
+          redirectTo = "/app";
         }
-      } else {
-        redirectTo = "/app";
       }
-    }
 
       toast.success("Bem-vindos de volta");
       navigate(redirectTo, { replace: true });
     } catch (err) {
       console.error("[Login] handleLogin failed", err);
+      logAuthStage('AUTH_ERROR', { 
+        context: 'login_exception',
+        error: err instanceof Error ? err.message : String(err),
+      });
+      setLoginError("Erro ao entrar. Tente novamente.");
       toast.error("Erro ao entrar. Tente novamente.");
     } finally {
       setLoading(false);
@@ -411,6 +449,14 @@ export function LoginPage() {
                 </button>
               </div>
             </div>
+
+            {/* Error message display */}
+            {loginError && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{loginError}</span>
+              </div>
+            )}
 
             <div className="pt-3 space-y-4">
               {/* Premium Button with gradient and shadow */}

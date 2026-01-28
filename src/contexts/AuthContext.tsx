@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { isInFocusTransition } from '@/hooks/useStableAuth';
 import { clearRouteResumeState } from '@/lib/routeResumeGuard';
-
+import { logAuthStage, isAuthDebugEnabled, installAuthErrorHandlers } from '@/lib/authDebug';
 interface Family {
   id: string;
   name: string;
@@ -166,13 +166,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const completeBootstrap = useCallback(() => {
     setLoading(false);
     setBootstrapStatus('ready');
+    logAuthStage('AUTH_LOADING_END', { status: 'complete' });
     console.log('[Auth] Bootstrap complete');
   }, []);
 
   useEffect(() => {
     let mounted = true;
     
+    // Install debug error handlers if enabled
+    if (isAuthDebugEnabled()) {
+      installAuthErrorHandlers();
+    }
+    
     const initializeAuth = async () => {
+      logAuthStage('AUTH_INIT_START', { path: window.location.pathname });
       console.log('[Auth] Initializing...');
       
       // Set up auth state change listener
@@ -180,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         async (event, newSession) => {
           if (!mounted) return;
           
+          logAuthStage('AUTH_STATE_CHANGE', { event, hasSession: !!newSession });
           console.log('[Auth] Auth state change:', event, 'inFocusTransition:', isInFocusTransition());
 
           // Instrumentation: if we ever transition to a null session, capture full context.
@@ -249,7 +257,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
 
       // Get initial session
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      logAuthStage('AUTH_SESSION_READ', { context: 'initial' });
+      const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        logAuthStage('AUTH_ERROR', { 
+          context: 'getSession',
+          error: sessionError.message,
+        });
+        console.error('[Auth] Error getting session:', sessionError);
+      }
       
       if (!mounted) {
         subscription.unsubscribe();
@@ -257,6 +274,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       console.log('[Auth] Initial session:', initialSession ? 'exists' : 'none');
+      logAuthStage('AUTH_USER_READY', { 
+        hasSession: !!initialSession,
+        userId: initialSession?.user?.id,
+      });
       
       setSession(initialSession);
       setUser(initialSession?.user ?? null);
