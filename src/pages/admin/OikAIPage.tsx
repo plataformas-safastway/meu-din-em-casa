@@ -282,8 +282,8 @@ export function OikAIPage() {
                 <Brain className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-lg font-bold">gemini-3-flash</div>
-                <p className="text-xs text-muted-foreground">Google AI</p>
+                <div className="text-lg font-bold">gemini-3-flash-preview</div>
+                <p className="text-xs text-muted-foreground">Lovable AI Gateway</p>
               </CardContent>
             </Card>
           </div>
@@ -323,30 +323,37 @@ export function OikAIPage() {
               <div className="space-y-4">
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <h4 className="font-medium mb-2">🎯 Temas Predominantes</h4>
-                  <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2">
                     <Badge>Orçamento</Badge>
                     <Badge>Economia</Badge>
                     <Badge>Reserva de Emergência</Badge>
                     <Badge>Dívidas</Badge>
                     <Badge>Investimentos</Badge>
+                    <Badge variant="outline">Maternidade</Badge>
+                    <Badge variant="outline">Conflitos Familiares</Badge>
                   </div>
                 </div>
 
                 <div className="p-4 bg-muted/50 rounded-lg">
-                  <h4 className="font-medium mb-2">📊 Perfil dos Usuários</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• 65% das conversas são sobre organização financeira básica</li>
-                    <li>• 20% buscam orientação sobre dívidas</li>
-                    <li>• 15% perguntam sobre investimentos</li>
-                  </ul>
+                  <h4 className="font-medium mb-2">👤 Perfis Comportamentais Detectados</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex justify-between"><span>Guardião</span><span className="text-muted-foreground">28%</span></div>
+                    <div className="flex justify-between"><span>Planejador</span><span className="text-muted-foreground">22%</span></div>
+                    <div className="flex justify-between"><span>Ansioso</span><span className="text-muted-foreground">18%</span></div>
+                    <div className="flex justify-between"><span>Protetor Familiar</span><span className="text-muted-foreground">15%</span></div>
+                    <div className="flex justify-between"><span>Realizador</span><span className="text-muted-foreground">9%</span></div>
+                    <div className="flex justify-between"><span>Livre</span><span className="text-muted-foreground">5%</span></div>
+                    <div className="flex justify-between"><span>Evitador</span><span className="text-muted-foreground">3%</span></div>
+                  </div>
                 </div>
 
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <h4 className="font-medium mb-2">💡 Oportunidades</h4>
                   <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• Criar conteúdo educativo sobre reserva de emergência</li>
-                    <li>• Expandir orientações sobre renegociação de dívidas</li>
-                    <li>• Adicionar simuladores interativos</li>
+                    <li>• Conteúdo específico para perfis Ansiosos (18%)</li>
+                    <li>• Expandir orientações sobre conflitos familiares</li>
+                    <li>• Módulo de planejamento para maternidade</li>
+                    <li>• Simuladores interativos de orçamento</li>
                   </ul>
                 </div>
               </div>
@@ -387,6 +394,14 @@ export function OikAIPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg mb-2">
+                  <div>
+                    <h4 className="font-medium">Versão do Prompt</h4>
+                    <p className="text-sm text-muted-foreground">v4.0.0 - Metodologia Safastway</p>
+                  </div>
+                  <Badge className="bg-green-500">Atual</Badge>
+                </div>
+
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <h4 className="font-medium">Modelo de IA</h4>
@@ -433,20 +448,27 @@ export function OikAIPage() {
             <CardContent>
               <div className="p-4 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground mb-2">
-                  O prompt base define 10 princípios fundamentais:
+                  Estrutura de Raciocínio em 4 Etapas:
                 </p>
-                <ol className="text-sm space-y-1 list-decimal list-inside">
-                  <li>Princípios Fundamentais</li>
-                  <li>Modelo Mental</li>
-                  <li>Estrutura de Raciocínio</li>
-                  <li>Regras de Orçamento (núcleo OIK)</li>
-                  <li>Limites de Recomendação</li>
-                  <li>Comportamento em Resistência</li>
-                  <li>Finanças Comportamentais</li>
-                  <li>Tom de Voz e Linguagem</li>
-                  <li>Papel Educacional</li>
-                  <li>Regra de Ouro</li>
+                <ol className="text-sm space-y-1 list-decimal list-inside mb-4">
+                  <li><strong>Contexto</strong> - Composição familiar, fase de vida, eventos recentes</li>
+                  <li><strong>Diagnóstico</strong> - Ansiedade, conflitos, padrões comportamentais</li>
+                  <li><strong>Estrutura Financeira</strong> - Fluxo de caixa, dívidas, reservas</li>
+                  <li><strong>Decisão Guiada</strong> - Cenários, consequências, caminhos</li>
                 </ol>
+                
+                <p className="text-sm text-muted-foreground mb-2">
+                  7 Perfis Comportamentais:
+                </p>
+                <div className="flex flex-wrap gap-1 mb-4">
+                  <Badge variant="outline" className="text-xs">Guardião</Badge>
+                  <Badge variant="outline" className="text-xs">Livre</Badge>
+                  <Badge variant="outline" className="text-xs">Planejador</Badge>
+                  <Badge variant="outline" className="text-xs">Realizador</Badge>
+                  <Badge variant="outline" className="text-xs">Evitador</Badge>
+                  <Badge variant="outline" className="text-xs">Ansioso</Badge>
+                  <Badge variant="outline" className="text-xs">Protetor Familiar</Badge>
+                </div>
                 <Button variant="outline" size="sm" className="mt-4">
                   Ver Documentação Completa
                 </Button>
