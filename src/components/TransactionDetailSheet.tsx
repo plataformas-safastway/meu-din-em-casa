@@ -40,10 +40,12 @@ import {
   CreditCard,
   AlertTriangle,
   Wallet,
+  CheckCircle2,
 } from "lucide-react";
 import { useDeleteTransaction } from "@/hooks/useTransactions";
 import { useMyPermissions } from "@/hooks/useFamilyPermissions";
 import { TransactionChangeHistory } from "@/components/transaction/TransactionChangeHistory";
+import { ChequeCompensationDialog } from "@/components/cash-basis/ChequeCompensationDialog";
 import { toast } from "sonner";
 import type { TransactionSource } from "@/hooks/useTransactions";
 
@@ -95,11 +97,15 @@ export function TransactionDetailSheet({
   onEdit,
 }: TransactionDetailSheetProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showChequeCompensation, setShowChequeCompensation] = useState(false);
   const deleteTransaction = useDeleteTransaction();
   const { data: myPermissions } = useMyPermissions();
   
   const canEdit = myPermissions?.can_edit_all ?? false;
   const canDelete = myPermissions?.can_delete_transactions ?? false;
+  
+  // Check if this is a pending cheque
+  const isPendingCheque = transaction?.payment_method === "cheque" && !transaction?.cash_date;
 
   if (!transaction) return null;
 
@@ -211,9 +217,20 @@ export function TransactionDetailSheet({
                   </p>
                 )}
                 {!transaction.cash_date && transaction.payment_method === "cheque" && (
-                  <p className="text-xs text-muted-foreground">
-                    Cheques entram no orçamento após informar a data de compensação.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      Cheques entram no orçamento após informar a data de compensação.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setShowChequeCompensation(true)}
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Registrar Compensação
+                    </Button>
+                  </div>
                 )}
               </div>
             )}
@@ -328,6 +345,21 @@ export function TransactionDetailSheet({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Cheque Compensation Dialog */}
+      {isPendingCheque && (
+        <ChequeCompensationDialog
+          open={showChequeCompensation}
+          onOpenChange={setShowChequeCompensation}
+          transaction={{
+            id: transaction.id,
+            description: transaction.description,
+            amount: transaction.amount,
+            date: transaction.date,
+          }}
+          onSuccess={() => onOpenChange(false)}
+        />
+      )}
     </>
   );
 }
