@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Loader2, Users, AlertCircle, CheckCircle2, Mail } from "lucide-react";
+import { ArrowRight, Loader2, Users, AlertCircle, CheckCircle2, Mail, Shield, Hand, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +32,7 @@ export function InviteAcceptPage() {
   const [birthDate, setBirthDate] = useState("");
   const [profession, setProfession] = useState("");
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<"auth" | "profile">(user ? "profile" : "auth");
+  const [step, setStep] = useState<"invite" | "auth" | "profile">("invite");
 
   // Pre-fill email if provided in invite
   useEffect(() => {
@@ -48,12 +48,27 @@ export function InviteAcceptPage() {
     }
   }, [user, family, inviteData?.family_id, navigate]);
 
-  // Update step based on auth state
+  // Update step based on auth state (skip invite step if already authenticated)
   useEffect(() => {
-    if (user) {
+    if (user && step === "invite") {
+      setStep("profile");
+    } else if (user && step === "auth") {
       setStep("profile");
     }
-  }, [user]);
+  }, [user, step]);
+
+  const handleAcceptClick = () => {
+    if (user) {
+      setStep("profile");
+    } else {
+      setStep("auth");
+    }
+  };
+
+  const handleDeclineClick = () => {
+    // Redirect to login without accepting
+    navigate("/login", { replace: true });
+  };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,6 +171,10 @@ export function InviteAcceptPage() {
     }
   };
 
+  // Get inviter name with fallback
+  const inviterName = inviteData?.inviter_name;
+  const hasInviterName = !!inviterName && inviterName.trim().length > 0;
+
   // Loading state
   if (validating) {
     return (
@@ -212,35 +231,133 @@ export function InviteAcceptPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="max-w-sm mx-auto w-full"
+          className="max-w-md mx-auto w-full"
         >
-          {/* Invite Info Card */}
-          <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 mb-8">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Users className="w-6 h-6 text-primary" />
+          {/* Invite Step - Main invite screen with full copy */}
+          {step === "invite" && (
+            <motion.div
+              key="invite"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="space-y-6"
+            >
+              {/* Title */}
+              <h1 className="text-2xl font-semibold text-foreground text-center">
+                Você foi convidado para participar de uma família
+              </h1>
+
+              {/* Trust Block */}
+              <div className="p-5 rounded-2xl bg-primary/5 border border-primary/10">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Hand className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    {hasInviterName ? (
+                      <p className="text-foreground font-medium">
+                        Você foi convidado por {inviterName}
+                      </p>
+                    ) : (
+                      <p className="text-foreground font-medium">
+                        Você recebeu um convite para participar de uma família
+                      </p>
+                    )}
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Confirme apenas se você reconhece quem enviou este convite.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Family name badge */}
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-primary/10">
+                  <Users className="w-4 h-4 text-primary" />
+                  <span className="text-sm text-muted-foreground">Família:</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {inviteData.family_name}
+                  </span>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Você foi convidado para</p>
-                <h2 className="text-lg font-semibold text-foreground">
-                  {inviteData.family_name}
-                </h2>
+
+              {/* Explanatory Text */}
+              <div className="space-y-3">
+                <p className="text-muted-foreground">
+                  Ao aceitar este convite, você passará a fazer parte da mesma família no aplicativo.
+                </p>
+                <p className="text-muted-foreground">
+                  Isso significa que vocês poderão:
+                </p>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>visualizar e organizar informações financeiras juntos</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>acompanhar orçamento, gastos e objetivos em família</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span>tomar decisões financeiras de forma mais clara e alinhada</span>
+                  </li>
+                </ul>
               </div>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">{inviteData.inviter_name}</span>{" "}
-              convidou você para gerenciar as finanças da família.
-            </p>
-          </div>
+
+              {/* Security Warning */}
+              <div className="p-4 rounded-xl bg-muted/50 border border-border">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">Importante</p>
+                    <p className="text-sm text-muted-foreground">
+                      Aceite este convite somente se você conhece quem o enviou e concorda em compartilhar informações financeiras dentro da mesma família.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTAs */}
+              <div className="space-y-3 pt-2">
+                <Button
+                  onClick={handleAcceptClick}
+                  size="lg"
+                  className="w-full h-12 text-base font-medium rounded-xl"
+                >
+                  Aceitar convite
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+                <Button
+                  onClick={handleDeclineClick}
+                  variant="ghost"
+                  size="lg"
+                  className="w-full h-12 text-base font-medium rounded-xl text-muted-foreground"
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Recusar convite
+                </Button>
+              </div>
+            </motion.div>
+          )}
 
           {/* Auth Step */}
           {step === "auth" && (
             <motion.div
               key="auth"
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
+              exit={{ opacity: 0, x: -20 }}
             >
+              {/* Compact invite reminder */}
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 mb-6">
+                <div className="flex items-center gap-3">
+                  <Users className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Entrando na família</p>
+                    <p className="font-medium text-foreground">{inviteData.family_name}</p>
+                  </div>
+                </div>
+              </div>
+
               <h1 className="text-xl font-semibold text-foreground mb-2 text-center">
                 Entre ou crie sua conta
               </h1>
@@ -296,6 +413,15 @@ export function InviteAcceptPage() {
                     </>
                   )}
                 </Button>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setStep("invite")}
+                  className="w-full text-muted-foreground"
+                >
+                  Voltar
+                </Button>
               </form>
             </motion.div>
           )}
@@ -308,6 +434,17 @@ export function InviteAcceptPage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
+              {/* Compact invite reminder */}
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 mb-6">
+                <div className="flex items-center gap-3">
+                  <Users className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Entrando na família</p>
+                    <p className="font-medium text-foreground">{inviteData.family_name}</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex items-center gap-2 justify-center mb-2">
                 <CheckCircle2 className="w-5 h-5 text-primary" />
                 <h1 className="text-xl font-semibold text-foreground">
