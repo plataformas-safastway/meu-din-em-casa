@@ -61,6 +61,9 @@ const IntegrationOneDrivePage = lazy(() => import("./integrations/IntegrationOne
 const IntegrationLovableAIPage = lazy(() => import("./integrations/IntegrationLovableAIPage").then(m => ({ default: m.IntegrationLovableAIPage })));
 const IntegrationOpenStreetMapPage = lazy(() => import("./integrations/IntegrationOpenStreetMapPage").then(m => ({ default: m.IntegrationOpenStreetMapPage })));
 
+// Profile page
+const AdminProfilePage = lazy(() => import("./AdminProfilePage").then(m => ({ default: m.AdminProfilePage })));
+
 // Executive reports
 const ExecutiveReportsPage = lazy(() => import("./executive/ExecutiveReportsPage"));
 
@@ -120,6 +123,7 @@ export function AdminRoutes() {
         <Route path="users" element={<LazyPage Component={AdminUsersPage} />} />
         <Route path="ebooks" element={<LazyPage Component={AdminEbooksPage} />} />
         <Route path="metrics" element={<LazyPage Component={AdminMetricsPage} />} />
+        <Route path="profile" element={<LazyPage Component={AdminProfilePage} />} />
         <Route path="openfinance" element={<LazyPage Component={AdminOpenFinancePage} />} />
         <Route path="settings" element={<div className="text-muted-foreground">Configurações em desenvolvimento...</div>} />
 

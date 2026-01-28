@@ -32,8 +32,20 @@ import {
   Key,
   Flag,
   Bug,
+  User,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAdminProfile, getRoleDisplayName } from "@/hooks/useAdminProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useUserRole";
 import { useUserAccessProfile } from "@/hooks/useUserAccessProfile";
@@ -53,9 +65,10 @@ type MenuItem = {
 export function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { role, isAdmin } = useIsAdmin();
   const { data: accessProfile } = useUserAccessProfile();
+  const { data: adminProfile } = useAdminProfile();
   const { data: mustChangePassword, refetch: refetchPasswordCheck } = useMustChangePassword();
   
   // CRITICAL: Check if user can access the App before allowing navigation
@@ -216,13 +229,48 @@ export function AdminLayout() {
         {/* Sidebar */}
         <aside className="w-64 bg-card border-r border-border flex flex-col">
           <div className="p-4 border-b border-border">
-            <div className="flex items-center gap-2">
-              <Shield className="w-8 h-8 text-primary" />
-              <div>
-                <h1 className="font-bold text-lg">Admin</h1>
-                <p className="text-xs text-muted-foreground capitalize">{role}</p>
-              </div>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-full flex items-center gap-3 hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={adminProfile?.avatar_url || undefined} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                      {adminProfile?.display_name?.slice(0, 2).toUpperCase() || "AD"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="font-medium text-sm truncate">
+                      {adminProfile?.display_name || "Admin"}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {getRoleDisplayName(role || "")}
+                    </p>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium">{adminProfile?.display_name || "Admin"}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/admin/profile")}>
+                  <User className="w-4 h-4 mr-2" />
+                  Meu Perfil
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={handleSignOut}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
