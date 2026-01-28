@@ -21,8 +21,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 28/01/2026 - Authorization layer (Dashboard vs App) - Artigos de acesso
-export const HELP_CENTER_VERSION = "28/01/2026 v14";
+// Última atualização: 28/01/2026 - Orçamento Sugerido Versionado
+export const HELP_CENTER_VERSION = "28/01/2026 v15";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -440,6 +440,149 @@ export const helpArticles: HelpArticle[] = [
     ],
     keywords: ["orçamento", "inteligente", "faixa", "renda", "automático", "personalizado", "template", "modelo"],
     deepLink: "settings",
+  },
+
+  // ===== ORÇAMENTO SUGERIDO VERSIONADO =====
+  {
+    id: "suggested-budget-versions",
+    title: "Orçamento Sugerido e Versões",
+    category: "budgets",
+    icon: "📊",
+    summary: "Entenda como funciona o orçamento sugerido com histórico de versões",
+    steps: [
+      {
+        title: "O que é o Orçamento Sugerido?",
+        description: "É um orçamento inteligente gerado pelo Oik com base no seu perfil financeiro ou nos seus gastos reais. Ele sugere limites mensais por categoria para ajudar no planejamento.",
+        tip: "Você não precisa criar metas manualmente — o sistema faz isso por você.",
+      },
+      {
+        title: "Por que existem versões?",
+        description: "Cada vez que você gera um novo orçamento, ele se torna uma nova 'versão'. As versões anteriores ficam arquivadas, mas nunca são apagadas.",
+        tip: "Isso garante histórico auditável e permite comparar diferentes planejamentos.",
+      },
+      {
+        title: "Como funciona a vigência",
+        description: "Ao criar um novo orçamento, você escolhe a partir de qual mês ele vale (ex: 'a partir de Fevereiro'). Meses anteriores continuam usando a versão antiga.",
+        tip: "Isso significa que o orçamento só muda 'daqui pra frente', nunca altera o passado.",
+      },
+      {
+        title: "Onde ver o histórico",
+        description: "Na página de Orçamento Sugerido, toque em 'Ver histórico' para ver todas as versões já criadas, com data de criação e status (ativo ou arquivado).",
+      },
+      {
+        title: "Como navegar pela timeline",
+        description: "Ao mudar o mês na timeline do app, o orçamento exibido será sempre o da versão ativa mais recente válida para aquele mês.",
+      },
+    ],
+    keywords: ["orçamento", "sugerido", "versão", "histórico", "vigência", "versionado", "arquivado", "timeline"],
+    deepLink: "suggested-budget",
+  },
+  {
+    id: "suggested-budget-diagnostic",
+    title: "Refazer Diagnóstico (Fluxo 1)",
+    category: "budgets",
+    icon: "🔄",
+    summary: "Responda as perguntas novamente e gere um novo orçamento",
+    steps: [
+      {
+        title: "Quando usar este fluxo",
+        description: "Use quando sua situação financeira mudou (nova renda, filhos, mudança de fase da vida) e você quer um novo orçamento sem usar dados de transações.",
+      },
+      {
+        title: "Acesse o Orçamento Sugerido",
+        description: "Em Metas > Orçamento Sugerido, toque no card 'Refazer diagnóstico'.",
+      },
+      {
+        title: "Responda as perguntas",
+        description: "Você passará pelas mesmas perguntas do onboarding: faixa de renda, subfaixa, fase da vida, filhos, pets, entre outras.",
+        tip: "As respostas são salvas como 'snapshot' para auditoria — você pode comparar versões depois.",
+      },
+      {
+        title: "Escolha o mês de vigência",
+        description: "Após preencher, defina a partir de qual mês o novo orçamento vale. O padrão é o próximo mês, mas você pode escolher o mês atual.",
+      },
+      {
+        title: "Confirme na prévia",
+        description: "Revise a prévia do orçamento sugerido por categoria antes de confirmar. Se algo não fizer sentido, você pode voltar e ajustar.",
+      },
+      {
+        title: "O que acontece depois",
+        description: "O novo orçamento fica ativo para a vigência escolhida. A versão anterior é arquivada automaticamente (não é apagada).",
+        tip: "Meses anteriores à vigência continuam usando o orçamento antigo.",
+      },
+    ],
+    keywords: ["diagnóstico", "refazer", "perguntas", "onboarding", "gerar", "novo", "orçamento", "fluxo 1"],
+    deepLink: "suggested-budget",
+  },
+  {
+    id: "suggested-budget-transactions",
+    title: "Orçamento Baseado nos Gastos Reais (Fluxo 2)",
+    category: "budgets",
+    icon: "📈",
+    summary: "Use seus dados importados para gerar um orçamento mais preciso",
+    steps: [
+      {
+        title: "Pré-requisito: importar transações",
+        description: "Para usar este fluxo, você precisa ter importado transações (planilha ou Open Finance) e categorizado pelo menos 80% delas.",
+        tip: "Se a categorização estiver abaixo de 80%, você verá um alerta com link para categorizar mais.",
+      },
+      {
+        title: "Acesse o fluxo",
+        description: "Em Metas > Orçamento Sugerido, toque no card 'Usar gastos reais'. Se elegível, o fluxo inicia.",
+      },
+      {
+        title: "Escolha o período-base",
+        description: "Selecione quantos dias de histórico usar: 30, 60, 90 (padrão) ou 180 dias. Quanto maior o período, mais precisa a média.",
+        tip: "Use 90 dias para capturar variações sazonais. Use 30 dias se suas finanças mudaram recentemente.",
+      },
+      {
+        title: "Como o sistema calcula",
+        description: "O Oik calcula a mediana mensal de gastos por categoria. A mediana é mais estável que a média, pois ignora gastos muito altos ou baixos.",
+        tip: "Exemplo: se você gastou R$200, R$300 e R$1000 em 'Lazer', a mediana é R$300, não R$500.",
+      },
+      {
+        title: "Responda perguntas adicionais",
+        description: "Mesmo usando dados reais, o sistema pede algumas perguntas (fase da vida, objetivos) para ajustar as sugestões.",
+      },
+      {
+        title: "Ajuste depois de confirmar",
+        description: "O orçamento sugerido não é 'travado'. Você pode editar as metas individuais a qualquer momento em Metas.",
+      },
+    ],
+    keywords: ["transações", "gastos", "reais", "importar", "80%", "categorização", "período", "mediana", "fluxo 2"],
+    deepLink: "suggested-budget",
+  },
+  {
+    id: "suggested-budget-why-no-past",
+    title: "Por que o Orçamento Não Muda Meses Passados?",
+    category: "budgets",
+    icon: "🔒",
+    summary: "Entenda a lógica de vigência 'daqui pra frente'",
+    steps: [
+      {
+        title: "Orçamento é planejamento futuro",
+        description: "O orçamento é uma ferramenta para planejar o futuro, não para reescrever o passado. Alterar meses já vividos distorceria a análise histórica.",
+      },
+      {
+        title: "Histórico preservado",
+        description: "Meses passados mantêm o orçamento que estava ativo naquela época. Assim, você pode comparar 'o que planejei' vs 'o que gastei' de forma honesta.",
+        tip: "Isso evita o viés de 'ajustar' o planejamento depois de saber o resultado.",
+      },
+      {
+        title: "Versões são imutáveis",
+        description: "Uma versão de orçamento nunca é editada após criada. Se você quiser mudar algo, cria-se uma nova versão com nova vigência.",
+      },
+      {
+        title: "Como funciona na prática",
+        description: "Se você criou um orçamento em Janeiro válido para Janeiro, e em Março criou outro válido para Março: ao navegar para Fevereiro, verá o orçamento de Janeiro.",
+      },
+      {
+        title: "Benefícios desta abordagem",
+        description: "Auditabilidade total, comparações justas entre meses, e aprendizado real sobre seus padrões financeiros.",
+      },
+    ],
+    keywords: ["passado", "vigência", "histórico", "imutável", "não altera", "preservado", "auditoria"],
+    deepLink: "suggested-budget",
   },
 
   // ===== PROJEÇÃO =====
@@ -1902,6 +2045,50 @@ export const adminFaqItems: FAQItem[] = [
     answer: "Atualmente, cada ambiente tem perfis independentes vinculados ao mesmo usuário de autenticação. Você pode ter os dois perfis (admin_users e family_member) no mesmo email. Se tiver ambos, verá a tela de seleção de contexto ao fazer login.",
     category: "access-control",
     keywords: ["mesmo", "email", "dashboard", "app", "dois", "contexto"],
+  },
+
+  // ===== ORÇAMENTO SUGERIDO VERSIONADO =====
+  {
+    id: "faq-suggested-budget-1",
+    question: "O que é o Orçamento Sugerido?",
+    answer: "O Orçamento Sugerido é um orçamento inteligente gerado pelo Oik. Ele pode ser criado de duas formas: respondendo perguntas sobre seu perfil (diagnóstico) ou usando seus gastos reais importados. O sistema sugere limites mensais por categoria.",
+    category: "budgets",
+    keywords: ["orçamento", "sugerido", "inteligente", "automático", "o que é"],
+  },
+  {
+    id: "faq-suggested-budget-2",
+    question: "Por que meu orçamento tem versões?",
+    answer: "Cada vez que você gera um novo orçamento, ele se torna uma nova 'versão'. Versões anteriores são arquivadas, nunca apagadas. Isso permite histórico auditável e comparar diferentes planejamentos ao longo do tempo.",
+    category: "budgets",
+    keywords: ["versão", "versões", "histórico", "arquivado", "por que"],
+  },
+  {
+    id: "faq-suggested-budget-3",
+    question: "O que é vigência do orçamento?",
+    answer: "Vigência é o mês a partir do qual o orçamento vale. Ao criar um novo orçamento, você escolhe se ele vale 'a partir do mês atual' ou 'a partir do próximo mês'. Meses anteriores continuam usando a versão anterior.",
+    category: "budgets",
+    keywords: ["vigência", "mês", "validade", "a partir de", "quando"],
+  },
+  {
+    id: "faq-suggested-budget-4",
+    question: "Posso editar um orçamento sugerido depois de criado?",
+    answer: "As versões de orçamento são imutáveis depois de criadas. Se quiser mudar algo, você cria uma nova versão com vigência a partir do mês desejado. As metas individuais podem ser editadas normalmente na tela de Metas.",
+    category: "budgets",
+    keywords: ["editar", "mudar", "alterar", "depois", "criado"],
+  },
+  {
+    id: "faq-suggested-budget-5",
+    question: "Por que preciso categorizar 80% para usar gastos reais?",
+    answer: "O sistema precisa de dados representativos para calcular medianas confiáveis. Com menos de 80% categorizado, as sugestões podem ser imprecisas. Se a categorização estiver baixa, o app mostra um alerta e link para categorizar mais.",
+    category: "budgets",
+    keywords: ["80%", "categorizar", "categorização", "mínimo", "gastos reais"],
+  },
+  {
+    id: "faq-suggested-budget-6",
+    question: "Como o sistema calcula o orçamento baseado em gastos?",
+    answer: "O Oik calcula a mediana mensal de gastos por categoria no período escolhido (30, 60, 90 ou 180 dias). A mediana é mais estável que a média porque ignora gastos muito altos ou baixos esporádicos.",
+    category: "budgets",
+    keywords: ["calcula", "mediana", "média", "período", "como"],
   },
 ];
 
