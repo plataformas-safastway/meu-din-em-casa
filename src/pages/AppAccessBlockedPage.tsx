@@ -8,11 +8,13 @@
  * REGRAS:
  * - NÃO permite criar família/signup automaticamente
  * - NÃO redireciona para /signup
- * - Apenas oferece voltar ao Dashboard
+ * - Apenas oferece voltar ao Dashboard ou sair
+ * 
+ * CONSISTENCY: Messaging aligned with AppAccessDeniedModal
  */
 
 import { useNavigate } from "react-router-dom";
-import { ShieldAlert, ArrowLeft, LayoutDashboard, LogOut } from "lucide-react";
+import { ShieldAlert, LayoutDashboard, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,7 +32,14 @@ export function AppAccessBlockedPage() {
 
   const handleSignOut = async () => {
     await signOut();
+    // Navigate to login - clean state allows creating new account
     navigate("/login", { replace: true });
+  };
+
+  const handleSignOutAndCreateAccount = async () => {
+    await signOut();
+    // Navigate to signup as a public user
+    navigate("/signup", { replace: true });
   };
 
   // Determine if user has admin access
@@ -74,7 +83,7 @@ export function AppAccessBlockedPage() {
             </CardHeader>
 
             <CardContent className="space-y-4">
-              {/* Explanation */}
+              {/* Explanation - consistent with modal */}
               <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground space-y-2">
                 <p>
                   O <strong>Dashboard</strong> e o <strong>App</strong> são ambientes separados com contextos de acesso independentes.
@@ -98,6 +107,7 @@ export function AppAccessBlockedPage() {
 
               {/* Actions */}
               <div className="space-y-3 pt-2">
+                {/* Primary CTA: Return to Dashboard */}
                 {isAdminUser && (
                   <Button 
                     className="w-full gap-2" 
@@ -108,13 +118,23 @@ export function AppAccessBlockedPage() {
                   </Button>
                 )}
 
+                {/* Secondary CTA: Sign out and create consumer account */}
                 <Button 
                   variant="outline" 
                   className="w-full gap-2" 
-                  onClick={handleSignOut}
+                  onClick={handleSignOutAndCreateAccount}
                 >
                   <LogOut className="w-4 h-4" />
-                  Sair e usar outra conta
+                  Sair e criar conta do App
+                </Button>
+
+                {/* Tertiary: Just sign out */}
+                <Button 
+                  variant="ghost" 
+                  className="w-full gap-2 text-muted-foreground" 
+                  onClick={handleSignOut}
+                >
+                  Sair
                 </Button>
               </div>
             </CardContent>
@@ -122,7 +142,7 @@ export function AppAccessBlockedPage() {
 
           {/* Footer note */}
           <p className="text-center text-xs text-muted-foreground/60">
-            Para suporte, entre em contato com o administrador do sistema.
+            Contas do Dashboard e do App são independentes.
           </p>
         </div>
       </main>

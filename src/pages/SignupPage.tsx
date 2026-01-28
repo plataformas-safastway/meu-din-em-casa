@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, ArrowLeft, ArrowRight, Loader2, Check } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, ArrowRight, Loader2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
@@ -16,7 +18,14 @@ import { DraftRestoredToast } from "@/components/ui/draft-restored-toast";
 import oikMarca from "@/assets/oik-marca.png";
 
 /**
- * New Signup Flow - LGPD Compliant
+ * SignupPage - Consumer-Only Signup
+ * 
+ * SECURITY RULES:
+ * - Admin/CS/Master users with active session CANNOT create consumer accounts
+ * - Must logout first to create a separate consumer account
+ * - This prevents role confusion and unauthorized family creation
+ * 
+ * LGPD Compliant:
  * - NO CPF on account creation (deferred to "Complete Registration" flow)
  * - Name, Email, Password, Terms acceptance
  * - Redirects to intelligent onboarding wizard after signup
@@ -26,7 +35,8 @@ export function SignupPage() {
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get("token");
 
-  const { signUp, signIn, user, family } = useAuth();
+  const { signUp, signIn, signOut, user, family, session } = useAuth();
+  const { data: role, isLoading: roleLoading } = useUserRole();
 
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
@@ -35,6 +45,10 @@ export function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [emailAlreadyExists, setEmailAlreadyExists] = useState(false);
+  
+  // Check if current user is an admin role
+  const isAdminRole = role === 'admin' || role === 'cs' || role === 'admin_master';
+  const isAuthenticatedAdmin = !!session && !!user && isAdminRole;
   
   // Draft persistence for form fields (excluding password for security)
   const { 
@@ -67,16 +81,43 @@ export function SignupPage() {
     }
   }, [inviteToken, navigate]);
 
-  // Redirect if already logged in with family
+  // Redirect if already logged in as consumer with family
   useEffect(() => {
-    if (user && family) {
+    // Only redirect if user is a consumer (has family) and not admin
+    if (user && family && !isAdminRole && !roleLoading) {
       navigate("/app", { replace: true });
     }
-  }, [user, family, navigate]);
+  }, [user, family, isAdminRole, roleLoading, navigate]);
+
+  // Handler for admin users to logout and continue signup
+  const handleLogoutAndSignup = async () => {
+    setLoading(true);
+    try {
+      await signOut();
+      // After logout, the page will reload/re-render as public
+      // Form state is preserved via draft persistence
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Erro ao sair. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handler to go back to dashboard
+  const handleGoToDashboard = () => {
+    navigate("/admin", { replace: true });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailAlreadyExists(false);
+
+    // CRITICAL: Block admin users from creating consumer accounts
+    if (isAuthenticatedAdmin) {
+      toast.error("Faça logout primeiro para criar uma conta do App");
+      return;
+    }
 
     // Validate fields
     if (!name.trim()) {
@@ -151,6 +192,99 @@ export function SignupPage() {
       setLoading(false);
     }
   };
+
+  // Show blocking card for authenticated admin users
+  if (isAuthenticatedAdmin && !roleLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        {/* Header */}
+        <header className="p-4 flex items-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleGoToDashboard}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+        </header>
+
+        {/* Content */}
+        <main className="flex-1 flex flex-col justify-center px-6 pb-8">
+          <div className="max-w-sm mx-auto w-full space-y-6">
+            {/* Logo */}
+            <div className="text-center">
+              <div className="flex justify-center mb-6">
+                <img src={oikMarca} alt="Oik" className="h-10 object-contain opacity-80" />
+              </div>
+            </div>
+
+            {/* Blocked Card */}
+            <Card className="border-destructive/20">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-3">
+                  <ShieldAlert className="w-7 h-7 text-destructive" />
+                </div>
+                <CardTitle className="text-lg">
+                  Sessão administrativa ativa
+                </CardTitle>
+                <CardDescription className="text-sm mt-2">
+                  Você está logado como <strong>{role}</strong>. Para criar uma conta do App, é necessário sair primeiro.
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {/* User info */}
+                {user?.email && (
+                  <div className="text-center text-sm text-muted-foreground">
+                    Logado como: <span className="font-medium">{user.email}</span>
+                  </div>
+                )}
+
+                {/* Explanation */}
+                <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground">
+                  <p>
+                    O Dashboard e o App são ambientes separados. 
+                    Contas administrativas não podem criar perfis consumer enquanto a sessão estiver ativa.
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-3 pt-2">
+                  <Button 
+                    className="w-full" 
+                    onClick={handleLogoutAndSignup}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      "Sair e criar conta do App"
+                    )}
+                  </Button>
+
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={handleGoToDashboard}
+                  >
+                    Voltar ao Dashboard
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <p className="text-center text-xs text-muted-foreground">
+              Já tem conta do App?{" "}
+              <Link to="/login" className="text-foreground font-medium hover:underline">
+                Entrar
+              </Link>
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
