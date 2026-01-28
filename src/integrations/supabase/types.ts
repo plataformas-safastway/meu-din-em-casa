@@ -6000,7 +6000,11 @@ export type Database = {
       is_admin_master: { Args: { _user_id: string }; Returns: boolean }
       is_admin_user: { Args: { _user_id: string }; Returns: boolean }
       is_family_member: { Args: { f_id: string }; Returns: boolean }
-      is_family_owner: { Args: { f_id: string }; Returns: boolean }
+      is_family_owner: { Args: { p_family_id: string }; Returns: boolean }
+      is_family_owner_or_manager: {
+        Args: { p_family_id: string }
+        Returns: boolean
+      }
       is_transaction_private_for_user: {
         Args: { _transaction_id: string; _user_id: string }
         Returns: boolean
