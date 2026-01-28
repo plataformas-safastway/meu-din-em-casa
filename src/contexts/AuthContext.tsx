@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { isInFocusTransition } from '@/hooks/useStableAuth';
+import { isInFocusTransition, hadRecentValidSession, markSessionBeforeHide } from '@/hooks/useStableAuth';
 import { clearRouteResumeState } from '@/lib/routeResumeGuard';
 import { logAuthStage, isAuthDebugEnabled, installAuthErrorHandlers } from '@/lib/authDebug';
 import { 
@@ -10,7 +10,7 @@ import {
   recordAuthError,
   wrapAuthRequest 
 } from '@/lib/authInstrumentation';
-import { setUserContext, addBreadcrumb } from '@/lib/observability';
+import { setUserContext, addBreadcrumb, captureEvent } from '@/lib/observability';
 interface Family {
   id: string;
   name: string;
@@ -223,9 +223,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           // CRITICAL: If we're in a focus transition and receive a null session,
           // this is likely a temporary state during token refresh. Don't reset state.
-          if (!newSession && isInFocusTransition()) {
-            console.log('[Auth] Ignoring null session during focus transition - likely token refresh');
-            addBreadcrumb('auth', 'null_session_ignored_focus_transition');
+          // ALSO: If we recently had a valid session before hiding, ignore spurious SIGNED_OUT
+          const shouldIgnoreNullSession = !newSession && (
+            isInFocusTransition() || 
+            (hadRecentValidSession() && event === 'SIGNED_OUT' && currentUserIdRef.current !== null)
+          );
+          
+          if (shouldIgnoreNullSession) {
+            console.log('[Auth] Ignoring null session - likely token refresh race', {
+              inFocusTransition: isInFocusTransition(),
+              hadRecentValidSession: hadRecentValidSession(),
+              event,
+              currentUserId: currentUserIdRef.current,
+            });
+            addBreadcrumb('auth', 'null_session_ignored', { 
+              reason: isInFocusTransition() ? 'focus_transition' : 'recent_session',
+              event,
+            });
+            
+            // Capture for diagnostics but don't act on it
+            captureEvent({
+              category: 'auth',
+              name: 'spurious_signout_ignored',
+              severity: 'warning',
+              message: 'Ignored SIGNED_OUT during likely token refresh',
+              data: {
+                event,
+                inFocusTransition: isInFocusTransition(),
+                hadRecentValidSession: hadRecentValidSession(),
+                path: window.location.pathname,
+              },
+            });
+            
             return;
           }
           
