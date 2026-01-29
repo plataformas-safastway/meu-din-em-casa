@@ -979,6 +979,27 @@ export const faqItems: FAQItem[] = [
     category: "budgets",
     keywords: ["trocar", "mudar", "alterar", "regime", "configuração"],
   },
+  {
+    id: "faq-29",
+    question: "Como funciona o cartão de crédito no Fluxo de Caixa?",
+    answer: "No Fluxo de Caixa (padrão), compras no cartão NÃO entram no orçamento no momento da compra. A despesa só entra quando você PAGA a fatura. Assim, o realizado reflete exatamente quando o dinheiro saiu da sua conta.",
+    category: "budgets",
+    keywords: ["cartão", "crédito", "fluxo", "caixa", "fatura", "pagamento"],
+  },
+  {
+    id: "faq-30",
+    question: "Como funciona o cartão de crédito no regime de Competência?",
+    answer: "No regime de Competência, compras no cartão entram no orçamento no mês da COMPRA, independente de quando você pagar a fatura. Cada parcela entra no mês correspondente. O pagamento da fatura não conta como despesa para evitar contagem dupla.",
+    category: "budgets",
+    keywords: ["cartão", "crédito", "competência", "compra", "parcela"],
+  },
+  {
+    id: "faq-31",
+    question: "Por que meu cartão não aparece no realizado?",
+    answer: "Se você está no regime de Fluxo de Caixa (padrão), compras no cartão só aparecem no realizado quando a FATURA é paga. Verifique se o pagamento da fatura foi registrado. Se preferir ver compras imediatamente, considere mudar para regime de Competência.",
+    category: "budgets",
+    keywords: ["cartão", "não aparece", "realizado", "fatura", "regime"],
+  },
 ];
 
 // =====================================================

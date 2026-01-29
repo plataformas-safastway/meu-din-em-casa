@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Calculator, Check, AlertTriangle } from "lucide-react";
+import { Calculator, Check, AlertTriangle, CreditCard, Info } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +18,8 @@ import { useAccountingRegime } from "@/hooks/useAccountingRegime";
 import {
   AccountingRegime,
   ACCOUNTING_REGIME_DESCRIPTIONS,
+  ACCOUNTING_REGIME_CHANGE_NOTES,
+  ACCOUNTING_REGIME_CHANGE_WARNING,
 } from "@/types/accountingRegime";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +62,12 @@ function RegimeCard({ regime, isSelected, isDefault, onSelect }: RegimeCardProps
           </div>
           {isDefault && (
             <Badge variant="secondary" className="text-xs">
-              Recomendado
+              {info.note}
+            </Badge>
+          )}
+          {!isDefault && (
+            <Badge variant="outline" className="text-xs">
+              {info.note}
             </Badge>
           )}
         </div>
@@ -83,14 +89,17 @@ function RegimeCard({ regime, isSelected, isDefault, onSelect }: RegimeCardProps
           </ul>
         </div>
 
-        <div className={cn(
-          "text-xs p-2 rounded-lg",
-          regime === 'cash_basis' 
-            ? "bg-primary/10 text-primary" 
-            : "bg-destructive/10 text-destructive"
-        )}>
-          {info.note}
+        {/* Credit Card Behavior */}
+        <div className="flex items-start gap-2 p-2 rounded-lg bg-muted/50">
+          <CreditCard className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            {info.creditCardBehavior}
+          </p>
         </div>
+
+        <p className="text-xs text-muted-foreground italic">
+          {info.recommendation}
+        </p>
       </CardContent>
     </Card>
   );
@@ -120,18 +129,20 @@ export function AccountingRegimeSettings() {
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
           <Calculator className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="font-semibold text-foreground">Regime de Registro</h3>
+          <h3 className="font-semibold text-foreground">Regime de Registro Financeiro</h3>
           <p className="text-sm text-muted-foreground">
-            Define como o realizado é calculado no orçamento
+            Escolha como o OIK deve calcular o realizado do seu orçamento
           </p>
         </div>
       </div>
 
+      {/* Regime Selection */}
       <RadioGroup value={selectedRegime} onValueChange={(v) => handleRegimeChange(v as AccountingRegime)}>
         <div className="space-y-3">
           <RegimeCard 
@@ -149,23 +160,59 @@ export function AccountingRegimeSettings() {
         </div>
       </RadioGroup>
 
+      {/* Important Notes */}
+      <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+        <div className="flex items-center gap-2">
+          <Info className="w-4 h-4 text-primary" />
+          <span className="text-xs font-medium text-foreground">Importante</span>
+        </div>
+        <ul className="space-y-1">
+          {ACCOUNTING_REGIME_CHANGE_NOTES.map((note, idx) => (
+            <li key={idx} className="text-xs text-muted-foreground flex items-start gap-2">
+              <span className="text-primary">•</span>
+              <span>{note}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Confirmation Dialog */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-destructive" />
-              Alterar Regime Contábil?
+              <AlertTriangle className="w-5 h-5 text-primary" />
+              {ACCOUNTING_REGIME_CHANGE_WARNING.title}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
-              <p>
-                Ao alterar o regime financeiro, a forma como o <strong>realizado</strong> é calculado será modificada.
-              </p>
-              <p>
-                Seus lançamentos <strong>não serão apagados</strong>. Apenas a forma de leitura e agregação dos dados mudará.
-              </p>
-              <p className="text-muted-foreground">
-                O orçamento planejado permanece o mesmo — apenas o confronto entre Planejado × Realizado será afetado.
-              </p>
+              <p>{ACCOUNTING_REGIME_CHANGE_WARNING.message}</p>
+              
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className={cn(
+                  "p-3 rounded-lg border-2",
+                  selectedRegime === 'cash_basis' ? "border-primary bg-primary/5" : "border-border"
+                )}>
+                  <div className="flex items-center gap-2 mb-1">
+                    {selectedRegime === 'cash_basis' && <Check className="w-4 h-4 text-primary" />}
+                    <span className="text-sm font-medium">Fluxo de Caixa</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {ACCOUNTING_REGIME_DESCRIPTIONS.cash_basis.recommendation}
+                  </p>
+                </div>
+                <div className={cn(
+                  "p-3 rounded-lg border-2",
+                  selectedRegime === 'accrual_basis' ? "border-primary bg-primary/5" : "border-border"
+                )}>
+                  <div className="flex items-center gap-2 mb-1">
+                    {selectedRegime === 'accrual_basis' && <Check className="w-4 h-4 text-primary" />}
+                    <span className="text-sm font-medium">Competência</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {ACCOUNTING_REGIME_DESCRIPTIONS.accrual_basis.recommendation}
+                  </p>
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

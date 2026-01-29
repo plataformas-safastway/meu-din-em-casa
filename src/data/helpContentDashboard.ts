@@ -367,6 +367,44 @@ export const dashboardHelpArticles: DashboardHelpArticle[] = [
     ],
     keywords: ["regime", "fluxo", "caixa", "competência", "cash_basis", "accrual_basis", "suporte"],
   },
+
+  // ===== CARTÃO DE CRÉDITO POR REGIME (SUPORTE) =====
+  {
+    id: "app-support-credit-card-regime-guide",
+    title: "📱 Guia de Cartão de Crédito por Regime (para Suporte)",
+    category: "app-support-budget",
+    icon: "💳",
+    summary: "Regras de cartão de crédito em Fluxo de Caixa vs Competência",
+    audience: "support-reference",
+    steps: [
+      {
+        title: "Regra de Ouro",
+        description: "NUNCA contar compra + fatura no mesmo regime. Isso causaria dupla contagem.",
+        tip: "Essa é a regra mais importante. Se o usuário vê 'valores dobrados', verifique o regime.",
+      },
+      {
+        title: "Fluxo de Caixa: Compra no cartão",
+        description: "NÃO entra no realizado. Apenas registra o compromisso. O cartão é meio de pagamento, não despesa imediata.",
+      },
+      {
+        title: "Fluxo de Caixa: Pagamento da fatura",
+        description: "ENTRA no realizado, no mês do pagamento, pelo valor total pago. Parcelamentos impactam quando cada fatura mensal é paga.",
+      },
+      {
+        title: "Competência: Compra no cartão",
+        description: "ENTRA no realizado imediatamente, classificada na categoria da despesa, no mês da compra.",
+      },
+      {
+        title: "Competência: Pagamento da fatura",
+        description: "NÃO entra como despesa (apenas movimentação de caixa). Parcelamentos: cada parcela entra no mês correspondente.",
+      },
+      {
+        title: "Diagnóstico rápido",
+        description: "Se usuário em CASH reclama que cartão não aparece → verificar se fatura foi paga. Se em ACCRUAL reclama de valores altos → verificar se não há dupla contagem acidental.",
+      },
+    ],
+    keywords: ["cartão", "crédito", "regime", "fatura", "compra", "dupla", "contagem", "suporte"],
+  },
 ];
 
 // =====================================================
@@ -606,6 +644,22 @@ export const dashboardFaqItems: DashboardFAQItem[] = [
     answer: "SIM! A troca é reversível a qualquer momento em Configurações > Finanças > Regime de Registro. Os dados não são perdidos — apenas a forma de leitura muda. O orçamento planejado permanece igual.",
     category: "app-support-budget",
     keywords: ["voltar", "reverter", "regime", "anterior", "trocar"],
+    audience: "support-reference",
+  },
+  {
+    id: "support-faq-12",
+    question: "📱 Usuário reclama que cartão 'sumiu' do orçamento. O que verificar?",
+    answer: "Se está em Fluxo de Caixa (padrão): compras no cartão SÓ entram quando a FATURA é paga. Verificar: 1) A fatura foi paga? 2) O pagamento foi registrado corretamente? Se preferir ver compras imediatamente, sugerir mudar para Competência.",
+    category: "app-support-budget",
+    keywords: ["cartão", "sumiu", "orçamento", "fatura", "verificar"],
+    audience: "support-reference",
+  },
+  {
+    id: "support-faq-13",
+    question: "📱 Usuário em Competência vê valores 'dobrados'. Como resolver?",
+    answer: "Provavelmente está contando compra + fatura. Em Competência, o pagamento da fatura NÃO deve entrar como despesa (só como movimentação de caixa). Verificar se há transações duplicadas ou se a fatura está sendo categorizada como despesa.",
+    category: "app-support-budget",
+    keywords: ["dobrado", "dupla", "contagem", "competência", "resolver"],
     audience: "support-reference",
   },
 ];
