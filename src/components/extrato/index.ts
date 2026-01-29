@@ -3,3 +3,4 @@ export { BulkActionsBar } from './BulkActionsBar';
 export { BulkCategoryChangeSheet } from './BulkCategoryChangeSheet';
 export { InlineCreateCategory } from './InlineCreateCategory';
 export { SelectableTransactionItem } from './SelectableTransactionItem';
+export { MissingRecurringAlert } from './MissingRecurringAlert';

@@ -23,7 +23,9 @@ import {
   BulkActionsBar,
   BulkCategoryChangeSheet,
   SelectableTransactionItem,
+  MissingRecurringAlert,
 } from "@/components/extrato";
+import { useMissingRecurringExpenses, MissingRecurringExpense } from "@/hooks/useMissingRecurringExpenses";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -118,6 +120,16 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
       }
     }
   }, []); // Only run on mount
+
+  // Current month for missing recurring expenses alert
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const { data: missingRecurring = [] } = useMissingRecurringExpenses(currentMonth, currentYear);
+
+  // Pre-fill data for adding transaction from missing recurring
+  const [prefilledCategory, setPrefilledCategory] = useState<string | null>(null);
+  const [prefilledSubcategory, setPrefilledSubcategory] = useState<string | null>(null);
+
   // Use paginated query with filters
   const { 
     data: paginatedData, 
@@ -131,6 +143,14 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
   const bulkDelete = useBulkDeleteTransactions();
   const bulkUpdateCategory = useBulkUpdateCategory();
   const createTransaction = useCreateTransactionWithInstallments();
+
+  // Handle registering payment from missing recurring alert
+  const handleRegisterMissingPayment = useCallback((expense: MissingRecurringExpense) => {
+    setPrefilledCategory(expense.categoryId);
+    setPrefilledSubcategory(expense.subcategoryId);
+    setDefaultTransactionType("expense");
+    setAddSheetOpen(true);
+  }, []);
 
   // Handle transaction submission from add sheet
   const handleSubmitTransaction = useCallback(async (transaction: any) => {
@@ -427,7 +447,15 @@ export function TransactionsPage({ onBack }: TransactionsPageProps) {
       </header>
 
       {/* Transaction List */}
-      <main className="container px-4 py-4">
+      <main className="container px-4 py-4 space-y-4">
+        {/* Missing Recurring Expenses Alert */}
+        {missingRecurring.length > 0 && !isSelectionMode && (
+          <MissingRecurringAlert
+            missingExpenses={missingRecurring}
+            onRegisterPayment={handleRegisterMissingPayment}
+          />
+        )}
+
         {transactions.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
