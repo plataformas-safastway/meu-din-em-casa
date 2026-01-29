@@ -1,26 +1,38 @@
 import { useState, useMemo } from "react";
-import { Check, ChevronRight, Settings } from "lucide-react";
+import { Check, ChevronRight, Settings, Plus, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Category, Subcategory, TransactionClassification } from "@/types/finance";
 import { defaultCategories, getCategoryById } from "@/data/categories";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CategoryManagerSheet, CategoryIcon } from "@/components/category";
 import { useUserCategories, UserCategory } from "@/hooks/useUserCategories";
+import { SubcategorySelectorSheet } from "./SubcategorySelectorSheet";
+import { InlineCategoryManager } from "./InlineCategoryManager";
 
 interface CategorySelectorProps {
   value: string;
   onChange: (categoryId: string) => void;
+  subcategoryValue: string;
+  onSubcategoryChange: (subcategoryId: string) => void;
   classification: TransactionClassification;
   recentCategories?: string[];
+  required?: boolean;
 }
 
 export function CategorySelector({
   value,
   onChange,
+  subcategoryValue,
+  onSubcategoryChange,
   classification,
   recentCategories = [],
+  required = true,
 }: CategorySelectorProps) {
   const [showManager, setShowManager] = useState(false);
+  const [showSubcategorySheet, setShowSubcategorySheet] = useState(false);
+  const [showInlineManager, setShowInlineManager] = useState(false);
+  const [inlineMode, setInlineMode] = useState<'create-category' | 'create-subcategory'>('create-category');
   
   // Map classification to transaction type for filtering
   const transactionType = classification === 'income' ? 'income' : 'expense';
@@ -42,10 +54,13 @@ export function CategorySelector({
         color: cat.color || 'hsl(var(--primary))',
         type: cat.type,
         isDefault: false,
+        isUserCategory: true,
         subcategories: (cat.subcategories || []).map(sub => ({
           id: sub.id,
           name: sub.name,
+          categoryId: cat.id,
         })),
+        originalCategory: cat,
       }));
     
     return [...customs, ...defaults];
@@ -64,13 +79,77 @@ export function CategorySelector({
     return allCategories;
   }, [allCategories, recentCategories]);
 
-  const selectedCategory = value ? getCategoryById(value) : null;
+  // Get selected category (either default or user)
+  const selectedCategory = useMemo(() => {
+    if (!value) return null;
+    
+    // Check user categories first
+    const userCat = userCategories.find(c => c.id === value);
+    if (userCat) return userCat;
+    
+    // Fallback to default
+    return getCategoryById(value);
+  }, [value, userCategories]);
+
+  // Get subcategories of selected category
+  const selectedCategorySubcategories = useMemo(() => {
+    if (!selectedCategory) return [];
+    
+    if ('icon_key' in selectedCategory) {
+      return (selectedCategory.subcategories || []).filter(s => s.status === 'ACTIVE');
+    }
+    
+    return selectedCategory.subcategories || [];
+  }, [selectedCategory]);
+
+  // Check if category has subcategories
+  const hasSubcategories = selectedCategorySubcategories.length > 0;
+  const isUserCategory = selectedCategory && 'icon_key' in selectedCategory;
+  const needsSubcategory = required && value && !subcategoryValue;
+
+  // Handle category selection
+  const handleCategorySelect = (catId: string) => {
+    onChange(catId);
+    onSubcategoryChange(""); // Reset subcategory
+    
+    // Check if category has subcategories
+    const cat = allCategories.find(c => c.id === catId);
+    if (cat && cat.subcategories.length > 0) {
+      // Auto-open subcategory selector
+      setTimeout(() => setShowSubcategorySheet(true), 100);
+    } else if (cat && 'isUserCategory' in cat && cat.isUserCategory) {
+      // User category without subcategories - prompt to create
+      setInlineMode('create-subcategory');
+      setTimeout(() => setShowSubcategorySheet(true), 100);
+    }
+  };
+
+  // Handle inline category creation
+  const handleInlineCreate = (mode: 'create-category' | 'create-subcategory') => {
+    setInlineMode(mode);
+    setShowInlineManager(true);
+  };
+
+  // Get selected subcategory name for display
+  const getSubcategoryName = () => {
+    if (!subcategoryValue || !selectedCategory) return null;
+    
+    if ('icon_key' in selectedCategory) {
+      const sub = selectedCategory.subcategories?.find(s => s.id === subcategoryValue);
+      return sub?.name;
+    }
+    
+    const sub = selectedCategory.subcategories?.find(s => s.id === subcategoryValue);
+    return sub?.name;
+  };
 
   return (
     <>
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-base font-medium">Categoria</label>
+          <label className="text-base font-medium">
+            Categoria <span className="text-destructive">*</span>
+          </label>
           <Button
             type="button"
             variant="ghost"
@@ -91,6 +170,16 @@ export function CategorySelector({
         )}
         
         <div className="grid grid-cols-3 gap-2">
+          {/* Add Category Button */}
+          <button
+            type="button"
+            onClick={() => handleInlineCreate('create-category')}
+            className="flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-all min-h-[72px]"
+          >
+            <Plus className="w-6 h-6 text-muted-foreground" />
+            <span className="text-[11px] text-muted-foreground font-medium">Nova</span>
+          </button>
+          
           {filteredCategories.map((cat, index) => {
             const isRecent = recentCategories.includes(cat.id);
             const isCustom = 'iconKey' in cat;
@@ -99,7 +188,7 @@ export function CategorySelector({
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => onChange(cat.id)}
+                onClick={() => handleCategorySelect(cat.id)}
                 className={cn(
                   "relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all min-h-[72px] active:scale-[0.97]",
                   value === cat.id
@@ -130,12 +219,104 @@ export function CategorySelector({
             );
           })}
         </div>
+
+        {/* Selected Subcategory or Prompt */}
+        {value && (
+          <div className="space-y-2 pt-2">
+            <div className="flex items-center justify-between">
+              <label className="text-base font-medium">
+                Subcategoria <span className="text-destructive">*</span>
+              </label>
+              {isUserCategory && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-muted-foreground"
+                  onClick={() => handleInlineCreate('create-subcategory')}
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Nova
+                </Button>
+              )}
+            </div>
+
+            {subcategoryValue && getSubcategoryName() ? (
+              <button
+                type="button"
+                onClick={() => setShowSubcategorySheet(true)}
+                className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-primary bg-primary/5 min-h-[52px]"
+              >
+                <span className="font-medium text-base">{getSubcategoryName()}</span>
+                <ChevronRight className="w-5 h-5 text-primary" />
+              </button>
+            ) : hasSubcategories ? (
+              <button
+                type="button"
+                onClick={() => setShowSubcategorySheet(true)}
+                className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-dashed border-warning bg-warning/5 min-h-[52px]"
+              >
+                <span className="font-medium text-base text-warning">Selecione uma subcategoria</span>
+                <ChevronRight className="w-5 h-5 text-warning" />
+              </button>
+            ) : (
+              <Alert className="border-warning bg-warning/10">
+                <AlertCircle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-sm">
+                  Esta categoria não possui subcategorias.
+                  {isUserCategory && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0 ml-1 text-primary"
+                      onClick={() => handleInlineCreate('create-subcategory')}
+                    >
+                      Criar subcategoria
+                    </Button>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+        )}
       </div>
       
+      {/* Category Manager Sheet (full management) */}
       <CategoryManagerSheet
         open={showManager}
         onOpenChange={setShowManager}
         defaultType={transactionType}
+      />
+
+      {/* Subcategory Selector Sheet */}
+      <SubcategorySelectorSheet
+        open={showSubcategorySheet}
+        onOpenChange={setShowSubcategorySheet}
+        category={selectedCategory}
+        value={subcategoryValue}
+        onChange={onSubcategoryChange}
+        onManageCategories={() => {
+          setShowSubcategorySheet(false);
+          setShowManager(true);
+        }}
+      />
+
+      {/* Inline Category/Subcategory Manager */}
+      <InlineCategoryManager
+        open={showInlineManager}
+        onOpenChange={setShowInlineManager}
+        type={transactionType}
+        mode={inlineMode}
+        selectedCategory={isUserCategory ? selectedCategory as UserCategory : null}
+        onCategoryCreated={(catId) => {
+          onChange(catId);
+          onSubcategoryChange("");
+          // Prompt to create subcategory immediately
+          setInlineMode('create-subcategory');
+        }}
+        onSubcategoryCreated={(subId) => {
+          onSubcategoryChange(subId);
+        }}
       />
     </>
   );

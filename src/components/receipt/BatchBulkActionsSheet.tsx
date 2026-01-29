@@ -42,6 +42,7 @@ export function BatchBulkActionsSheet({
 
   // Fields to update
   const [categoryId, setCategoryId] = useState<string>("");
+  const [subcategoryId, setSubcategoryId] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
   const [bankAccountId, setBankAccountId] = useState<string>("");
   const [creditCardId, setCreditCardId] = useState<string>("");
@@ -59,9 +60,9 @@ export function BatchBulkActionsSheet({
 
     const updates: Parameters<typeof updateItems.mutateAsync>[0]['updates'] = {};
 
-    if (applyCategory && categoryId) {
+    if (applyCategory && categoryId && subcategoryId) {
       updates.finalCategoryId = categoryId;
-      updates.finalSubcategoryId = null;
+      updates.finalSubcategoryId = subcategoryId;
     }
 
     if (applyPayment) {
@@ -140,6 +141,8 @@ export function BatchBulkActionsSheet({
               <CategorySelector
                 value={categoryId}
                 onChange={setCategoryId}
+                subcategoryValue={subcategoryId}
+                onSubcategoryChange={setSubcategoryId}
                 classification="expense"
               />
             )}

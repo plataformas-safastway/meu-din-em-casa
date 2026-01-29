@@ -1216,6 +1216,29 @@ export const faqItems: FAQItem[] = [
     category: "categories",
     keywords: ["planilha", "gastos", "categoria", "substituir", "oik", "padrão", "fonte de verdade"],
   },
+  
+  // ===== REGRA DE SUBCATEGORIA OBRIGATÓRIA =====
+  {
+    id: "faq-44",
+    question: "Por que preciso escolher uma subcategoria?",
+    answer: "No OIK, todo lançamento exige categoria E subcategoria. Isso garante relatórios precisos e permite análises detalhadas dos seus gastos. Por exemplo: ao invés de apenas 'Alimentação', você saberá exatamente quanto gastou em 'Supermercado' vs 'Delivery'.",
+    category: "transactions",
+    keywords: ["subcategoria", "obrigatória", "escolher", "selecionar", "por que", "necessário"],
+  },
+  {
+    id: "faq-45",
+    question: "Posso criar categorias durante o lançamento?",
+    answer: "Sim! Durante o lançamento, você pode criar novas categorias e subcategorias sem sair da tela. Basta tocar no botão '+' e preencher o nome e ícone. A nova categoria/subcategoria ficará selecionada automaticamente.",
+    category: "transactions",
+    keywords: ["criar", "categoria", "subcategoria", "lançamento", "inline", "durante", "nova"],
+  },
+  {
+    id: "faq-46",
+    question: "E se a categoria não tiver subcategorias?",
+    answer: "Se você selecionar uma categoria personalizada sem subcategorias, o OIK exibirá um aviso e permitirá que você crie uma subcategoria imediatamente. Não é possível salvar um lançamento sem subcategoria.",
+    category: "transactions",
+    keywords: ["categoria", "sem", "subcategoria", "vazia", "criar", "obrigatória"],
+  },
 ];
 
 // =====================================================
