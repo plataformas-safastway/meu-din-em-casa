@@ -3110,6 +3110,125 @@ export type Database = {
           },
         ]
       }
+      lgpd_ticket_messages: {
+        Row: {
+          author_name: string | null
+          author_role: Database["public"]["Enums"]["lgpd_message_author_role"]
+          author_user_id: string | null
+          created_at: string
+          id: string
+          is_internal: boolean | null
+          message: string
+          ticket_id: string
+        }
+        Insert: {
+          author_name?: string | null
+          author_role: Database["public"]["Enums"]["lgpd_message_author_role"]
+          author_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_internal?: boolean | null
+          message: string
+          ticket_id: string
+        }
+        Update: {
+          author_name?: string | null
+          author_role?: Database["public"]["Enums"]["lgpd_message_author_role"]
+          author_user_id?: string | null
+          created_at?: string
+          id?: string
+          is_internal?: boolean | null
+          message?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lgpd_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "lgpd_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lgpd_tickets: {
+        Row: {
+          assigned_to: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          data_category: string | null
+          family_id: string
+          id: string
+          last_response_at: string | null
+          message: string
+          priority: Database["public"]["Enums"]["lgpd_ticket_priority"]
+          protocol: string
+          requester_member_id: string | null
+          requester_user_id: string
+          status: Database["public"]["Enums"]["lgpd_ticket_status"]
+          subject: string
+          ticket_type: Database["public"]["Enums"]["lgpd_ticket_type"]
+          unread_by_user: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          data_category?: string | null
+          family_id: string
+          id?: string
+          last_response_at?: string | null
+          message: string
+          priority?: Database["public"]["Enums"]["lgpd_ticket_priority"]
+          protocol: string
+          requester_member_id?: string | null
+          requester_user_id: string
+          status?: Database["public"]["Enums"]["lgpd_ticket_status"]
+          subject: string
+          ticket_type: Database["public"]["Enums"]["lgpd_ticket_type"]
+          unread_by_user?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          data_category?: string | null
+          family_id?: string
+          id?: string
+          last_response_at?: string | null
+          message?: string
+          priority?: Database["public"]["Enums"]["lgpd_ticket_priority"]
+          protocol?: string
+          requester_member_id?: string | null
+          requester_user_id?: string
+          status?: Database["public"]["Enums"]["lgpd_ticket_status"]
+          subject?: string
+          ticket_type?: Database["public"]["Enums"]["lgpd_ticket_type"]
+          unread_by_user?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lgpd_tickets_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lgpd_tickets_requester_member_id_fkey"
+            columns: ["requester_member_id"]
+            isOneToOne: false
+            referencedRelation: "family_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lgpd_verification_codes: {
         Row: {
           code: string
@@ -6142,7 +6261,18 @@ export type Database = {
         | "OPENSTREETMAP"
       integration_status: "ACTIVE" | "INACTIVE" | "PENDING" | "ERROR"
       learning_scope: "user" | "family" | "global"
+      lgpd_message_author_role: "USER" | "ADMIN" | "DPO" | "SYSTEM"
       lgpd_request_status: "PENDING" | "PROCESSING" | "COMPLETED" | "CANCELLED"
+      lgpd_ticket_priority: "LOW" | "MEDIUM" | "HIGH"
+      lgpd_ticket_status: "OPEN" | "IN_REVIEW" | "ANSWERED" | "CLOSED"
+      lgpd_ticket_type:
+        | "PRIVACY_QUESTION"
+        | "DATA_ACCESS"
+        | "DATA_CORRECTION"
+        | "DATA_DELETION"
+        | "CONSENT_REVOCATION"
+        | "DATA_PORTABILITY"
+        | "OTHER"
       member_status: "INVITED" | "ACTIVE" | "REMOVED" | "DISABLED" | "BLOCKED"
       onboarding_status: "not_started" | "in_progress" | "completed"
       payment_method:
@@ -6329,7 +6459,19 @@ export const Constants = {
       ],
       integration_status: ["ACTIVE", "INACTIVE", "PENDING", "ERROR"],
       learning_scope: ["user", "family", "global"],
+      lgpd_message_author_role: ["USER", "ADMIN", "DPO", "SYSTEM"],
       lgpd_request_status: ["PENDING", "PROCESSING", "COMPLETED", "CANCELLED"],
+      lgpd_ticket_priority: ["LOW", "MEDIUM", "HIGH"],
+      lgpd_ticket_status: ["OPEN", "IN_REVIEW", "ANSWERED", "CLOSED"],
+      lgpd_ticket_type: [
+        "PRIVACY_QUESTION",
+        "DATA_ACCESS",
+        "DATA_CORRECTION",
+        "DATA_DELETION",
+        "CONSENT_REVOCATION",
+        "DATA_PORTABILITY",
+        "OTHER",
+      ],
       member_status: ["INVITED", "ACTIVE", "REMOVED", "DISABLED", "BLOCKED"],
       onboarding_status: ["not_started", "in_progress", "completed"],
       payment_method: ["cash", "debit", "credit", "pix", "transfer", "cheque"],

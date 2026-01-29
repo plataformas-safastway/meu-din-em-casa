@@ -58,6 +58,9 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
       case "learned-rules":
         navigateToTab("learned-rules");
         break;
+      case "dpo-contact":
+        navigateToTab("dpo-contact");
+        break;
       case "help":
         onNavigate?.("help");
         break;
@@ -102,6 +105,7 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
     {
       title: "Suporte",
       items: [
+        { id: "dpo-contact", label: "Contato com o DPO", icon: Shield, action: "navigate" },
         { id: "education", label: "Dicas e Educação", icon: BookOpen, action: "component" },
         { id: "help", label: "Central de Ajuda", icon: HelpCircle, action: "navigate" },
       ],
