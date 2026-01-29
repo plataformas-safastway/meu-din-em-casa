@@ -28,6 +28,7 @@ import {
   Vault,
   Plug,
   Mail,
+  HelpCircle,
   CreditCard,
   Key,
   Flag,
@@ -135,6 +136,7 @@ export function AdminLayout() {
   const supportMenuItems: MenuItem[] = hasSupportAccess ? [
     { path: "/admin/support/errors", label: "Painel de Erros", icon: AlertTriangle },
     { path: "/admin/support/users", label: "Usuários", icon: Headphones },
+    { path: "/admin/support/faq", label: "Central de Ajuda", icon: HelpCircle },
     { path: "/admin/support/audit", label: "Auditoria Suporte", icon: ClipboardList },
   ] : [];
 
