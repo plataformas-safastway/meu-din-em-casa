@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import * as XLSX from "xlsx";
+import { parseExcelFile } from "@/lib/excelParser";
 import { defaultCategories } from "@/data/categories";
 
 export interface SpreadsheetRow {
@@ -364,55 +364,19 @@ export function useSpreadsheetImport() {
         throw new Error("Formato não suportado. Use XLSX ou CSV.");
       }
 
-      const arrayBuffer = await file.arrayBuffer();
-      
       setState((prev) => ({ ...prev, status: "analyzing" }));
 
-      const workbook = XLSX.read(arrayBuffer, { type: "array", cellDates: true });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
+      // Use secure ExcelJS parser
+      const result = await parseExcelFile(file, { maxRows: 50000 });
+      
+      const { headers, rows: parsedRows } = result;
 
-      const jsonData = XLSX.utils.sheet_to_json<SpreadsheetRow>(sheet, {
-        header: 1,
-        defval: null,
-      }) as unknown as (string | number | null)[][];
-
-      if (jsonData.length < 2) {
-        throw new Error("A planilha precisa ter pelo menos 1 linha de cabeçalho e 1 linha de dados.");
-      }
-
-      // Find header row (first row with at least 2 non-empty cells)
-      let headerRowIndex = 0;
-      for (let i = 0; i < Math.min(jsonData.length, 5); i++) {
-        const row = jsonData[i];
-        const nonEmptyCells = row.filter((c) => c !== null && c !== "").length;
-        if (nonEmptyCells >= 2) {
-          headerRowIndex = i;
-          break;
-        }
-      }
-
-      const headerRow = jsonData[headerRowIndex] as string[];
-      const headers = headerRow.map((h, i) => (h ? String(h).trim() : `Coluna ${i + 1}`));
-
-      const dataRows = jsonData.slice(headerRowIndex + 1).filter((row) => {
-        const nonEmpty = row.filter((c) => c !== null && c !== "").length;
-        return nonEmpty >= 2;
-      });
-
-      if (dataRows.length === 0) {
+      if (parsedRows.length === 0) {
         throw new Error("Nenhuma linha de dados encontrada na planilha.");
       }
 
-      // Convert to objects
-      const allRows: SpreadsheetRow[] = dataRows.map((row) => {
-        const obj: SpreadsheetRow = {};
-        headers.forEach((header, i) => {
-          obj[header] = row[i] ?? null;
-        });
-        return obj;
-      });
-
+      // Convert ParsedRow[] to SpreadsheetRow[]
+      const allRows: SpreadsheetRow[] = parsedRows;
       const previewRows = allRows.slice(0, 5);
       const suggestedMapping = detectColumnMapping(headers);
 

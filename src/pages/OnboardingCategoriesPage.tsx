@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { defaultCategories, getCategoryById } from "@/data/categories";
 import { useSaveCategoryMappings, useCreateBudgetsFromMappings } from "@/hooks/useCategoryMappings";
-import * as XLSX from "xlsx";
+import { parseExcelFile } from "@/lib/excelParser";
 
 interface OnboardingCategoriesPageProps {
   onComplete: () => void;
@@ -148,43 +148,44 @@ export function OnboardingCategoriesPage({ onComplete, onSkip, onBack }: Onboard
     setLoading(true);
     
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array" });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
+      // Use secure ExcelJS parser
+      const result = await parseExcelFile(file);
+      const { headers, rows } = result;
       
-      if (data.length < 2) {
+      if (rows.length === 0) {
         toast.error("Arquivo vazio ou inválido");
         setLoading(false);
         return;
       }
       
       // Try to identify columns
-      const headerRow = data[0].map(h => String(h || "").toLowerCase());
+      const headerRowLower = headers.map(h => h.toLowerCase());
       
-      let categoryCol = headerRow.findIndex(h => 
+      let categoryCol = headerRowLower.findIndex(h => 
         h.includes("categoria") || h.includes("subcategoria") || h.includes("nome")
       );
-      let limitCol = headerRow.findIndex(h => 
+      let limitCol = headerRowLower.findIndex(h => 
         h.includes("limite") || h.includes("meta") || h.includes("valor") || h.includes("orcamento") || h.includes("orçamento")
       );
       
-      // If no header found, assume first row is data
-      const startRow = categoryCol >= 0 ? 1 : 0;
+      // If no header found, use first column
       if (categoryCol < 0) categoryCol = 0;
       if (limitCol < 0) limitCol = 1;
       
+      const categoryHeader = headers[categoryCol];
+      const limitHeader = headers[limitCol];
+      
       const categories: ImportedCategory[] = [];
       
-      for (let i = startRow; i < data.length; i++) {
-        const row = data[i];
-        if (!row || !row[categoryCol]) continue;
+      rows.forEach((row, i) => {
+        const categoryValue = row[categoryHeader];
+        if (!categoryValue) return;
         
-        const importedName = String(row[categoryCol]).trim();
-        if (!importedName) continue;
+        const importedName = String(categoryValue).trim();
+        if (!importedName) return;
         
         const suggestion = suggestCategory(importedName);
-        const limit = parseNumber(row[limitCol]);
+        const limit = parseNumber(row[limitHeader]);
         
         categories.push({
           id: `cat-${i}`,
@@ -194,7 +195,7 @@ export function OnboardingCategoriesPage({ onComplete, onSkip, onBack }: Onboard
           limit,
           confidence: suggestion.confidence,
         });
-      }
+      });
       
       if (categories.length === 0) {
         toast.error("Nenhuma categoria encontrada no arquivo");

@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
+import { parseExcelFile, ParsedRow } from "@/lib/excelParser";
 
 // Hook to rename subcategory
 export function useRenameSubcategory() {
@@ -83,108 +83,91 @@ export function useImportCategories() {
   const [progress, setProgress] = useState(0);
 
   const parseFile = useCallback(async (file: File): Promise<ParsedCategoryData> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
+    try {
+      // Use secure ExcelJS parser
+      const result = await parseExcelFile(file, {
+        sheetIndex: 'categoria', // Try to find sheet with "categoria" in name
+        maxRows: 2000,
+      });
 
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
-
-          // Find the "Categorias" sheet
-          const sheetName = workbook.SheetNames.find(name => 
-            normalizeText(name).includes('categoria')
-          ) || workbook.SheetNames[1] || workbook.SheetNames[0];
-
-          const sheet = workbook.Sheets[sheetName];
-          if (!sheet) {
-            throw new Error('Planilha "Categorias" não encontrada');
-          }
-
-          const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { header: 1 });
-          
-          // Skip header row and find column indices
-          const headerRow = rows[0] as string[];
-          const colIndices = {
-            categoria: headerRow.findIndex(h => normalizeText(String(h || '')).includes('categoria')),
-            subcategoria: headerRow.findIndex(h => normalizeText(String(h || '')).includes('subcategoria')),
-            tipo: headerRow.findIndex(h => normalizeText(String(h || '')).includes('tipo')),
-            ativo: headerRow.findIndex(h => normalizeText(String(h || '')).includes('ativo')),
-          };
-
-          if (colIndices.categoria === -1) {
-            throw new Error('Coluna "Categoria" não encontrada na planilha');
-          }
-
-          // Parse data rows
-          const categoriesMap = new Map<string, ParsedCategory>();
-          const subcategoriesSet = new Set<string>();
-          let duplicatesConsolidated = 0;
-          const warnings: string[] = [];
-
-          for (let i = 1; i < rows.length; i++) {
-            const row = rows[i] as any[];
-            if (!row || !row[colIndices.categoria]) continue;
-
-            const categoryName = String(row[colIndices.categoria]).trim();
-            const subcategoryName = colIndices.subcategoria >= 0 
-              ? String(row[colIndices.subcategoria] || '').trim()
-              : '';
-            const type = colIndices.tipo >= 0 
-              ? normalizeType(String(row[colIndices.tipo] || ''))
-              : 'DESPESA';
-            const active = colIndices.ativo >= 0
-              ? normalizeActive(String(row[colIndices.ativo] || ''))
-              : true;
-
-            const categoryKey = normalizeText(categoryName);
-            
-            if (!categoriesMap.has(categoryKey)) {
-              categoriesMap.set(categoryKey, {
-                name: categoryName,
-                type,
-                active,
-                subcategories: [],
-              });
-            }
-
-            if (subcategoryName) {
-              const subKey = `${categoryKey}::${normalizeText(subcategoryName)}`;
-              if (subcategoriesSet.has(subKey)) {
-                duplicatesConsolidated++;
-              } else {
-                subcategoriesSet.add(subKey);
-                categoriesMap.get(categoryKey)!.subcategories.push({
-                  name: subcategoryName,
-                  active,
-                });
-              }
-            }
-          }
-
-          const categories = Array.from(categoriesMap.values());
-          const totalSubcategories = categories.reduce((sum, cat) => sum + cat.subcategories.length, 0);
-
-          // Validate limits
-          if (rows.length > 2000) {
-            warnings.push('Limite de 2000 linhas excedido. Algumas linhas foram ignoradas.');
-          }
-
-          resolve({
-            categories,
-            totalSubcategories,
-            totalRows: rows.length - 1, // Exclude header
-            duplicatesConsolidated,
-            warnings,
-          });
-        } catch (error: any) {
-          reject(new Error(error.message || 'Erro ao processar arquivo'));
-        }
+      const { headers, rows } = result;
+      
+      // Find column indices
+      const colIndices = {
+        categoria: headers.findIndex(h => normalizeText(h).includes('categoria')),
+        subcategoria: headers.findIndex(h => normalizeText(h).includes('subcategoria')),
+        tipo: headers.findIndex(h => normalizeText(h).includes('tipo')),
+        ativo: headers.findIndex(h => normalizeText(h).includes('ativo')),
       };
 
-      reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
-      reader.readAsArrayBuffer(file);
-    });
+      if (colIndices.categoria === -1) {
+        throw new Error('Coluna "Categoria" não encontrada na planilha');
+      }
+
+      // Parse data rows
+      const categoriesMap = new Map<string, ParsedCategory>();
+      const subcategoriesSet = new Set<string>();
+      let duplicatesConsolidated = 0;
+      const warnings: string[] = [];
+
+      for (const row of rows) {
+        const rowValues = headers.map(h => row[h]);
+        if (!rowValues[colIndices.categoria]) continue;
+
+        const categoryName = String(rowValues[colIndices.categoria]).trim();
+        const subcategoryName = colIndices.subcategoria >= 0 
+          ? String(rowValues[colIndices.subcategoria] || '').trim()
+          : '';
+        const type = colIndices.tipo >= 0 
+          ? normalizeType(String(rowValues[colIndices.tipo] || ''))
+          : 'DESPESA';
+        const active = colIndices.ativo >= 0
+          ? normalizeActive(String(rowValues[colIndices.ativo] || ''))
+          : true;
+
+        const categoryKey = normalizeText(categoryName);
+        
+        if (!categoriesMap.has(categoryKey)) {
+          categoriesMap.set(categoryKey, {
+            name: categoryName,
+            type,
+            active,
+            subcategories: [],
+          });
+        }
+
+        if (subcategoryName) {
+          const subKey = `${categoryKey}::${normalizeText(subcategoryName)}`;
+          if (subcategoriesSet.has(subKey)) {
+            duplicatesConsolidated++;
+          } else {
+            subcategoriesSet.add(subKey);
+            categoriesMap.get(categoryKey)!.subcategories.push({
+              name: subcategoryName,
+              active,
+            });
+          }
+        }
+      }
+
+      const categories = Array.from(categoriesMap.values());
+      const totalSubcategories = categories.reduce((sum, cat) => sum + cat.subcategories.length, 0);
+
+      // Check if truncated
+      if (result.truncated) {
+        warnings.push('Limite de 2000 linhas excedido. Algumas linhas foram ignoradas.');
+      }
+
+      return {
+        categories,
+        totalSubcategories,
+        totalRows: rows.length,
+        duplicatesConsolidated,
+        warnings,
+      };
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro ao processar arquivo');
+    }
   }, []);
 
   const importMutation = useMutation({
