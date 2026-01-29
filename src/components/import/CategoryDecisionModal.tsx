@@ -26,12 +26,13 @@ interface DecisionOption {
 const DECISION_OPTIONS: DecisionOption[] = [
   {
     id: "keep_imported",
-    title: "Manter categorias da planilha",
-    description: "Use exclusivamente as categorias importadas",
+    title: "Usar minhas categorias",
+    description: "Suas categorias passam a ser as oficiais do OIK",
     icon: <FileSpreadsheet className="w-6 h-6" />,
     details: [
-      "Suas transações usarão as categorias da planilha",
-      "Categorias do OIK ficam disponíveis apenas para novos lançamentos manuais",
+      "Suas categorias substituem as categorias padrão do OIK",
+      "Não haverá duas fontes de verdade — apenas suas categorias",
+      "Transações importadas serão associadas às suas categorias",
       "Ideal se você já tem um sistema de categorias consolidado",
     ],
     recommended: true,
@@ -159,7 +160,7 @@ export function CategoryDecisionModal({
             {importedSubcategoriesCount > 0 && (
               <> e <strong>{importedSubcategoriesCount}</strong> subcategorias</>
             )}{" "}
-            na sua planilha
+            na sua planilha. No OIK, existe uma única fonte de verdade para categorias.
           </DialogDescription>
         </DialogHeader>
 
