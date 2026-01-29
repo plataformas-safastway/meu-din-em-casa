@@ -1460,6 +1460,59 @@ export type Database = {
         }
         Relationships: []
       }
+      detected_recurring_patterns: {
+        Row: {
+          average_amount: number
+          category_id: string
+          confidence_score: number
+          created_at: string
+          family_id: string
+          id: string
+          is_active: boolean
+          last_occurrence_date: string
+          occurrence_count: number
+          pattern_type: string
+          subcategory_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          average_amount: number
+          category_id: string
+          confidence_score: number
+          created_at?: string
+          family_id: string
+          id?: string
+          is_active?: boolean
+          last_occurrence_date: string
+          occurrence_count: number
+          pattern_type: string
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          average_amount?: number
+          category_id?: string
+          confidence_score?: number
+          created_at?: string
+          family_id?: string
+          id?: string
+          is_active?: boolean
+          last_occurrence_date?: string
+          occurrence_count?: number
+          pattern_type?: string
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "detected_recurring_patterns_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ebook_ctas: {
         Row: {
           cover_url: string | null
@@ -4315,6 +4368,47 @@ export type Database = {
             columns: ["recurring_transaction_id"]
             isOneToOne: false
             referencedRelation: "recurring_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_expense_confirmations: {
+        Row: {
+          category_id: string
+          confirmation_type: string
+          confirmed_by_user_id: string
+          created_at: string
+          family_id: string
+          id: string
+          month_ref: string
+          subcategory_id: string | null
+        }
+        Insert: {
+          category_id: string
+          confirmation_type: string
+          confirmed_by_user_id: string
+          created_at?: string
+          family_id: string
+          id?: string
+          month_ref: string
+          subcategory_id?: string | null
+        }
+        Update: {
+          category_id?: string
+          confirmation_type?: string
+          confirmed_by_user_id?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          month_ref?: string
+          subcategory_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_expense_confirmations_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
             referencedColumns: ["id"]
           },
         ]

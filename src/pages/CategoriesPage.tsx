@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ArrowLeft, Plus, ChevronRight, ChevronDown, TrendingUp, TrendingDown, Minus, BarChart3 } from "lucide-react";
+import { ArrowLeft, Plus, ChevronRight, ChevronDown, TrendingUp, TrendingDown, Minus, BarChart3, Calendar, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getExpenseCategories, getIncomeCategories, GOALS_CATEGORY_ID } from "@/data/categories";
 import { formatCurrency } from "@/lib/formatters";
@@ -8,16 +8,21 @@ import { useTransactions, useTransactionsCurrentYear } from "@/hooks/useTransact
 import { useActiveGoals } from "@/hooks/useGoals";
 import { MonthSelector } from "@/components/MonthSelector";
 import { CategoryEvolutionSection } from "@/components/CategoryEvolutionChart";
+import { useCategorySpendingByMonth, useCategorySpendingByYear } from "@/hooks/useCategorySpending";
 
 interface CategoriesPageProps {
   onBack: () => void;
 }
+
+type ViewMode = "month" | "year";
 
 export function CategoriesPage({ onBack }: CategoriesPageProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showChart, setShowChart] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [showAllCategories, setShowAllCategories] = useState(false);
   
   const selectedMonth = selectedDate.getMonth();
   const selectedYear = selectedDate.getFullYear();
@@ -37,6 +42,21 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
   const { data: prevTransactions = [] } = useTransactions(prevMonth, prevYear);
   const { data: currentYearTransactions = [] } = useTransactionsCurrentYear();
 
+  // Get active categories/subcategories based on view mode
+  const { 
+    activeCategoryIds: monthlyActiveCategories, 
+    activeSubcategoryIds: monthlyActiveSubcategories 
+  } = useCategorySpendingByMonth(selectedMonth, selectedYear);
+  
+  const { 
+    activeCategoryIds: yearlyActiveCategories, 
+    activeSubcategoryIds: yearlyActiveSubcategories 
+  } = useCategorySpendingByYear(selectedYear);
+
+  // Use the appropriate active sets based on view mode
+  const activeCategoryIds = viewMode === "month" ? monthlyActiveCategories : yearlyActiveCategories;
+  const activeSubcategoryIds = viewMode === "month" ? monthlyActiveSubcategories : yearlyActiveSubcategories;
+
   // Build dynamic subcategories for "Objetivos" based on goals
   const categoriesWithDynamicSubs = useMemo(() => {
     const baseCategories = activeTab === 'expense' ? expenseCategories : incomeCategories;
@@ -55,7 +75,22 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
     });
   }, [activeTab, expenseCategories, incomeCategories, goals]);
 
-  const categories = categoriesWithDynamicSubs;
+  // Filter categories to only show those with transactions (unless showAllCategories is true)
+  const filteredCategories = useMemo(() => {
+    if (showAllCategories) return categoriesWithDynamicSubs;
+    
+    return categoriesWithDynamicSubs
+      .filter(cat => activeCategoryIds.has(cat.id))
+      .map(cat => ({
+        ...cat,
+        // Also filter subcategories to only show active ones
+        subcategories: cat.subcategories.filter(sub => 
+          activeSubcategoryIds[cat.id]?.has(sub.id)
+        ),
+      }));
+  }, [categoriesWithDynamicSubs, activeCategoryIds, activeSubcategoryIds, showAllCategories]);
+
+  const categories = filteredCategories;
 
   // Calculate totals from real transaction data
   const totals = useMemo(() => {
@@ -128,6 +163,9 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
     setExpandedCategory(expandedCategory === categoryId ? null : categoryId);
   };
 
+  // Count of hidden categories (those with no transactions)
+  const hiddenCategoriesCount = categoriesWithDynamicSubs.length - categories.length;
+
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -140,17 +178,78 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
               </Button>
               <h1 className="text-lg font-semibold">Categorias</h1>
             </div>
-            <Button size="sm" variant="outline" className="gap-2" onClick={() => setShowChart(!showChart)}>
-              <BarChart3 className="w-4 h-4" />
-              {showChart ? 'Lista' : 'Gráfico'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="gap-2" onClick={() => setShowChart(!showChart)}>
+                <BarChart3 className="w-4 h-4" />
+                {showChart ? 'Lista' : 'Gráfico'}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Month Selector */}
-      <div className="container px-4 py-4">
-        <MonthSelector selectedDate={selectedDate} onMonthChange={setSelectedDate} />
+      {/* View Mode Toggle + Month Selector */}
+      <div className="container px-4 py-4 space-y-3">
+        {/* View mode toggle */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 p-1 bg-muted rounded-lg">
+            <button
+              onClick={() => setViewMode("month")}
+              className={cn(
+                "px-3 py-1.5 rounded-md text-sm font-medium transition-all",
+                viewMode === "month"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Mensal
+            </button>
+            <button
+              onClick={() => setViewMode("year")}
+              className={cn(
+                "px-3 py-1.5 rounded-md text-sm font-medium transition-all",
+                viewMode === "year"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Anual
+            </button>
+          </div>
+          
+          {/* Toggle to show all categories */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowAllCategories(!showAllCategories)}
+            className="gap-1.5 text-xs text-muted-foreground"
+          >
+            {showAllCategories ? (
+              <>
+                <EyeOff className="w-3.5 h-3.5" />
+                Ocultar vazias
+              </>
+            ) : (
+              <>
+                <Eye className="w-3.5 h-3.5" />
+                Mostrar todas
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Month selector (only for month view) */}
+        {viewMode === "month" && (
+          <MonthSelector selectedDate={selectedDate} onMonthChange={setSelectedDate} />
+        )}
+        
+        {/* Year indicator (for year view) */}
+        {viewMode === "year" && (
+          <div className="flex items-center justify-center gap-2 py-2">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <span className="font-semibold text-lg">{selectedYear}</span>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -321,12 +420,39 @@ export function CategoriesPage({ onBack }: CategoriesPageProps) {
         </div>
         )}
 
+        {/* Empty state when no categories with transactions */}
+        {categories.length === 0 && !showAllCategories && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-2">
+              Nenhuma {activeTab === 'expense' ? 'despesa' : 'receita'} registrada {viewMode === 'month' ? 'neste mês' : 'neste ano'}.
+            </p>
+            <Button
+              variant="link"
+              onClick={() => setShowAllCategories(true)}
+              className="text-primary"
+            >
+              Mostrar todas as categorias
+            </Button>
+          </div>
+        )}
+
+        {/* Hidden categories indicator */}
+        {!showAllCategories && hiddenCategoriesCount > 0 && categories.length > 0 && (
+          <div className="mt-4 text-center">
+            <p className="text-xs text-muted-foreground">
+              {hiddenCategoriesCount} {hiddenCategoriesCount === 1 ? 'categoria oculta' : 'categorias ocultas'} por não ter movimentação no período
+            </p>
+          </div>
+        )}
+
         {/* Insight */}
         <div className="mt-6 p-4 rounded-2xl bg-info/10 border border-info/20">
           <p className="text-sm text-info leading-relaxed">
             💡 <strong>Dica:</strong> {showChart 
               ? 'Os gráficos mostram a evolução de gastos/receitas por categoria nos últimos 6 meses.'
-              : 'A variação percentual compara com o mês anterior. Para despesas: 🔴 aumento, 🟢 redução. Para receitas: 🟢 aumento, 🔴 redução.'}
+              : viewMode === 'month'
+                ? 'Mostrando apenas categorias com movimentação neste mês. Use "Mostrar todas" para ver categorias zeradas.'
+                : 'Visão anual: exibe todas as categorias com pelo menos uma transação no ano, incluindo despesas pontuais como IPTU ou seguro anual.'}
           </p>
         </div>
       </main>
