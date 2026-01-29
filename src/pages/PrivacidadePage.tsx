@@ -22,105 +22,100 @@ export function PrivacidadePage() {
       {/* Content */}
       <main className="container px-6 py-8 max-w-2xl mx-auto">
         <div className="prose prose-neutral dark:prose-invert max-w-none space-y-8">
-          <p className="text-muted-foreground text-sm">
-            Última atualização: Janeiro de 2026
-          </p>
+          <div className="space-y-1">
+            <p className="text-muted-foreground text-sm">Versão: 1.4</p>
+            <p className="text-muted-foreground text-sm">
+              Última atualização: 29 de janeiro de 2026
+            </p>
+          </div>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">1. Sobre o Oik e Privacidade</h2>
+            <h2 className="text-xl font-semibold text-foreground">Sobre esta Política</h2>
             <p className="text-muted-foreground leading-relaxed">
-              O Oik é uma plataforma premium de inteligência financeira familiar. Entendemos 
-              a importância da privacidade e estamos comprometidos em proteger as informações 
-              pessoais e financeiras de vocês e suas famílias.
+              Esta Política de Privacidade descreve, de forma detalhada, transparente e em 
+              conformidade com a legislação brasileira, como a TRIPLE A, CONSULTORIA EM GESTÃO, 
+              PLANEJAMENTO E TREINAMENTOS LTDA, CNPJ nº 31.487.532/0001-29, detentora da marca OIK, 
+              realiza o tratamento de dados pessoais dos usuários do aplicativo OIK.
             </p>
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">2. Coleta de Dados</h2>
+            <h2 className="text-xl font-semibold text-foreground">Base Legal</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Coletamos informações que vocês fornecem diretamente ao usar o Oik, 
-              incluindo dados de cadastro (nome, e-mail, telefone), informações financeiras inseridas 
-              (transações, categorias, orçamentos) e dados de uso da plataforma.
-            </p>
-            <p className="text-muted-foreground leading-relaxed">
-              Os dados financeiros são armazenados de forma segura e são utilizados 
-              exclusivamente para fornecer as funcionalidades do Oik. Não vendemos, 
-              alugamos ou compartilhamos suas informações pessoais com terceiros para fins 
-              de marketing.
-            </p>
-          </section>
-
-          <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">3. Uso das Informações</h2>
-            <p className="text-muted-foreground leading-relaxed">
-              Utilizamos as informações coletadas para:
+              O documento observa especialmente:
             </p>
             <ul className="text-muted-foreground space-y-2 list-disc list-inside">
-              <li>Fornecer, manter e melhorar o Oik</li>
-              <li>Processar e exibir suas informações financeiras</li>
-              <li>Gerar análises e insights personalizados com inteligência artificial</li>
-              <li>Enviar comunicações relacionadas ao serviço</li>
-              <li>Responder a solicitações e fornecer suporte</li>
-              <li>Detectar e prevenir atividades fraudulentas</li>
+              <li>Lei nº 13.709/2018 (LGPD)</li>
+              <li>Lei nº 12.965/2014 (Marco Civil da Internet)</li>
+              <li>Lei nº 8.078/1990 (Código de Defesa do Consumidor)</li>
             </ul>
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">4. Proteção e Segurança</h2>
+            <h2 className="text-xl font-semibold text-foreground">Destinatários</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Implementamos medidas de segurança técnicas e organizacionais para proteger 
-              suas informações pessoais contra acesso não autorizado, alteração, divulgação 
-              ou destruição. Isso inclui criptografia de dados, controles de acesso e 
-              monitoramento contínuo de segurança.
-            </p>
-            <p className="text-muted-foreground leading-relaxed">
-              Embora nos esforcemos para proteger suas informações, nenhum método de 
-              transmissão pela Internet ou método de armazenamento eletrônico é 100% seguro. 
-              Portanto, não podemos garantir segurança absoluta.
+              O OIK é destinado exclusivamente a pessoas físicas organizadas em núcleos familiares.
             </p>
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">5. Direitos do Usuário (LGPD)</h2>
+            <h2 className="text-xl font-semibold text-foreground">Bases de Tratamento</h2>
             <p className="text-muted-foreground leading-relaxed">
-              De acordo com a Lei Geral de Proteção de Dados (LGPD), vocês têm direito a:
+              O tratamento de dados ocorre com base em:
             </p>
             <ul className="text-muted-foreground space-y-2 list-disc list-inside">
-              <li>Confirmar a existência de tratamento de dados</li>
-              <li>Acessar seus dados pessoais</li>
-              <li>Corrigir dados incompletos, inexatos ou desatualizados</li>
-              <li>Solicitar a anonimização, bloqueio ou eliminação de dados</li>
-              <li>Solicitar a portabilidade dos dados</li>
-              <li>Revogar o consentimento a qualquer momento</li>
+              <li>Execução de contrato</li>
+              <li>Obrigação legal</li>
+              <li>Exercício regular de direitos</li>
+              <li>Consentimento</li>
+              <li>Legítimo interesse</li>
             </ul>
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">6. Retenção de Dados</h2>
+            <h2 className="text-xl font-semibold text-foreground">Medidas de Segurança</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Mantemos suas informações pessoais pelo tempo necessário para fornecer os 
-              serviços solicitados ou conforme exigido por lei. Quando vocês excluem sua 
-              conta, removemos ou anonimizamos suas informações, exceto quando precisamos 
-              retê-las para fins legais ou regulatórios.
+              São adotadas medidas de segurança como:
+            </p>
+            <ul className="text-muted-foreground space-y-2 list-disc list-inside">
+              <li>Criptografia</li>
+              <li>Controle de acesso</li>
+              <li>Segregação de dados por família</li>
+              <li>Logs de auditoria</li>
+              <li>Princípio do menor privilégio</li>
+            </ul>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold text-foreground">Direitos do Titular</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              O usuário pode exercer seus direitos de titular a qualquer momento por meio do canal interno:
+            </p>
+            <p className="text-muted-foreground leading-relaxed font-medium">
+              Configurações → Privacidade e LGPD → Contato com o DPO
             </p>
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">7. Contato para Dúvidas</h2>
+            <h2 className="text-xl font-semibold text-foreground">Compartilhamento de Dados</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Se tiverem dúvidas sobre esta Política de Privacidade ou sobre como tratamos 
-              suas informações pessoais, entrem em contato conosco através dos canais 
-              disponíveis no Oik. Responderemos às solicitações dentro do prazo 
-              estabelecido pela legislação aplicável.
+              Os dados não são vendidos, podendo ser compartilhados apenas quando necessário para 
+              operação, obrigação legal ou mediante consentimento.
             </p>
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold text-foreground">8. Alterações nesta Política</h2>
+            <h2 className="text-xl font-semibold text-foreground">Inadimplência e Exclusão</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Podemos atualizar esta Política de Privacidade periodicamente. Notificaremos 
-              sobre quaisquer alterações significativas através do Oik ou por e-mail. 
-              Recomendamos que revisem esta política regularmente.
+              Em caso de inadimplência superior a 90 dias, os dados poderão ser excluídos de forma 
+              definitiva, respeitadas obrigações legais.
+            </p>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold text-foreground">Foro</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Foro eleito: São José – Santa Catarina.
             </p>
           </section>
         </div>
