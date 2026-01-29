@@ -50,6 +50,7 @@ const LGPDOverviewPage = lazy(() => import("./lgpd/LGPDOverviewPage").then(m => 
 const LegalVaultPage = lazy(() => import("./lgpd/LegalVaultPage").then(m => ({ default: m.LegalVaultPage })));
 const BreakglassApprovalsPage = lazy(() => import("./lgpd/BreakglassApprovalsPage").then(m => ({ default: m.BreakglassApprovalsPage })));
 const LGPDAuditPage = lazy(() => import("./lgpd/LGPDAuditPage").then(m => ({ default: m.LGPDAuditPage })));
+const DpoTicketsPage = lazy(() => import("./lgpd/DpoTicketsPage").then(m => ({ default: m.DpoTicketsPage })));
 
 // Integrations module
 const IntegrationsOverviewPage = lazy(() => import("./integrations/IntegrationsOverviewPage").then(m => ({ default: m.IntegrationsOverviewPage })));
@@ -162,6 +163,7 @@ export function AdminRoutes() {
 
         {/* LGPD module */}
         <Route path="lgpd" element={<LazyPage Component={LGPDOverviewPage} />} />
+        <Route path="lgpd/tickets" element={<LazyPage Component={DpoTicketsPage} />} />
         <Route path="lgpd/dsar" element={<LazyPage Component={LGPDRequestsPage} />} />
         <Route path="lgpd/vault" element={<LazyPage Component={LegalVaultPage} />} />
         <Route path="lgpd/breakglass" element={<LazyPage Component={BreakglassApprovalsPage} />} />

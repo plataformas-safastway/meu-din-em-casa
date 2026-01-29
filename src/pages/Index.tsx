@@ -31,6 +31,7 @@ const OpenFinancePage = lazy(() => import("./OpenFinancePage").then(m => ({ defa
 const FamilyPage = lazy(() => import("./FamilyPage").then(m => ({ default: m.FamilyPage })));
 const InsightsHubPage = lazy(() => import("./InsightsHubPage").then(m => ({ default: m.InsightsHubPage })));
 const LearnedRulesPage = lazy(() => import("./settings/LearnedRulesPage"));
+const DpoContactPage = lazy(() => import("./settings/DpoContactPage").then(m => ({ default: m.DpoContactPage })));
 const SuggestedBudgetPage = lazy(() => import("./SuggestedBudgetPage").then(m => ({ default: m.SuggestedBudgetPage })));
 
 // Minimal loading component for lazy modules
@@ -188,6 +189,8 @@ const Index = () => {
         return <InsightsHubPage />;
       case "learned-rules":
         return <LearnedRulesPage onBack={() => setActiveTab(getBackTab("settings"))} />;
+      case "dpo-contact":
+        return <DpoContactPage />;
       case "suggested-budget":
         return (
           <SuggestedBudgetPage 
