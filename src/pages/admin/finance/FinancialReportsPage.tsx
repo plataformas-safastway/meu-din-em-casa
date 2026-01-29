@@ -36,7 +36,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "@/lib/excelParser";
 
 // Mask CPF for LGPD
 function maskCPF(cpf: string): string {
@@ -202,15 +202,8 @@ export function FinancialReportsPage() {
         return;
       }
 
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Relatório");
-
-      if (exportFormat === 'csv') {
-        XLSX.writeFile(wb, `${filename}.csv`);
-      } else {
-        XLSX.writeFile(wb, `${filename}.xlsx`);
-      }
+      // Use secure ExcelJS export
+      await exportToExcel(data, filename, "Relatório");
 
       toast.success("Relatório exportado com sucesso");
     } catch (error) {

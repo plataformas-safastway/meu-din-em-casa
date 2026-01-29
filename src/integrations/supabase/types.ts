@@ -5917,39 +5917,36 @@ export type Database = {
       audit_logs_safe: {
         Row: {
           action: string | null
-          actor_user_id: string | null
           created_at: string | null
           entity_id: string | null
           entity_type: string | null
           family_id: string | null
           id: string | null
-          metadata_safe: Json | null
           module: string | null
           severity: string | null
+          user_id: string | null
         }
         Insert: {
           action?: string | null
-          actor_user_id?: string | null
           created_at?: string | null
           entity_id?: string | null
           entity_type?: string | null
           family_id?: string | null
           id?: string | null
-          metadata_safe?: never
           module?: string | null
           severity?: string | null
+          user_id?: string | null
         }
         Update: {
           action?: string | null
-          actor_user_id?: string | null
           created_at?: string | null
           entity_id?: string | null
           entity_type?: string | null
           family_id?: string | null
           id?: string | null
-          metadata_safe?: never
           module?: string | null
           severity?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -6003,6 +6000,7 @@ export type Database = {
         Returns: boolean
       }
       can_manage_admins: { Args: { _user_id: string }; Returns: boolean }
+      can_view_audit_log: { Args: { log_family_id: string }; Returns: boolean }
       change_user_account_status: {
         Args: {
           _new_status: Database["public"]["Enums"]["user_account_status"]

@@ -53,7 +53,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
+import { exportToExcel } from "@/lib/excelParser";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
   pending: { label: "Pendente", color: "bg-yellow-500/10 text-yellow-500", icon: Clock },
@@ -91,7 +91,7 @@ export function FinancialPaymentsPage() {
     await retryPayment.mutateAsync(paymentId);
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!filteredPayments.length) {
       toast.error("Nenhum dado para exportar");
       return;
@@ -110,12 +110,14 @@ export function FinancialPaymentsPage() {
       "Motivo Falha": payment.failure_reason || "—",
     }));
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Cobranças");
-    XLSX.writeFile(wb, `cobrancas_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
-    
-    toast.success("Relatório exportado com sucesso");
+    try {
+      // Use secure ExcelJS export
+      await exportToExcel(exportData, `cobrancas_${format(new Date(), "yyyy-MM-dd")}`, "Cobranças");
+      toast.success("Relatório exportado com sucesso");
+    } catch (error) {
+      console.error("Error exporting:", error);
+      toast.error("Erro ao exportar relatório");
+    }
   };
 
   if (isLoading) {
