@@ -19,6 +19,7 @@ import { BudgetAlertsWidget } from "@/components/budget";
 import { ProjectionPreviewWidget } from "@/components/projection";
 import { UpcomingDuesCard } from "@/components/alerts";
 import { FixedCostSummaryCard } from "@/components/expense-nature";
+import { FixedCommitmentCard } from "@/components/home";
 import { ReceiptCaptureSheet, ReceiptReviewSheet } from "@/components/receipt";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions, useFinanceSummary, useTransactionsLast6Months } from "@/hooks/useTransactions";
@@ -50,6 +51,7 @@ const MemoizedQuickActions = memo(QuickActions);
 const MemoizedGoalsWidget = memo(GoalsWidget);
 const MemoizedBudgetAlertsWidget = memo(BudgetAlertsWidget);
 const MemoizedProjectionPreviewWidget = memo(ProjectionPreviewWidget);
+const MemoizedFixedCommitmentCard = memo(FixedCommitmentCard);
 const MemoizedMonthlyChart = memo(MonthlyChart);
 const MemoizedCategoryChart = memo(CategoryChart);
 const MemoizedUpcomingDuesCard = memo(UpcomingDuesCard);
@@ -427,6 +429,12 @@ export const Dashboard = memo(function Dashboard({
         <MemoizedUpcomingDuesCard 
           maxItems={3} 
           onViewAll={ctaActions.onUpcomingDuesViewAll}
+        />
+
+        {/* Fixed Commitment Card - Core educational widget */}
+        <MemoizedFixedCommitmentCard 
+          onViewProjections={ctaActions.onProjectionViewAll}
+          onViewDetails={ctaActions.onProjectionViewAll}
         />
 
         {/* Budget, Projection & Fixed Costs Widgets */}
