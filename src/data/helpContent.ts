@@ -1,7 +1,37 @@
+/**
+ * ============================================================
+ * FAQ DO APLICATIVO (USUÁRIO FINAL)
+ * ============================================================
+ * 
+ * Este arquivo contém APENAS conteúdos da experiência do usuário no App.
+ * 
+ * ✅ PERMITIDO:
+ * - Cadastro, login e recuperação de senha
+ * - Criação e gestão de família
+ * - Lançamentos de receitas e despesas
+ * - Orçamento, categorias e subcategorias
+ * - Cartões de crédito e contas bancárias
+ * - Metas e objetivos financeiros
+ * - Importação de extratos
+ * - Projeção financeira
+ * - Privacidade e LGPD (do ponto de vista do usuário)
+ * - Problemas comuns de uso do aplicativo
+ * 
+ * ❌ PROIBIDO:
+ * - Qualquer referência a dashboard administrativo
+ * - Fluxos internos ou de operação
+ * - Permissões de CS, admin ou colaboradores
+ * - Logs, auditorias, integrações técnicas
+ * - Configurações sistêmicas
+ * - Segurança técnica (RLS, políticas, banco de dados)
+ * 
+ * ============================================================
+ */
+
 export interface HelpArticle {
   id: string;
   title: string;
-  category: "getting-started" | "home" | "transactions" | "categories" | "goals" | "objectives" | "budgets" | "projection" | "import" | "family" | "settings" | "privacy" | "insights" | "access-control";
+  category: "getting-started" | "home" | "transactions" | "categories" | "goals" | "objectives" | "budgets" | "projection" | "import" | "family" | "settings" | "privacy" | "insights";
   icon: string;
   summary: string;
   steps: Array<{
@@ -21,8 +51,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 28/01/2026 - Regime de Caixa + cash_date
-export const HELP_CENTER_VERSION = "28/01/2026 v16";
+// Última atualização: 29/01/2026 - Separação App x Dashboard
+export const HELP_CENTER_VERSION = "29/01/2026 v17";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -98,12 +128,8 @@ export const helpArticles: HelpArticle[] = [
         title: "Widget de Orçamento",
         description: "Mostra alertas de metas próximas do limite ou excedidas.",
       },
-      {
-        title: "Ícones do Topo",
-        description: "Sino para notificações e engrenagem para configurações.",
-      },
     ],
-    keywords: ["home", "início", "saldo", "dashboard", "cartão", "fatura", "mês", "timeline", "notificações", "configurações"],
+    keywords: ["home", "início", "saldo", "cartão", "fatura", "mês", "timeline", "notificações"],
     deepLink: "dashboard",
   },
 
@@ -118,7 +144,7 @@ export const helpArticles: HelpArticle[] = [
       {
         title: "Barra de Navegação Inferior",
         description: "A barra fixa na parte inferior tem 5 ícones: Casa (Home), Extrato, Categorias, Metas e Educação. Toque para navegar.",
-        tip: "O ícone ativo fica destacado em verde.",
+        tip: "O ícone ativo fica destacado.",
       },
       {
         title: "Atalhos da Home",
@@ -131,10 +157,6 @@ export const helpArticles: HelpArticle[] = [
       {
         title: "Card de Fatura → Faturas",
         description: "Toque no card de fatura do cartão para ver a fatura completa e detalhes.",
-      },
-      {
-        title: "'Ver extrato' na Timeline",
-        description: "Abaixo da lista de últimos lançamentos, o botão 'Ver extrato' navega diretamente para o Extrato completo.",
       },
       {
         title: "Botão Voltar",
@@ -184,7 +206,7 @@ export const helpArticles: HelpArticle[] = [
         description: "Opcionalmente, vincule o lançamento a uma conta bancária ou cartão de crédito específico.",
       },
     ],
-    keywords: ["adicionar", "inserir", "lançamento", "receita", "despesa", "gasto", "entrada", "saída", "pix", "dinheiro", "cartão", "cheque", "débito", "crédito"],
+    keywords: ["adicionar", "inserir", "lançamento", "receita", "despesa", "gasto", "entrada", "saída", "pix", "dinheiro", "cartão", "cheque"],
     deepLink: "dashboard",
   },
 
@@ -213,52 +235,15 @@ export const helpArticles: HelpArticle[] = [
       {
         title: "Transferência ⚪",
         description: "Movimentação entre suas próprias contas. NÃO conta como receita nem despesa.",
-        tip: "Use para: PIX entre contas, TED para investimentos, resgate de aplicação. Não infla seus números.",
+        tip: "Use para: PIX entre contas, TED para investimentos, resgate de aplicação.",
       },
       {
         title: "Ajuste ⚙️",
         description: "Correção ou acerto contábil. Para arrumar saldos ou registrar diferenças.",
         tip: "Raramente usado. Ideal para correções de erros ou ajustes de conciliação.",
       },
-      {
-        title: "Como escolher?",
-        description: "Dinheiro novo = Receita. Gasto real = Despesa. Devolução = Reembolso. Entre contas = Transferência.",
-      },
     ],
-    keywords: ["tipo", "lançamento", "receita", "despesa", "reembolso", "transferência", "ajuste", "diferença", "classificação", "como escolher", "guia"],
-    deepLink: "dashboard",
-  },
-
-  {
-    id: "choose-bank-account",
-    title: "Escolher Conta Bancária Correta",
-    category: "transactions",
-    icon: "🏦",
-    summary: "Como selecionar a conta ou cartão certo ao lançar",
-    steps: [
-      {
-        title: "Por que vincular conta?",
-        description: "Vinculando a conta, você sabe de onde saiu ou entrou o dinheiro. Facilita a conciliação com extratos.",
-      },
-      {
-        title: "Conta para PIX/Débito/Transferência",
-        description: "Selecione a conta bancária de onde saiu ou entrou o dinheiro. O saldo da conta será afetado.",
-      },
-      {
-        title: "Cartão de Crédito",
-        description: "Para compras no crédito, selecione o cartão. O valor entra na fatura do cartão.",
-        tip: "A fatura aparece no mês do fechamento, não da compra.",
-      },
-      {
-        title: "Dinheiro ou Cheque",
-        description: "Não precisa vincular conta. Para cheque, informe o número no campo específico.",
-      },
-      {
-        title: "Posso não vincular?",
-        description: "Sim, o campo é opcional. Mas vincular ajuda nos relatórios por conta e na conciliação.",
-      },
-    ],
-    keywords: ["conta", "bancária", "escolher", "vincular", "cartão", "crédito", "débito", "pix", "qual"],
+    keywords: ["tipo", "lançamento", "receita", "despesa", "reembolso", "transferência", "ajuste", "diferença", "classificação"],
     deepLink: "dashboard",
   },
 
@@ -297,7 +282,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Categorias e Subcategorias",
     category: "categories",
     icon: "📊",
-    summary: "Como os valores são calculados por categoria no Oik",
+    summary: "Como organizar seus gastos por categoria",
     steps: [
       {
         title: "Visualize suas categorias",
@@ -315,11 +300,6 @@ export const helpArticles: HelpArticle[] = [
         title: "Subcategorias",
         description: "Cada categoria tem subcategorias para detalhar melhor seus gastos.",
         tip: "Use subcategorias para relatórios mais precisos.",
-      },
-      {
-        title: "Cálculo de valores",
-        description: "Os valores exibidos são calculados pela SOMA REAL das transações cadastradas, não por estimativas.",
-        tip: "O total da categoria é sempre igual à soma de suas subcategorias.",
       },
     ],
     keywords: ["categoria", "subcategoria", "organizar", "classificar", "tipo", "total", "soma"],
@@ -348,11 +328,6 @@ export const helpArticles: HelpArticle[] = [
         description: "Veja o percentual atingido e quanto falta para a meta.",
       },
       {
-        title: "Integração com categorias",
-        description: "Aportes aparecem na categoria 'Objetivos' com subcategoria igual ao nome do objetivo.",
-        tip: "Vocês podem fazer lançamentos manuais em 'Objetivos > [Nome]' e o progresso será atualizado.",
-      },
-      {
         title: "Editar ou excluir",
         description: "Vocês podem editar nome, valor alvo e data. Ao excluir um aporte, apenas aquele aporte específico é removido.",
       },
@@ -367,41 +342,32 @@ export const helpArticles: HelpArticle[] = [
     title: "Metas de Orçamento",
     category: "budgets",
     icon: "💰",
-    summary: "Defina limites e receba alertas no Oik",
+    summary: "Defina limites e receba alertas",
     steps: [
       {
         title: "Crie uma meta",
         description: "Em Metas, toque em 'Nova Meta'. Escolha uma categoria e defina o limite mensal.",
-        tip: "Orçamento é uma referência, não um limite rígido. Use para entender padrões.",
+        tip: "Orçamento é uma referência, não um limite rígido.",
       },
       {
         title: "Previsto vs Realizado",
         description: "Veja a comparação clara entre o que vocês planejaram (previsto) e o que realmente gastaram (realizado).",
-        tip: "A diferença positiva significa economia. Negativa significa que gastaram mais que o planejado.",
       },
       {
         title: "Alerta de 80%",
-        description: "Quando vocês atingirem 80% do limite, verão um alerta amarelo suave: 'Vocês já usaram 80% do orçamento desta categoria'.",
+        description: "Quando vocês atingirem 80% do limite, verão um alerta amarelo suave.",
         tip: "Esses alertas podem ser fechados e silenciados por categoria.",
       },
       {
         title: "Limite excedido (100%)",
         description: "Ao ultrapassar 100%, o alerta fica vermelho. Vocês podem ajustar o orçamento ou revisar os lançamentos.",
-        tip: "Exceder não é 'errar' — é um sinal para reavaliar ou aceitar que essa categoria precisa de mais.",
-      },
-      {
-        title: "Ajuste metas",
-        description: "Vocês podem editar ou remover metas a qualquer momento. Metas futuras também podem ser configuradas.",
-        tip: "Comece com metas realistas baseadas no seu histórico.",
-      },
-      {
-        title: "Integração com Projeção",
-        description: "As metas de orçamento impactam a projeção financeira futura, ajudando a visualizar o impacto das escolhas.",
+        tip: "Exceder não é 'errar' — é um sinal para reavaliar.",
       },
     ],
-    keywords: ["meta", "orçamento", "limite", "alerta", "objetivo", "controle", "80%", "100%", "excedido", "previsto", "realizado", "comparação"],
+    keywords: ["meta", "orçamento", "limite", "alerta", "objetivo", "controle", "80%", "100%", "excedido"],
     deepLink: "goals",
   },
+
   {
     id: "smart-budget",
     title: "Orçamento Inteligente por Faixa de Renda",
@@ -416,173 +382,20 @@ export const helpArticles: HelpArticle[] = [
       },
       {
         title: "Refine com a subfaixa",
-        description: "Dentro da faixa selecionada, escolha uma subfaixa (baixa, média ou alta) para ajustar ainda mais as proporções.",
-        tip: "Subfaixas mais baixas priorizam moradia e essenciais. Mais altas, investimentos e lazer.",
+        description: "Dentro da faixa selecionada, escolha uma subfaixa (baixa, média ou alta) para ajustar as proporções.",
       },
       {
         title: "Indique filhos ou pets",
-        description: "Se tiverem filhos ou pets, categorias específicas serão incluídas automaticamente no orçamento.",
-      },
-      {
-        title: "Visualize a prévia",
-        description: "Antes de confirmar, vocês verão exatamente quanto será alocado para cada categoria.",
-        tip: "Podem voltar e ajustar as opções a qualquer momento.",
+        description: "Se tiverem filhos ou pets, categorias específicas serão incluídas automaticamente.",
       },
       {
         title: "Crie o orçamento",
-        description: "Com um toque, todas as metas de orçamento do mês são criadas automaticamente baseadas nos percentuais.",
+        description: "Com um toque, todas as metas de orçamento do mês são criadas automaticamente.",
         tip: "Isso não impede ajustes manuais posteriormente.",
       },
-      {
-        title: "Acesse nas Configurações",
-        description: "Vocês podem reconfigurar o orçamento inteligente a qualquer momento em Configurações > Finanças > Orçamento Inteligente.",
-      },
     ],
-    keywords: ["orçamento", "inteligente", "faixa", "renda", "automático", "personalizado", "template", "modelo"],
+    keywords: ["orçamento", "inteligente", "faixa", "renda", "automático", "personalizado", "template"],
     deepLink: "settings",
-  },
-
-  // ===== ORÇAMENTO SUGERIDO VERSIONADO =====
-  {
-    id: "suggested-budget-versions",
-    title: "Orçamento Sugerido e Versões",
-    category: "budgets",
-    icon: "📊",
-    summary: "Entenda como funciona o orçamento sugerido com histórico de versões",
-    steps: [
-      {
-        title: "O que é o Orçamento Sugerido?",
-        description: "É um orçamento inteligente gerado pelo Oik com base no seu perfil financeiro ou nos seus gastos reais. Ele sugere limites mensais por categoria para ajudar no planejamento.",
-        tip: "Você não precisa criar metas manualmente — o sistema faz isso por você.",
-      },
-      {
-        title: "Por que existem versões?",
-        description: "Cada vez que você gera um novo orçamento, ele se torna uma nova 'versão'. As versões anteriores ficam arquivadas, mas nunca são apagadas.",
-        tip: "Isso garante histórico auditável e permite comparar diferentes planejamentos.",
-      },
-      {
-        title: "Como funciona a vigência",
-        description: "Ao criar um novo orçamento, você escolhe a partir de qual mês ele vale (ex: 'a partir de Fevereiro'). Meses anteriores continuam usando a versão antiga.",
-        tip: "Isso significa que o orçamento só muda 'daqui pra frente', nunca altera o passado.",
-      },
-      {
-        title: "Onde ver o histórico",
-        description: "Na página de Orçamento Sugerido, toque em 'Ver histórico' para ver todas as versões já criadas, com data de criação e status (ativo ou arquivado).",
-      },
-      {
-        title: "Como navegar pela timeline",
-        description: "Ao mudar o mês na timeline do app, o orçamento exibido será sempre o da versão ativa mais recente válida para aquele mês.",
-      },
-    ],
-    keywords: ["orçamento", "sugerido", "versão", "histórico", "vigência", "versionado", "arquivado", "timeline"],
-    deepLink: "suggested-budget",
-  },
-  {
-    id: "suggested-budget-diagnostic",
-    title: "Refazer Diagnóstico (Fluxo 1)",
-    category: "budgets",
-    icon: "🔄",
-    summary: "Responda as perguntas novamente e gere um novo orçamento",
-    steps: [
-      {
-        title: "Quando usar este fluxo",
-        description: "Use quando sua situação financeira mudou (nova renda, filhos, mudança de fase da vida) e você quer um novo orçamento sem usar dados de transações.",
-      },
-      {
-        title: "Acesse o Orçamento Sugerido",
-        description: "Em Metas > Orçamento Sugerido, toque no card 'Refazer diagnóstico'.",
-      },
-      {
-        title: "Responda as perguntas",
-        description: "Você passará pelas mesmas perguntas do onboarding: faixa de renda, subfaixa, fase da vida, filhos, pets, entre outras.",
-        tip: "As respostas são salvas como 'snapshot' para auditoria — você pode comparar versões depois.",
-      },
-      {
-        title: "Escolha o mês de vigência",
-        description: "Após preencher, defina a partir de qual mês o novo orçamento vale. O padrão é o próximo mês, mas você pode escolher o mês atual.",
-      },
-      {
-        title: "Confirme na prévia",
-        description: "Revise a prévia do orçamento sugerido por categoria antes de confirmar. Se algo não fizer sentido, você pode voltar e ajustar.",
-      },
-      {
-        title: "O que acontece depois",
-        description: "O novo orçamento fica ativo para a vigência escolhida. A versão anterior é arquivada automaticamente (não é apagada).",
-        tip: "Meses anteriores à vigência continuam usando o orçamento antigo.",
-      },
-    ],
-    keywords: ["diagnóstico", "refazer", "perguntas", "onboarding", "gerar", "novo", "orçamento", "fluxo 1"],
-    deepLink: "suggested-budget",
-  },
-  {
-    id: "suggested-budget-transactions",
-    title: "Orçamento Baseado nos Gastos Reais (Fluxo 2)",
-    category: "budgets",
-    icon: "📈",
-    summary: "Use seus dados importados para gerar um orçamento mais preciso",
-    steps: [
-      {
-        title: "Pré-requisito: importar transações",
-        description: "Para usar este fluxo, você precisa ter importado transações (planilha ou Open Finance) e categorizado pelo menos 80% delas.",
-        tip: "Se a categorização estiver abaixo de 80%, você verá um alerta com link para categorizar mais.",
-      },
-      {
-        title: "Acesse o fluxo",
-        description: "Em Metas > Orçamento Sugerido, toque no card 'Usar gastos reais'. Se elegível, o fluxo inicia.",
-      },
-      {
-        title: "Escolha o período-base",
-        description: "Selecione quantos dias de histórico usar: 30, 60, 90 (padrão) ou 180 dias. Quanto maior o período, mais precisa a média.",
-        tip: "Use 90 dias para capturar variações sazonais. Use 30 dias se suas finanças mudaram recentemente.",
-      },
-      {
-        title: "Como o sistema calcula",
-        description: "O Oik calcula a mediana mensal de gastos por categoria. A mediana é mais estável que a média, pois ignora gastos muito altos ou baixos.",
-        tip: "Exemplo: se você gastou R$200, R$300 e R$1000 em 'Lazer', a mediana é R$300, não R$500.",
-      },
-      {
-        title: "Responda perguntas adicionais",
-        description: "Mesmo usando dados reais, o sistema pede algumas perguntas (fase da vida, objetivos) para ajustar as sugestões.",
-      },
-      {
-        title: "Ajuste depois de confirmar",
-        description: "O orçamento sugerido não é 'travado'. Você pode editar as metas individuais a qualquer momento em Metas.",
-      },
-    ],
-    keywords: ["transações", "gastos", "reais", "importar", "80%", "categorização", "período", "mediana", "fluxo 2"],
-    deepLink: "suggested-budget",
-  },
-  {
-    id: "suggested-budget-why-no-past",
-    title: "Por que o Orçamento Não Muda Meses Passados?",
-    category: "budgets",
-    icon: "🔒",
-    summary: "Entenda a lógica de vigência 'daqui pra frente'",
-    steps: [
-      {
-        title: "Orçamento é planejamento futuro",
-        description: "O orçamento é uma ferramenta para planejar o futuro, não para reescrever o passado. Alterar meses já vividos distorceria a análise histórica.",
-      },
-      {
-        title: "Histórico preservado",
-        description: "Meses passados mantêm o orçamento que estava ativo naquela época. Assim, você pode comparar 'o que planejei' vs 'o que gastei' de forma honesta.",
-        tip: "Isso evita o viés de 'ajustar' o planejamento depois de saber o resultado.",
-      },
-      {
-        title: "Versões são imutáveis",
-        description: "Uma versão de orçamento nunca é editada após criada. Se você quiser mudar algo, cria-se uma nova versão com nova vigência.",
-      },
-      {
-        title: "Como funciona na prática",
-        description: "Se você criou um orçamento em Janeiro válido para Janeiro, e em Março criou outro válido para Março: ao navegar para Fevereiro, verá o orçamento de Janeiro.",
-      },
-      {
-        title: "Benefícios desta abordagem",
-        description: "Auditabilidade total, comparações justas entre meses, e aprendizado real sobre seus padrões financeiros.",
-      },
-    ],
-    keywords: ["passado", "vigência", "histórico", "imutável", "não altera", "preservado", "auditoria"],
-    deepLink: "suggested-budget",
   },
 
   // ===== PROJEÇÃO =====
@@ -591,29 +404,28 @@ export const helpArticles: HelpArticle[] = [
     title: "O que é Projeção Financeira?",
     category: "projection",
     icon: "🔮",
-    summary: "Entenda como ver o futuro financeiro sem editar nada",
+    summary: "Entenda como ver o futuro financeiro",
     steps: [
       {
         title: "Visualização, não controle",
-        description: "A Projeção mostra o impacto futuro das suas decisões atuais. Você não edita nada — apenas observa e planeja.",
+        description: "A Projeção mostra o impacto futuro das suas decisões atuais. Você não edita nada — apenas observa.",
         tip: "Enxergue antes de sentir. Essa é a ideia central da projeção.",
       },
       {
         title: "Timeline mensal",
-        description: "Veja os próximos 6 meses em cards horizontais. Cada card mostra o saldo projetado. Toque para ver detalhes.",
+        description: "Veja os próximos 6 meses em cards horizontais. Cada card mostra o saldo projetado.",
       },
       {
         title: "Receitas projetadas",
-        description: "Baseadas nas suas transações recorrentes (salário, pro-labore, renda fixa) e na média histórica.",
+        description: "Baseadas nas suas transações recorrentes (salário, pro-labore, renda fixa).",
       },
       {
         title: "Despesas projetadas",
-        description: "Incluem gastos fixos (recorrentes), parcelas de cartão e uma estimativa baseada no seu padrão de consumo.",
+        description: "Incluem gastos fixos (recorrentes), parcelas de cartão e estimativa baseada no seu padrão.",
       },
       {
         title: "Saldo projetado",
-        description: "Receitas menos despesas. Se ficar negativo, o card fica vermelho com alerta. Se positivo, está tudo bem.",
-        tip: "Vermelho não é erro — é um sinal para planejar com antecedência.",
+        description: "Receitas menos despesas. Se ficar negativo, o card fica vermelho com alerta.",
       },
     ],
     keywords: ["projeção", "futuro", "próximos meses", "previsão", "visualizar", "timeline", "saldo projetado"],
@@ -630,53 +442,17 @@ export const helpArticles: HelpArticle[] = [
       {
         title: "Detalhamento de parcelas",
         description: "A projeção mostra cada parcela individualmente: descrição, número da parcela (ex: 3/12) e valor.",
-        tip: "Parcelas são compromissos fixos — entram automaticamente no cálculo.",
       },
       {
         title: "Impacto no orçamento",
         description: "Se suas parcelas representam mais de 30% da receita projetada, você verá um alerta educativo.",
-        tip: "Parcelar espalha o impacto no tempo — pode ser bom, mas requer atenção.",
       },
       {
         title: "Concentração de parcelas",
         description: "A projeção destaca quando um cartão concentra muitas parcelas em um período específico.",
       },
-      {
-        title: "Dica: não é sugestão de troca",
-        description: "O Oik não sugere trocar de cartão. Apenas mostra os dados para você decidir conscientemente.",
-      },
     ],
-    keywords: ["cartão", "parcela", "crédito", "fatura", "projeção", "impacto", "futuro", "concentração"],
-    deepLink: "projection",
-  },
-
-  {
-    id: "projection-ai-tips",
-    title: "Dicas de IA na Projeção",
-    category: "projection",
-    icon: "✨",
-    summary: "Como funcionam as dicas inteligentes baseadas nos seus dados",
-    steps: [
-      {
-        title: "Análise agregada",
-        description: "A IA analisa dados agregados (totais, médias, tendências) — nunca vê transações individuais.",
-        tip: "Sua privacidade é preservada. A IA vê números, não descrições.",
-      },
-      {
-        title: "Dicas personalizadas",
-        description: "Baseadas no seu padrão: taxa de economia, categorias mais gastas, tendências de mês a mês.",
-      },
-      {
-        title: "Alertas quando necessário",
-        description: "Se a projeção indicar risco (saldo negativo futuro, gastos muito altos), você verá um alerta.",
-        tip: "Alertas são informativos, não cobranças. O Oik não julga.",
-      },
-      {
-        title: "Recomendações práticas",
-        description: "Sugestões simples e acionáveis como 'revisar gastos fixos' ou 'manter reserva de emergência'.",
-      },
-    ],
-    keywords: ["ia", "inteligência artificial", "dicas", "recomendação", "alerta", "automático", "personalizado"],
+    keywords: ["cartão", "parcela", "crédito", "fatura", "projeção", "impacto", "futuro"],
     deepLink: "projection",
   },
 
@@ -686,39 +462,21 @@ export const helpArticles: HelpArticle[] = [
     title: "Importar Extratos",
     category: "import",
     icon: "📥",
-    summary: "Importe arquivos OFX, XLSX, XLS ou PDF no Oik",
+    summary: "Importe arquivos OFX, XLSX, XLS ou PDF",
     steps: [
       {
         title: "Formatos suportados",
-        description: "OFX (padrão bancário universal), XLSX/XLS (Excel) e PDF. O OIK detecta automaticamente as colunas e banco emissor.",
-        tip: "Excel é o formato mais confiável para extratos brasileiros. OFX funciona com qualquer banco.",
+        description: "OFX (padrão bancário universal), XLSX/XLS (Excel) e PDF. O OIK detecta automaticamente.",
+        tip: "Excel é o formato mais confiável. OFX funciona com qualquer banco.",
       },
       {
         title: "Bancos compatíveis (testados)",
-        description: "Bradesco, BTG Pactual, Itaú e Santander foram testados com arquivos PDF e XLS reais. Nubank, Inter e C6 funcionam via OFX.",
-        tip: "O parser universal funciona com qualquer banco que exporte Excel com colunas padrão (Data, Descrição, Valor).",
+        description: "Bradesco, BTG Pactual, Itaú e Santander foram testados com arquivos PDF e XLS. Nubank, Inter e C6 funcionam via OFX.",
       },
       {
-        title: "Upload do arquivo",
-        description: "Vá em Configurações > Importar ou use o atalho na tela inicial. Selecione o arquivo e confirme a titularidade.",
-      },
-      {
-        title: "Detecção automática de colunas",
-        description: "O OIK identifica colunas automaticamente: Data (Data, Dt, Data Lançamento), Descrição (Histórico, Movimentação), Valor (Crédito, Débito, Valor R$).",
-        tip: "Se seu Excel tiver cabeçalhos padrão, a importação funciona sem configuração.",
-      },
-      {
-        title: "Arquivos com senha (Inteligente)",
-        description: "Se o arquivo estiver protegido, o OIK tenta desbloquear automaticamente usando padrões de CPF: 11, 10, 9, 8, 7, 6, 5, 4 ou 3 primeiros dígitos.",
+        title: "Arquivos com senha",
+        description: "Se o arquivo estiver protegido, o OIK tenta desbloquear automaticamente usando padrões de CPF.",
         tip: "O sistema aprende o padrão de cada banco para acelerar futuras importações.",
-      },
-      {
-        title: "Confirmação de titularidade",
-        description: "Antes de importar, você confirma que o arquivo pertence a você ou sua família. Isso é obrigatório por segurança e LGPD.",
-      },
-      {
-        title: "Detecção automática de conta",
-        description: "O OIK identifica agência e conta no cabeçalho do arquivo. Se não existir no cadastro, oferece criar automaticamente.",
       },
       {
         title: "Revisão obrigatória",
@@ -726,55 +484,10 @@ export const helpArticles: HelpArticle[] = [
       },
       {
         title: "Edição na revisão",
-        description: "Você pode editar: descrição (nome do lançamento), classificação (Receita/Despesa/Transferência/Reembolso/Ajuste), categoria e subcategoria.",
-      },
-      {
-        title: "Linhas multi-linha (Rem:/Des:)",
-        description: "Descrições que continuam em linhas abaixo (como 'Rem: Fulano' ou 'Des: Pagamento') são concatenadas automaticamente.",
-      },
-      {
-        title: "Aprendizado contínuo",
-        description: "Ao corrigir uma categoria, o OIK aprende para próximas importações. Padrões de senha também são aprendidos por banco.",
+        description: "Você pode editar descrição, classificação, categoria e subcategoria antes de confirmar.",
       },
     ],
-    keywords: ["importar", "extrato", "banco", "ofx", "excel", "xlsx", "xls", "pdf", "senha", "cpf", "duplicado", "automático", "inteligente", "bradesco", "btg", "itau", "santander", "colunas", "heurística"],
-    deepLink: "settings",
-  },
-
-  {
-    id: "import-excel-tips",
-    title: "Dicas para Importar Excel",
-    category: "import",
-    icon: "📊",
-    summary: "Como preparar seu arquivo Excel para melhor importação",
-    steps: [
-      {
-        title: "Colunas reconhecidas",
-        description: "O OIK detecta automaticamente: Data, Dt, Data Lançamento, Data Movimento | Descrição, Histórico, Movimentação, Lançamento | Valor, Crédito, Débito, Valor R$.",
-        tip: "Use nomes de coluna em português para melhor detecção.",
-      },
-      {
-        title: "Formato de data",
-        description: "Aceitos: DD/MM/YYYY, DD/MM/YY, DD-MM-YYYY, ou serial do Excel (número). Datas sem ano usam o ano do período do extrato.",
-      },
-      {
-        title: "Formato de valor",
-        description: "Aceitos: 1.234,56 (brasileiro) ou 1234.56 (internacional). Valores negativos indicam débito. Colunas separadas de Crédito/Débito também funcionam.",
-      },
-      {
-        title: "Linhas de cabeçalho",
-        description: "O OIK pula linhas de título, período e cabeçalho automaticamente. Procura a primeira linha com 'Data' e padrões similares.",
-      },
-      {
-        title: "Linhas de rodapé",
-        description: "Linhas com 'Últimos Lançamentos', 'Total', 'Telefones úteis' ou 'Dados acima' são ignoradas automaticamente.",
-      },
-      {
-        title: "Se não funcionar",
-        description: "Exporte o extrato em formato OFX (disponível em todos os internet bankings). OFX é o formato mais universal e confiável.",
-      },
-    ],
-    keywords: ["excel", "xlsx", "xls", "colunas", "formato", "data", "valor", "preparar", "dicas"],
+    keywords: ["importar", "extrato", "banco", "ofx", "excel", "xlsx", "xls", "pdf", "senha", "cpf", "automático"],
     deepLink: "settings",
   },
 
@@ -783,7 +496,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Arquivos com Senha (CPF)",
     category: "import",
     icon: "🔐",
-    summary: "Como o OIK desbloqueia arquivos protegidos por senha",
+    summary: "Como o OIK desbloqueia arquivos protegidos",
     steps: [
       {
         title: "Detecção de proteção",
@@ -795,137 +508,40 @@ export const helpArticles: HelpArticle[] = [
         tip: "Bradesco geralmente usa CPF completo (11 dígitos). Outros bancos variam.",
       },
       {
-        title: "Aprendizado por banco",
-        description: "Quando um padrão funciona, o OIK memoriza para aquele banco. Próximas importações tentam esse padrão primeiro.",
-      },
-      {
         title: "Segurança do CPF",
-        description: "Seu CPF é criptografado e NUNCA aparece em logs. Senhas de arquivo são usadas apenas no momento do desbloqueio e descartadas.",
-      },
-      {
-        title: "Se não conseguir desbloquear",
-        description: "Verifique se o CPF cadastrado está correto. Se o arquivo usa outra senha (data de nascimento, código do banco), exporte em OFX.",
+        description: "Seu CPF é criptografado e NUNCA aparece em logs. Senhas são usadas apenas no momento do desbloqueio e descartadas.",
       },
     ],
-    keywords: ["senha", "cpf", "protegido", "desbloquear", "automático", "segurança", "lgpd"],
+    keywords: ["senha", "cpf", "protegido", "desbloquear", "automático", "segurança"],
     deepLink: "settings",
   },
 
   {
-    id: "import-troubleshooting",
-    title: "Problemas na Importação",
-    category: "import",
-    icon: "🔧",
-    summary: "Soluções para erros comuns de importação",
-    steps: [
-      {
-        title: "Erro: 'Nenhuma transação encontrada'",
-        description: "O arquivo pode estar vazio, em formato não suportado, ou as colunas não foram reconhecidas. Tente exportar em OFX.",
-        tip: "PDFs escaneados (imagem) não funcionam. Precisa ser PDF com texto selecionável.",
-      },
-      {
-        title: "Erro: 'Não foi possível ler o Excel'",
-        description: "O arquivo pode estar corrompido ou em formato muito antigo. Abra no Excel, salve como XLSX e tente novamente.",
-      },
-      {
-        title: "Erro: 'Arquivo protegido'",
-        description: "O OIK não conseguiu desbloquear com CPF. Verifique se seu CPF está cadastrado corretamente ou exporte em OFX (sem senha).",
-      },
-      {
-        title: "Tela branca na revisão",
-        description: "Toque em 'Atualizar'. Se persistir, volte e tente novamente. O OIK nunca perde seus dados — eles ficam salvos no servidor.",
-      },
-      {
-        title: "Valores errados",
-        description: "Se os valores estão trocados (crédito como débito), edite a classificação na revisão. Se os números estão errados, o arquivo pode ter formato incomum — use OFX.",
-      },
-      {
-        title: "Falar com suporte",
-        description: "Na tela de erro, use 'Falar com suporte' no WhatsApp. Informe o código do erro (ex: IMPORT-003) para agilizar o atendimento.",
-      },
-    ],
-    keywords: ["erro", "problema", "não funciona", "falhou", "branco", "corrompido", "suporte"],
-    deepLink: "settings",
-  },
-
-  {
-    id: "import-supported-banks",
-    title: "Bancos Compatíveis",
-    category: "import",
-    icon: "🏦",
-    summary: "Lista de bancos testados e formatos suportados",
-    steps: [
-      {
-        title: "Bradesco",
-        description: "PDF e XLS testados. Layout 'Bradesco Internet Banking' com colunas Data, Histórico, Crédito, Débito.",
-        tip: "Linhas 'Rem:' e 'Des:' são concatenadas automaticamente na descrição.",
-      },
-      {
-        title: "BTG Pactual",
-        description: "PDF e XLS testados. Layout com Data/hora, Categoria, Transação, Descrição, Valor.",
-        tip: "Linhas 'Saldo Diário' são ignoradas automaticamente.",
-      },
-      {
-        title: "Itaú",
-        description: "PDF e XLS testados. Layout com data, lançamentos, valor, saldo.",
-        tip: "Linhas 'SALDO TOTAL DISPONÍVEL DIA' são filtradas automaticamente.",
-      },
-      {
-        title: "Santander",
-        description: "PDF e XLS testados. Layout com Data, Descrição, Crédito, Débito, Saldo.",
-      },
-      {
-        title: "Outros bancos (via OFX)",
-        description: "Nubank, Inter, C6 Bank, Caixa, Banco do Brasil e outros funcionam exportando o extrato em formato OFX.",
-        tip: "OFX é o formato mais universal e funciona com qualquer banco.",
-      },
-    ],
-    keywords: ["banco", "compatível", "suportado", "bradesco", "btg", "itau", "santander", "nubank", "inter", "c6", "caixa", "bb"],
-    deepLink: "settings",
-  },
-
-  {
-    id: "ocr-batch-import",
-    title: "OCR em Lote: Importar Várias Fotos",
+    id: "import-receipt-ocr",
+    title: "Importar Recibos e Notas (OCR)",
     category: "import",
     icon: "📸",
-    summary: "Como importar e categorizar vários recibos de uma vez",
+    summary: "Fotografe comprovantes e deixe a IA extrair os dados",
     steps: [
       {
-        title: "Iniciar o OCR em Lote",
-        description: "Toque no botão + na tela inicial e selecione 'OCR em Lote'. Você pode adicionar até 10 fotos por vez.",
-        tip: "Use para processar vários comprovantes, notas fiscais ou recibos de uma só vez.",
+        title: "Acesse a importação",
+        description: "Em Configurações > Importar, escolha 'Importar Recibos' para ativar o modo foto.",
       },
       {
         title: "Adicionar fotos",
-        description: "Selecione múltiplas fotos da galeria ou tire fotos diretamente. Cada imagem será processada individualmente.",
-        tip: "Garanta boa iluminação e enquadre todo o documento para melhor leitura.",
+        description: "Selecione múltiplas fotos da galeria ou tire fotos diretamente.",
+        tip: "Garanta boa iluminação e enquadre todo o documento.",
       },
       {
         title: "Processamento automático",
-        description: "O OIK extrai automaticamente valor, data, estabelecimento e forma de pagamento de cada comprovante.",
-        tip: "Itens com erro podem ser reprocessados individualmente.",
+        description: "O OIK extrai automaticamente valor, data, estabelecimento e forma de pagamento.",
       },
       {
         title: "Revisão do lote",
         description: "Após o processamento, revise todos os itens. Você pode filtrar por 'Sem categoria', 'Duplicados' ou 'Erros'.",
       },
-      {
-        title: "Edição em lote",
-        description: "Selecione vários itens e aplique categoria, forma de pagamento ou data de uma só vez.",
-        tip: "Ideal quando vários recibos são do mesmo tipo de gasto (ex: supermercado).",
-      },
-      {
-        title: "Detecção de duplicados",
-        description: "O sistema marca automaticamente possíveis duplicados baseado em data, valor e estabelecimento.",
-        tip: "Duplicados não são excluídos automaticamente - você decide se são realmente repetidos.",
-      },
-      {
-        title: "Salvar transações",
-        description: "Ao finalizar, toque em 'Salvar' para criar as transações. Os comprovantes ficam anexados aos lançamentos.",
-      },
     ],
-    keywords: ["ocr", "foto", "recibo", "nota", "comprovante", "lote", "múltiplas", "batch", "categoria", "leitura automática", "scanner"],
+    keywords: ["ocr", "foto", "recibo", "nota", "comprovante", "lote", "múltiplas", "categoria", "scanner"],
     deepLink: "dashboard",
   },
 
@@ -935,11 +551,11 @@ export const helpArticles: HelpArticle[] = [
     title: "Privacidade e Segurança",
     category: "privacy",
     icon: "🔒",
-    summary: "Como o Oik trata seus dados e senhas",
+    summary: "Como o Oik trata seus dados",
     steps: [
       {
         title: "Senhas de arquivo",
-        description: "Senhas usadas para desbloquear arquivos de importação NUNCA são salvas no banco de dados. São usadas apenas temporariamente para processar o arquivo.",
+        description: "Senhas usadas para desbloquear arquivos de importação NUNCA são salvas no banco de dados.",
       },
       {
         title: "Dados sensíveis",
@@ -959,37 +575,28 @@ export const helpArticles: HelpArticle[] = [
         description: "Cada família só acessa seus próprios dados. Não há compartilhamento entre famílias.",
       },
     ],
-    keywords: ["privacidade", "lgpd", "dados", "exportar", "excluir", "segurança", "proteção", "senha", "criptografia", "oik"],
+    keywords: ["privacidade", "lgpd", "dados", "exportar", "excluir", "segurança", "proteção", "senha", "criptografia"],
     deepLink: "settings",
   },
 
   {
     id: "lgpd-data-deletion",
-    title: "Como funciona a exclusão de dados (LGPD)",
+    title: "Como solicitar exclusão de dados (LGPD)",
     category: "privacy",
     icon: "🗑️",
     summary: "Entenda o processo de exclusão de dados conforme a LGPD",
     steps: [
       {
-        title: "O que é a LGPD?",
-        description: "A Lei Geral de Proteção de Dados (Lei nº 13.709/2018) garante seu direito de solicitar a exclusão dos seus dados pessoais.",
+        title: "Seu direito",
+        description: "A Lei Geral de Proteção de Dados (LGPD) garante seu direito de solicitar a exclusão dos seus dados pessoais.",
       },
       {
         title: "Exclusão vs Anonimização",
-        description: "Exclusão remove dados definitivamente. Anonimização desvincula dados financeiros de você, mantendo apenas estatísticas agregadas.",
-        tip: "Dados anonimizados não são mais considerados dados pessoais pela LGPD.",
+        description: "Exclusão remove dados definitivamente. Anonimização desvincula dados de você, mantendo apenas estatísticas agregadas.",
       },
       {
         title: "O que é excluído",
-        description: "Nome, e-mail, telefone, foto de perfil, preferências pessoais, tokens de autenticação e integrações são removidos permanentemente.",
-      },
-      {
-        title: "O que é anonimizado",
-        description: "Histórico financeiro e comportamental perde o vínculo com você, mantido apenas para métricas agregadas do produto.",
-      },
-      {
-        title: "Retenção legal",
-        description: "Alguns registros de auditoria são mantidos por obrigação legal (segurança, fraude, defesa jurídica) por até 10 anos, isolados e sem uso operacional.",
+        description: "Nome, e-mail, telefone, foto de perfil, preferências pessoais e tokens de autenticação são removidos permanentemente.",
       },
       {
         title: "Prazo de processamento",
@@ -1000,79 +607,7 @@ export const helpArticles: HelpArticle[] = [
         description: "Vá em Meus Dados > Privacidade (LGPD) > 'Solicitar Exclusão de Dados'. Um código de verificação será enviado para seu e-mail.",
       },
     ],
-    keywords: ["lgpd", "exclusão", "dados", "anonimização", "privacidade", "direito", "titular", "solicitar", "30 dias", "prazo"],
-    deepLink: "settings",
-  },
-  {
-    id: "lgpd-staff-access",
-    title: "Acesso de colaboradores aos seus dados",
-    category: "privacy",
-    icon: "👥",
-    summary: "Como a equipe do Oik acessa seus dados e quais controles existem",
-    steps: [
-      {
-        title: "Quem pode acessar?",
-        description: "Apenas colaboradores autorizados (consultores financeiros e equipe de suporte) podem visualizar seus dados para prestar o serviço contratado.",
-      },
-      {
-        title: "Base legal",
-        description: "O acesso é fundamentado na execução do contrato de consultoria e legítimo interesse para prestação do serviço financeiro.",
-      },
-      {
-        title: "O que eles veem",
-        description: "Consultores acessam: contas, transações, orçamentos, metas, categorias e relatórios financeiros necessários para a consultoria.",
-      },
-      {
-        title: "O que eles NÃO veem",
-        description: "Colaboradores não têm acesso a: logs técnicos, tokens de autenticação, IPs, senhas ou dados de auditoria interna.",
-      },
-      {
-        title: "Rastreabilidade",
-        description: "Todo acesso de colaborador aos seus dados é registrado automaticamente em log de auditoria, sem exceção.",
-        tip: "Os logs são pseudonimizados (sem dados pessoais expostos).",
-      },
-      {
-        title: "Acesso excepcional (Break-glass)",
-        description: "Para situações como ordens judiciais ou incidentes de segurança, existem controles rigorosos com aprovação, MFA e tempo limitado.",
-      },
-    ],
-    keywords: ["colaborador", "acesso", "equipe", "consultoria", "suporte", "rastreabilidade", "auditoria", "breakglass"],
-    deepLink: "settings",
-  },
-  {
-    id: "lgpd-data-protection",
-    title: "Como protegemos seus dados",
-    category: "privacy",
-    icon: "🔒",
-    summary: "Medidas de segurança e privacidade implementadas no Oik",
-    steps: [
-      {
-        title: "Criptografia",
-        description: "Todos os dados são criptografados em trânsito (HTTPS/TLS) e em repouso no banco de dados.",
-      },
-      {
-        title: "Row Level Security (RLS)",
-        description: "Cada família só vê seus próprios dados. Regras de segurança são aplicadas diretamente no banco de dados.",
-      },
-      {
-        title: "Separação de papéis",
-        description: "Colaboradores têm diferentes níveis de acesso conforme sua função: Consultoria, Suporte, Tecnologia, Financeiro, Jurídico.",
-      },
-      {
-        title: "Auditoria completa",
-        description: "Todas as ações sensíveis são registradas: quem fez, quando fez, o que mudou. Logs são imutáveis.",
-      },
-      {
-        title: "Cofre Legal isolado",
-        description: "Evidências para fins legais são armazenadas em ambiente separado, com acesso extremamente restrito e temporário.",
-      },
-      {
-        title: "Política de retenção",
-        description: "Dados são mantidos apenas pelo tempo necessário. Após exclusão, dados pessoais são removidos ou anonimizados irreversivelmente.",
-        tip: "Dados anonimizados são mantidos por até 10 anos para fins estatísticos.",
-      },
-    ],
-    keywords: ["segurança", "proteção", "criptografia", "rls", "auditoria", "cofre", "retenção", "privacidade"],
+    keywords: ["lgpd", "exclusão", "dados", "anonimização", "privacidade", "direito", "solicitar", "30 dias"],
     deepLink: "settings",
   },
 
@@ -1082,7 +617,7 @@ export const helpArticles: HelpArticle[] = [
     title: "Família e Permissões",
     category: "family",
     icon: "👨‍👩‍👧‍👦",
-    summary: "Convide membros e gerencie permissões granulares no Oik",
+    summary: "Convide membros e gerencie permissões",
     steps: [
       {
         title: "Convide familiares",
@@ -1094,20 +629,15 @@ export const helpArticles: HelpArticle[] = [
         tip: "Use o perfil mais restrito necessário para cada membro.",
       },
       {
-        title: "Permissões granulares",
-        description: "O dono pode definir individualmente: ver tudo, editar tudo, inserir lançamentos, excluir lançamentos, ver projeção, ver orçamento e gerenciar família.",
-      },
-      {
         title: "Compartilhamento",
         description: "Todos os membros da família veem os mesmos dados financeiros conforme suas permissões.",
-        tip: "Alterações de permissão refletem imediatamente.",
       },
       {
         title: "Atividade da família",
         description: "Um feed mostra quem adicionou, editou ou removeu lançamentos, com data e hora.",
       },
     ],
-    keywords: ["família", "membro", "convidar", "permissão", "compartilhar", "perfil", "granular", "atividade"],
+    keywords: ["família", "membro", "convidar", "permissão", "compartilhar", "perfil", "atividade"],
     deepLink: "settings",
   },
 
@@ -1165,976 +695,239 @@ export const helpArticles: HelpArticle[] = [
     deepLink: "dashboard",
   },
 
-  // ===== ACESSO E AUTORIZAÇÃO =====
+  // ===== INSIGHTS =====
   {
-    id: "dashboard-vs-app",
-    title: "Dashboard e App são Ambientes Diferentes",
-    category: "access-control",
-    icon: "🔐",
-    summary: "Entenda a diferença entre o Dashboard administrativo e o App OIK",
+    id: "insights-reports",
+    title: "Insights e Relatórios Mensais",
+    category: "insights",
+    icon: "📊",
+    summary: "Recomendações personalizadas e resumo mensal",
     steps: [
       {
-        title: "O que é o Dashboard?",
-        description: "O Dashboard é o painel administrativo para gestores, CS e equipes internas do OIK. Ele não acessa dados financeiros pessoais — apenas configurações e análises do sistema.",
-        tip: "O Dashboard está em /admin e requer um perfil de colaborador (admin_users).",
+        title: "O que são Insights",
+        description: "Recomendações geradas automaticamente com base nos seus dados: alertas de orçamento, metas sem aporte, padrões de gastos.",
       },
       {
-        title: "O que é o App?",
-        description: "O App é onde famílias gerenciam suas finanças: lançamentos, categorias, metas, importação de extratos. Cada usuário precisa de um perfil de consumidor (family_member).",
-        tip: "O App está em /app e requer conclusão do onboarding.",
+        title: "Relatórios Mensais",
+        description: "Visualize o resumo de cada mês (receitas, despesas, saldo, categorias principais) e identifique pendências.",
       },
       {
-        title: "Por que são separados?",
-        description: "Segurança e privacidade. Um administrador do sistema não deve acessar dados financeiros de famílias sem autorização explícita. A separação impede acesso indevido.",
+        title: "Fechar o mês",
+        description: "Você pode 'fechar' o mês para registrar que o período foi revisado. Meses fechados podem ser reabertos.",
       },
       {
-        title: "Posso ter acesso aos dois?",
-        description: "Sim! Se você for colaborador E tiver um perfil de consumidor (família própria), verá a tela de seleção de contexto ao fazer login. Escolha App ou Dashboard conforme o que deseja fazer.",
-        tip: "Use 'Ir ao Dashboard' ou 'Ir ao App' para alternar entre contextos.",
+        title: "Baixar PDF",
+        description: "Acesse Insights > Relatórios, selecione o mês e toque em 'Baixar PDF'. O link expira em 24 horas.",
       },
     ],
-    keywords: ["dashboard", "app", "diferença", "admin", "ambiente", "separado", "acesso", "autorização"],
-  },
-  {
-    id: "back-to-app-button",
-    title: "Botão 'Voltar ao App' no Dashboard",
-    category: "access-control",
-    icon: "🔙",
-    summary: "Por que o botão pode estar bloqueado e o que fazer",
-    steps: [
-      {
-        title: "O que faz esse botão?",
-        description: "No Dashboard, o botão 'Voltar ao App' permite alternar rapidamente para o App de finanças pessoais, se você tiver acesso.",
-      },
-      {
-        title: "Por que está bloqueado?",
-        description: "O botão fica bloqueado se você não tiver um perfil de consumidor (family_member) vinculado ao seu login. Isso significa que sua conta é apenas administrativa.",
-        tip: "Contas administrativas não acessam o App automaticamente — é uma proteção de segurança.",
-      },
-      {
-        title: "O que acontece ao clicar quando bloqueado?",
-        description: "Um modal aparece explicando que 'Este login é do Dashboard administrativo e não possui um usuário no App OIK'. Você pode voltar ao Dashboard ou sair para criar uma conta no App.",
-      },
-      {
-        title: "Como ter acesso ao App?",
-        description: "Saia da sessão atual e crie uma conta de consumidor pelo fluxo normal de cadastro (/signup). As contas são independentes.",
-      },
-    ],
-    keywords: ["voltar", "app", "botão", "bloqueado", "dashboard", "modal"],
-  },
-  {
-    id: "app-access-blocked-page",
-    title: "Página de Acesso Bloqueado (/app-access-blocked)",
-    category: "access-control",
-    icon: "🚫",
-    summary: "O que significa e como resolver quando você vê esta página",
-    steps: [
-      {
-        title: "Quando aparece?",
-        description: "Esta página aparece quando você tenta acessar /app mas seu login não possui um perfil de consumidor (family_member). É comum para usuários que só têm conta administrativa.",
-      },
-      {
-        title: "Por que não sou redirecionado para cadastro?",
-        description: "Por segurança, não redirecionamos administradores para o cadastro do App automaticamente. Isso evita criação acidental de famílias e mistura de contextos.",
-        tip: "Esta é uma proteção intencional, não um erro.",
-      },
-      {
-        title: "O que posso fazer?",
-        description: "Opção 1: Clique em 'Voltar ao Dashboard' para continuar usando o painel administrativo. Opção 2: Clique em 'Sair e criar conta do App' para fazer logout e criar uma conta de consumidor separada.",
-      },
-      {
-        title: "Posso usar o mesmo email?",
-        description: "Atualmente, cada ambiente tem perfis independentes. Se quiser usar o mesmo email, entre em contato com o suporte para orientação sobre como proceder.",
-      },
-    ],
-    keywords: ["bloqueado", "acesso", "blocked", "app-access-blocked", "administrador", "família"],
-  },
-  {
-    id: "signup-blocked-admin-session",
-    title: "/signup Bloqueado com Sessão Administrativa",
-    category: "access-control",
-    icon: "⚠️",
-    summary: "Por que não consigo criar conta no App enquanto logado como admin",
-    steps: [
-      {
-        title: "O que acontece?",
-        description: "Ao acessar /signup com uma sessão administrativa ativa (admin/cs/admin_master), você vê um card informando 'Sessão administrativa ativa' e não consegue prosseguir com o cadastro.",
-      },
-      {
-        title: "Por que esse bloqueio existe?",
-        description: "Impede que administradores criem famílias acidentalmente enquanto logados. As contas do Dashboard e do App são independentes por design.",
-        tip: "Isso protege a integridade dos dados e evita conflitos de contexto.",
-      },
-      {
-        title: "Como criar minha conta no App?",
-        description: "Clique em 'Sair e criar conta do App'. Isso faz logout da sessão administrativa e permite que você crie uma conta de consumidor como um novo usuário.",
-      },
-      {
-        title: "Posso voltar ao Dashboard depois?",
-        description: "Sim! Basta fazer login novamente com suas credenciais administrativas. As sessões são completamente independentes.",
-      },
-    ],
-    keywords: ["signup", "cadastro", "bloqueado", "admin", "sessão", "criar conta"],
-  },
-  {
-    id: "session-loading-timeout",
-    title: "Carregamento de Sessão e Timeouts",
-    category: "access-control",
-    icon: "⏳",
-    summary: "O que fazer quando a verificação de sessão demora ou exibe alertas",
-    steps: [
-      {
-        title: "O que é o overlay de verificação?",
-        description: "Quando você acessa uma área protegida, o OIK verifica sua sessão. Um overlay sutil aparece com 'Verificando acesso...' enquanto isso acontece.",
-        tip: "Normalmente leva menos de 2 segundos. Se demorar mais, pode indicar problema de conexão.",
-      },
-      {
-        title: "Por que aparece 'Carregamento demorado'?",
-        description: "Após 5 segundos, mostramos um contador. Após 10 segundos, exibimos opções de recuperação. Isso pode acontecer por conexão lenta, sessão expirada ou problema temporário.",
-      },
-      {
-        title: "O que fazer quando aparece?",
-        description: "Opção 1: 'Tentar novamente' — recarrega o estado de autenticação. Opção 2: 'Sair' — limpa a sessão e redireciona para login. Opção 3 (se disponível): 'Voltar ao Dashboard'.",
-        tip: "Se o problema persistir, tente limpar os dados do navegador ou usar outro dispositivo.",
-      },
-      {
-        title: "Meu formulário será perdido?",
-        description: "Não! O overlay é 'suave' — ele não desmonta a tela por baixo. Se você estava preenchendo algo, os dados continuam lá enquanto a sessão é verificada.",
-      },
-      {
-        title: "Quando devo contatar o suporte?",
-        description: "Se mesmo após tentar novamente e limpar a sessão o problema continuar, entre em contato pelo WhatsApp de suporte com o código de erro (se exibido).",
-      },
-    ],
-    keywords: ["carregamento", "lento", "timeout", "sessão", "verificando", "overlay", "travou", "loading"],
-  },
-  {
-    id: "admin-profile",
-    title: "Meu Perfil no Dashboard",
-    category: "access-control",
-    icon: "👤",
-    summary: "Como gerenciar seus dados pessoais e credenciais no Dashboard administrativo",
-    steps: [
-      {
-        title: "Acessando Meu Perfil",
-        description: "Clique no seu avatar no canto superior esquerdo do Dashboard. Um menu dropdown aparecerá com a opção 'Meu Perfil'.",
-        tip: "Seu avatar mostra suas iniciais se você ainda não configurou uma foto.",
-      },
-      {
-        title: "Editando Dados Pessoais",
-        description: "Na tela de perfil, você pode editar seu nome completo e telefone. O email e tipo de usuário são campos somente leitura.",
-      },
-      {
-        title: "Alterando sua Senha",
-        description: "Na seção 'Alterar Senha', informe sua senha atual e escolha uma nova senha. A nova senha deve ter pelo menos 8 caracteres, 1 letra maiúscula e 1 número.",
-        tip: "Sua sessão permanece ativa após a alteração de senha — não é necessário fazer login novamente.",
-      },
-      {
-        title: "Por que não posso alterar meu email?",
-        description: "Por segurança, o email de login não pode ser alterado diretamente. Se precisar mudar seu email, entre em contato com o administrador Master.",
-      },
-    ],
-    keywords: ["perfil", "meu perfil", "dashboard", "admin", "dados pessoais", "editar", "alterar"],
-  },
-  {
-    id: "admin-change-password",
-    title: "Como Alterar sua Senha (Dashboard)",
-    category: "access-control",
-    icon: "🔑",
-    summary: "Passo a passo para atualizar sua senha de acesso ao Dashboard",
-    steps: [
-      {
-        title: "Acesse Meu Perfil",
-        description: "Clique no seu avatar no topo do Dashboard e selecione 'Meu Perfil'.",
-      },
-      {
-        title: "Localize a seção 'Alterar Senha'",
-        description: "Na tela de perfil, você verá um card dedicado à alteração de senha no lado direito (desktop) ou abaixo dos dados pessoais (mobile).",
-      },
-      {
-        title: "Informe a senha atual",
-        description: "Digite sua senha atual no primeiro campo. Isso é necessário para confirmar sua identidade.",
-        tip: "Se esqueceu sua senha atual, use a opção 'Esqueci minha senha' na tela de login.",
-      },
-      {
-        title: "Escolha uma nova senha segura",
-        description: "A nova senha deve atender aos requisitos: mínimo 8 caracteres, pelo menos 1 letra maiúscula e 1 número. O indicador visual mostra quando cada requisito é atendido.",
-      },
-      {
-        title: "Confirme e salve",
-        description: "Confirme a nova senha e clique em 'Alterar Senha'. Uma mensagem de sucesso aparecerá e sua sessão continuará ativa.",
-      },
-    ],
-    keywords: ["senha", "alterar senha", "trocar senha", "password", "dashboard", "segurança"],
+    keywords: ["insights", "relatório", "mensal", "pdf", "resumo", "recomendação", "dicas"],
+    deepLink: "insights",
   },
 ];
 
+// =====================================================
+// FAQs DO APLICATIVO (USUÁRIO FINAL)
+// =====================================================
 export const faqItems: FAQItem[] = [
-  {
-    id: "faq-0",
-    question: "O que é o Oik?",
-    answer: "O Oik é uma plataforma premium de inteligência financeira familiar. Utilizamos inteligência artificial para acompanhar o dia a dia financeiro, integrar dados, gerar relatórios e promover educação financeira, trazendo harmonia ao lar e eliminando a ansiedade causada pelo dinheiro.",
-    category: "general",
-    keywords: ["oik", "o que é", "sobre", "plataforma", "inteligência"],
-  },
+  // ===== PRIMEIROS PASSOS =====
   {
     id: "faq-1",
-    question: "Como adicionar uma despesa parcelada?",
-    answer: "Ao adicionar uma despesa, selecione o método de pagamento 'Crédito' e informe o número de parcelas. O Oik criará automaticamente os lançamentos futuros.",
-    category: "transactions",
-    keywords: ["parcela", "parcelado", "cartão", "crédito"],
+    question: "Como criar minha conta no Oik?",
+    answer: "Toque em 'Criar conta' na tela inicial. Informe seu email, crie uma senha segura e complete o cadastro com seu nome, CPF e data de nascimento. O CPF é usado para desbloquear extratos protegidos.",
+    category: "getting-started",
+    keywords: ["criar", "conta", "cadastro", "início", "email"],
   },
   {
     id: "faq-2",
-    question: "Posso usar o Oik sem internet?",
-    answer: "O Oik precisa de internet para sincronizar dados. No entanto, vocês podem visualizar dados já carregados mesmo offline.",
-    category: "general",
-    keywords: ["offline", "internet", "conexão"],
-  },
-  {
-    id: "faq-3",
-    question: "Como funciona o alerta de orçamento?",
-    answer: "Quando vocês gastam 80% do limite definido para uma categoria, aparece um alerta amarelo. Ao atingir 100%, o alerta fica vermelho indicando que o limite foi excedido.",
-    category: "budgets",
-    keywords: ["alerta", "orçamento", "limite", "meta", "80%", "100%"],
-  },
-  {
-    id: "faq-smart-budget",
-    question: "O que é o Orçamento Inteligente?",
-    answer: "É um recurso que cria automaticamente metas de orçamento para cada categoria baseado na faixa de renda da família. Você seleciona a faixa (não o valor exato), e o OIK aplica percentuais recomendados para cada tipo de gasto como moradia, alimentação, transporte, etc.",
-    category: "budgets",
-    keywords: ["orçamento", "inteligente", "faixa", "renda", "automático", "template"],
-  },
-  {
-    id: "faq-smart-budget-privacy",
-    question: "O OIK armazena minha renda exata?",
-    answer: "Não! O OIK armazena apenas a faixa de renda selecionada (por exemplo, 'R$ 8.001 – R$ 15.000'), nunca o valor exato. Isso é usado apenas para calcular percentuais de orçamento adequados.",
-    category: "budgets",
-    keywords: ["privacidade", "renda", "faixa", "segurança", "dados"],
-  },
-  {
-    id: "faq-4",
-    question: "Como convidar minha família?",
-    answer: "Vá em Configurações > Família e toque em 'Convidar membro'. Um convite será enviado por email e a pessoa poderá criar a conta e acessar os mesmos dados no Oik.",
-    category: "family",
-    keywords: ["convidar", "família", "membro", "compartilhar"],
-  },
-  {
-    id: "faq-5",
-    question: "Meus dados estão seguros no Oik?",
-    answer: "Sim! O Oik utiliza criptografia e segue as melhores práticas de segurança. Seus dados são armazenados de forma segura e nunca são vendidos a terceiros. Senhas de arquivos de importação nunca são salvas.",
-    category: "privacy",
-    keywords: ["segurança", "dados", "privacidade", "criptografia", "senha"],
-  },
-  {
-    id: "faq-6",
-    question: "Como importar meu extrato bancário?",
-    answer: "Vá em Configurações > Importar Dados. Vocês podem importar arquivos OFX, Excel (XLSX/XLS) ou PDF. Bancos testados: Bradesco, BTG Pactual, Itaú e Santander (PDF/XLS). Outros bancos funcionam via OFX. Se o arquivo tiver senha, o Oik tentará usar CPF automaticamente.",
-    category: "import",
-    keywords: ["importar", "extrato", "banco", "ofx", "excel", "pdf", "senha", "bradesco", "btg", "itau", "santander"],
-  },
-  {
-    id: "faq-bancos-compativeis",
-    question: "Quais bancos são compatíveis com importação?",
-    answer: "Testamos e validamos: Bradesco, BTG Pactual, Itaú e Santander (PDF e XLS). Nubank, Inter e C6 Bank funcionam via OFX. Outros bancos podem funcionar — se o seu não for reconhecido, exporte o extrato em formato OFX.",
-    category: "import",
-    keywords: ["banco", "compatível", "suportado", "bradesco", "btg", "itau", "santander", "nubank", "inter", "c6"],
-  },
-  {
-    id: "faq-saldo-nao-aparece",
-    question: "Por que linhas de saldo não aparecem na importação?",
-    answer: "O OIK filtra automaticamente linhas que não são transações reais: 'SALDO ANTERIOR', 'SALDO TOTAL DISPONÍVEL DIA', 'Saldo Diário', limites e rodapés. Isso garante que apenas movimentações reais sejam importadas.",
-    category: "import",
-    keywords: ["saldo", "não aparece", "filtro", "importação", "anterior"],
-  },
-  {
-    id: "faq-data-lancamento",
-    question: "Como funciona a data dos lançamentos importados?",
-    answer: "A data do lançamento vem diretamente do extrato bancário, nunca da data do upload. Bradesco usa dd/mm/yy com carry-forward para linhas sem data. BTG usa dd/mm/yyyy hh'h'mm. Itaú e Santander usam dd/mm/yyyy. A ordem na revisão é cronológica crescente (mais antigos primeiro).",
-    category: "import",
-    keywords: ["data", "lançamento", "importação", "cronológica", "ordem", "extrato"],
-  },
-  {
-    id: "faq-ordem-lancamentos",
-    question: "Por que a ordem é do mais antigo para o mais recente?",
-    answer: "Os lançamentos importados são exibidos em ordem cronológica crescente (do primeiro ao último dia do mês) para facilitar a revisão e conferência com o extrato original do banco.",
-    category: "import",
-    keywords: ["ordem", "cronológica", "crescente", "antigo", "recente"],
-  },
-  {
-    id: "faq-editar-categoria-revisao",
-    question: "Como editar nome/categoria/subcategoria na revisão?",
-    answer: "Na tela de revisão, toque no nome do lançamento para editar a descrição. Toque na categoria para abrir os dropdowns de Categoria e Subcategoria (dependentes). Suas edições são salvas automaticamente e aplicadas ao confirmar.",
-    category: "import",
-    keywords: ["editar", "categoria", "subcategoria", "nome", "revisão", "descrição"],
-  },
-  {
-    id: "faq-formato-melhor",
-    question: "Qual formato de arquivo é melhor para importar?",
-    answer: "OFX é o mais universal e funciona com qualquer banco. PDF e XLS são suportados para Bradesco, BTG, Itaú e Santander. Se um formato não funcionar, tente OFX como alternativa.",
-    category: "import",
-    keywords: ["formato", "ofx", "pdf", "xls", "xlsx", "melhor", "recomendado"],
-  },
-  {
-    id: "faq-7",
-    question: "Posso alterar a categoria de um lançamento?",
-    answer: "Sim! Vá ao Extrato, toque no lançamento desejado e selecione 'Editar'. Vocês podem alterar a categoria, valor, data e outros detalhes.",
-    category: "transactions",
-    keywords: ["editar", "alterar", "categoria", "lançamento"],
-  },
-  {
-    id: "faq-8",
-    question: "Como criar um objetivo de poupança?",
-    answer: "Em Metas, toque em 'Novo Objetivo'. Defina nome (ex: Viagem), valor alvo e data limite. Ao criar, ele aparece como subcategoria em 'Objetivos'. Faça aportes pelo botão 'Contribuir'.",
-    category: "objectives",
-    keywords: ["objetivo", "poupança", "guardar", "aporte", "contribuição"],
-  },
-  {
-    id: "faq-9",
-    question: "Por que ao excluir um aporte, todos foram apagados?",
-    answer: "Isso era um bug que já foi corrigido. Agora, ao excluir um aporte, apenas aquele aporte específico é removido. O objetivo recalcula o progresso corretamente.",
-    category: "objectives",
-    keywords: ["excluir", "aporte", "bug", "corrigido"],
-  },
-  {
-    id: "faq-10",
-    question: "Posso definir metas por subcategoria?",
-    answer: "Sim! Ao criar uma meta de orçamento, vocês podem escolher uma categoria específica ou uma subcategoria para um controle mais detalhado.",
-    category: "budgets",
-    keywords: ["meta", "subcategoria", "orçamento", "específico"],
-  },
-  {
-    id: "faq-11",
     question: "Por que preciso informar CPF e data de nascimento?",
-    answer: "O CPF é usado para tentar desbloquear automaticamente arquivos de extrato protegidos por senha. Os bancos brasileiros geralmente usam o CPF (completo ou parcial) como senha padrão. Seu CPF é armazenado de forma segura e nunca aparece em logs.",
-    category: "import",
+    answer: "O CPF é usado para tentar desbloquear automaticamente arquivos de extrato protegidos por senha. Os bancos brasileiros geralmente usam o CPF como senha padrão. Seu CPF é armazenado de forma segura.",
+    category: "getting-started",
     keywords: ["cpf", "nascimento", "senha", "importar", "segurança"],
   },
   {
-    id: "faq-cpf-seguro",
-    question: "O OIK salva minha senha de arquivo?",
-    answer: "Não! Senhas de arquivos NUNCA são salvas. O OIK apenas memoriza qual PADRÃO funcionou (ex: 'CPF 9 dígitos') para cada banco, acelerando futuras importações. Seu CPF é criptografado e usado apenas no momento do desbloqueio.",
-    category: "import",
-    keywords: ["senha", "cpf", "segurança", "lgpd", "salvar"],
+    id: "faq-3",
+    question: "O que é o Oik?",
+    answer: "Oik vem do conceito grego 'oikonomía', que significa a organização inteligente da casa. O Oik representa ordem, clareza e tranquilidade para a vida financeira da sua família.",
+    category: "general",
+    keywords: ["oik", "nome", "significado", "oikonomia"],
+  },
+
+  // ===== LANÇAMENTOS =====
+  {
+    id: "faq-4",
+    question: "Qual a diferença entre 'Crédito' e 'Receita'?",
+    answer: "Crédito é a DIREÇÃO do valor (dinheiro entrando). Receita é a CLASSIFICAÇÃO (como você quer que o sistema trate). Um crédito pode ser classificado como Receita (salário), Reembolso (devolução) ou Transferência (entre contas).",
+    category: "transactions",
+    keywords: ["crédito", "receita", "diferença", "classificação", "direção"],
   },
   {
-    id: "faq-auto-detect",
-    question: "Como funciona a detecção automática de contas?",
-    answer: "Ao importar um arquivo, o OIK identifica automaticamente o banco emissor usando CNPJ, códigos COMPE e padrões de texto. Se detectar uma conta ou cartão, oferece a opção de vincular a um cadastro existente ou criar automaticamente.",
-    category: "import",
-    keywords: ["detecção", "automático", "conta", "cartão", "banco"],
-  },
-  {
-    id: "faq-12",
+    id: "faq-5",
     question: "Por que receitas não têm opção de débito/crédito?",
     answer: "Porque débito e crédito são métodos de PAGAMENTO. Para receitas (dinheiro entrando), os métodos de RECEBIMENTO disponíveis são: PIX, Dinheiro, Transferência e Cheque.",
     category: "transactions",
     keywords: ["receita", "débito", "crédito", "pagamento", "recebimento"],
   },
   {
-    id: "faq-13",
-    question: "O que acontece se eu selecionar Cheque?",
-    answer: "Ao selecionar Cheque como método de pagamento, o campo 'Número do cheque' se torna obrigatório. Isso ajuda a rastrear e conciliar os cheques emitidos.",
+    id: "faq-6",
+    question: "Posso alterar a categoria de um lançamento?",
+    answer: "Sim! Vá ao Extrato, toque no lançamento desejado e selecione 'Editar'. Vocês podem alterar a categoria, valor, data e outros detalhes.",
     category: "transactions",
-    keywords: ["cheque", "número", "obrigatório"],
+    keywords: ["editar", "alterar", "categoria", "lançamento"],
   },
   {
+    id: "faq-7",
+    question: "Transferência entre minhas contas conta como despesa?",
+    answer: "Não! Ao classificar como 'Transferência', o lançamento não entra no cálculo de despesas nem receitas. É apenas uma movimentação interna.",
+    category: "transactions",
+    keywords: ["transferência", "contas", "próprias", "não conta", "despesa"],
+  },
+  {
+    id: "faq-8",
+    question: "Como lançar despesas rápido no celular?",
+    answer: "Toque no botão + flutuante. O valor é o primeiro campo com teclado numérico automático. Escolha categoria com um toque, a data já vem como 'Hoje' e o botão Salvar fica sempre visível. Menos de 10 segundos!",
+    category: "transactions",
+    keywords: ["rápido", "celular", "mobile", "lançar", "despesa", "velocidade"],
+  },
+
+  // ===== FAMÍLIA =====
+  {
+    id: "faq-9",
+    question: "Como convidar minha família?",
+    answer: "Vá em Configurações > Família e toque em 'Convidar membro'. Um convite será enviado por email e a pessoa poderá criar a conta e acessar os mesmos dados.",
+    category: "family",
+    keywords: ["convidar", "família", "membro", "compartilhar"],
+  },
+
+  // ===== IMPORTAÇÃO =====
+  {
+    id: "faq-10",
+    question: "Como importar meu extrato bancário?",
+    answer: "Vá em Configurações > Importar Dados. Vocês podem importar arquivos OFX, Excel (XLSX/XLS) ou PDF. Bancos testados: Bradesco, BTG Pactual, Itaú e Santander. Se o arquivo tiver senha, o Oik tentará usar CPF automaticamente.",
+    category: "import",
+    keywords: ["importar", "extrato", "banco", "ofx", "excel", "pdf", "senha"],
+  },
+  {
+    id: "faq-11",
+    question: "Quais bancos são compatíveis com importação?",
+    answer: "Testamos e validamos: Bradesco, BTG Pactual, Itaú e Santander (PDF e XLS). Nubank, Inter e C6 Bank funcionam via OFX. Outros bancos podem funcionar — se o seu não for reconhecido, exporte em OFX.",
+    category: "import",
+    keywords: ["banco", "compatível", "suportado", "bradesco", "btg", "itau", "santander", "nubank"],
+  },
+  {
+    id: "faq-12",
+    question: "O OIK salva minha senha de arquivo?",
+    answer: "Não! Senhas de arquivos NUNCA são salvas. O OIK apenas memoriza qual PADRÃO funcionou (ex: 'CPF 9 dígitos') para cada banco, acelerando futuras importações.",
+    category: "import",
+    keywords: ["senha", "cpf", "segurança", "lgpd", "salvar"],
+  },
+  {
+    id: "faq-13",
+    question: "Qual formato de arquivo é melhor para importar?",
+    answer: "OFX é o mais universal e funciona com qualquer banco. PDF e XLS são suportados para Bradesco, BTG, Itaú e Santander. Se um formato não funcionar, tente OFX.",
+    category: "import",
+    keywords: ["formato", "ofx", "pdf", "xls", "xlsx", "melhor", "recomendado"],
+  },
+
+  // ===== ORÇAMENTO =====
+  {
     id: "faq-14",
-    question: "Como funciona o WhatsApp do Oik?",
-    answer: "O botão WhatsApp na tela inicial abre uma conversa com o número +55 48 98848-3333. A mensagem já vem pré-preenchida para agendar consultoria financeira familiar.",
-    category: "home",
-    keywords: ["whatsapp", "consultoria", "número"],
+    question: "O que é o Orçamento Inteligente?",
+    answer: "É um recurso que cria automaticamente metas de orçamento para cada categoria baseado na faixa de renda da família. Você seleciona a faixa (não o valor exato), e o OIK aplica percentuais recomendados.",
+    category: "budgets",
+    keywords: ["orçamento", "inteligente", "faixa", "renda", "automático", "template"],
   },
   {
     id: "faq-15",
+    question: "O OIK armazena minha renda exata?",
+    answer: "Não! O OIK armazena apenas a faixa de renda selecionada (por exemplo, 'R$ 8.001 – R$ 15.000'), nunca o valor exato. Isso é usado apenas para calcular percentuais.",
+    category: "budgets",
+    keywords: ["privacidade", "renda", "faixa", "segurança", "dados"],
+  },
+  {
+    id: "faq-16",
+    question: "Por que compras no cartão não entram no orçamento do mês?",
+    answer: "O Oik usa regime de caixa: a compra no cartão é um evento, mas o dinheiro só sai quando você paga a fatura. Por isso, compras no cartão entram no orçamento do mês em que a fatura é paga.",
+    category: "budgets",
+    keywords: ["cartão", "crédito", "compra", "fatura", "orçamento", "mês"],
+  },
+  {
+    id: "faq-17",
+    question: "Posso definir metas por subcategoria?",
+    answer: "Sim! Ao criar uma meta de orçamento, vocês podem escolher uma categoria específica ou uma subcategoria para um controle mais detalhado.",
+    category: "budgets",
+    keywords: ["meta", "subcategoria", "orçamento", "específico"],
+  },
+
+  // ===== OBJETIVOS =====
+  {
+    id: "faq-18",
+    question: "Como criar um objetivo de poupança?",
+    answer: "Em Metas, toque em 'Novo Objetivo'. Defina nome (ex: Viagem), valor alvo e data limite. Ao criar, ele aparece como subcategoria em 'Objetivos'. Faça aportes pelo botão 'Contribuir'.",
+    category: "objectives",
+    keywords: ["objetivo", "poupança", "guardar", "aporte", "contribuição"],
+  },
+
+  // ===== PRIVACIDADE =====
+  {
+    id: "faq-19",
+    question: "Meus dados estão seguros no Oik?",
+    answer: "Sim! O Oik utiliza criptografia e segue as melhores práticas de segurança. Seus dados são armazenados de forma segura e nunca são vendidos a terceiros.",
+    category: "privacy",
+    keywords: ["segurança", "dados", "privacidade", "criptografia", "senha"],
+  },
+  {
+    id: "faq-20",
     question: "Como excluir minha conta no Oik?",
     answer: "Em Configurações > Meus Dados > Privacidade, vocês encontram a opção de excluir conta. Esta ação é irreversível e remove todos os dados permanentemente.",
     category: "privacy",
     keywords: ["excluir", "deletar", "conta", "remover"],
   },
-  {
-    id: "faq-16",
-    question: "O que significa Oik?",
-    answer: "Oik vem do conceito grego 'oikonomía', que significa a organização inteligente da casa. O Oik representa ordem, clareza e tranquilidade para a vida financeira da sua família.",
-    category: "general",
-    keywords: ["oik", "nome", "significado", "oikonomia"],
-  },
-  {
-    id: "faq-17",
-    question: "Como lançar despesas rápido no celular?",
-    answer: "Toque no botão + flutuante (canto inferior direito). O valor é o primeiro campo com teclado numérico automático. Escolha categoria com um toque, a data já vem como 'Hoje' e o botão Salvar fica sempre visível. Você consegue lançar em menos de 10 segundos!",
-    category: "transactions",
-    keywords: ["rápido", "celular", "mobile", "lançar", "despesa", "velocidade"],
-  },
-  {
-    id: "faq-18",
-    question: "Dica: como usar o Oik com uma mão só?",
-    answer: "O botão + fica na zona do polegar. O valor é o primeiro campo (foco automático). Categorias têm alvos grandes. Deslize horizontalmente para escolher forma de pagamento. O botão Salvar fica fixo na parte inferior. Tudo foi pensado para uso com uma mão!",
-    category: "transactions",
-    keywords: ["uma mão", "polegar", "mobile", "acessibilidade", "ergonomia"],
-  },
-  {
-    id: "faq-19",
-    question: "Por que o botão + é tão grande?",
-    answer: "O botão flutuante tem 56px de diâmetro (mínimo recomendado é 44px) para garantir toque preciso mesmo em movimento. Ele fica posicionado na 'zona do polegar' para acesso fácil com uma mão.",
-    category: "transactions",
-    keywords: ["botão", "grande", "acessibilidade", "toque", "fab"],
-  },
-  {
-    id: "faq-20",
-    question: "O que significa 'Processando' na importação?",
-    answer: "Quando você envia um arquivo, o OIK está detectando o banco, abrindo o arquivo (se tiver senha, tenta CPF automaticamente), extraindo lançamentos e categorizando. Isso leva até 30 segundos. A tela atualiza automaticamente.",
-    category: "import",
-    keywords: ["processando", "importação", "aguarde", "loading"],
-  },
-  {
-    id: "faq-21",
-    question: "Deu erro na revisão de importação. O que fazer?",
-    answer: "Toque em 'Tentar novamente' para reprocessar. Se não funcionar, toque em 'Enviar outro arquivo' ou 'Falar com suporte'. O código de erro (ex: IMPORT-003) ajuda o suporte a resolver mais rápido.",
-    category: "import",
-    keywords: ["erro", "importação", "falhou", "retry", "suporte"],
-  },
 
   // ===== NAVEGAÇÃO =====
   {
-    id: "faq-nav-1",
+    id: "faq-21",
     question: "Como navegar entre as telas do Oik?",
-    answer: "Use a barra de navegação inferior com 5 ícones: Casa, Extrato, Categorias, Metas e Educação. Na tela inicial, atalhos rápidos também levam diretamente às funcionalidades principais.",
+    answer: "Use a barra de navegação inferior com 5 ícones: Casa, Extrato, Categorias, Metas e Educação. Na tela inicial, atalhos rápidos também levam às funcionalidades principais.",
     category: "navigation",
     keywords: ["navegar", "navegação", "menu", "tela", "aba", "inferior"],
   },
   {
-    id: "faq-nav-2",
-    question: "Por que o botão 'Ver extrato' não funciona?",
-    answer: "O botão deve navegar para a aba de Extrato. Se não funcionar, atualize o aplicativo. O bug foi corrigido na versão mais recente. Tente também usar o ícone de Extrato na barra inferior.",
-    category: "navigation",
-    keywords: ["ver extrato", "botão", "não funciona", "bug"],
-  },
-  {
-    id: "faq-nav-3",
+    id: "faq-22",
     question: "Como voltar para a tela anterior?",
-    answer: "Use a seta no canto superior esquerdo ou toque no ícone Casa na barra inferior para voltar à Home. Em sheets (painéis deslizantes), deslize para baixo ou toque fora do painel.",
+    answer: "Use a seta no canto superior esquerdo ou toque no ícone Casa na barra inferior para voltar à Home. Em painéis deslizantes, deslize para baixo ou toque fora.",
     category: "navigation",
     keywords: ["voltar", "anterior", "seta", "fechar", "sheet"],
   },
 
-  // ===== CLASSIFICAÇÃO =====
+  // ===== WHATSAPP =====
   {
-    id: "faq-class-1",
-    question: "Qual a diferença entre 'Crédito' e 'Receita'?",
-    answer: "Crédito é a DIREÇÃO do valor (dinheiro entrando). Receita é a CLASSIFICAÇÃO (como você quer que o sistema trate). Um crédito pode ser classificado como Receita (salário), Reembolso (devolução de despesa) ou Transferência (movimentação entre contas). A classificação correta afeta os relatórios.",
-    category: "transactions",
-    keywords: ["crédito", "receita", "diferença", "classificação", "direção"],
-  },
-  {
-    id: "faq-class-2",
-    question: "O que são as classificações de lançamento?",
-    answer: "Existem 5 classificações: Receita (dinheiro que entra como ganho), Despesa (dinheiro que sai como gasto), Transferência (movimentação entre suas contas), Reembolso (devolução de despesa feita anteriormente), Ajuste (correção ou acerto contábil). Cada uma afeta os relatórios de forma diferente.",
-    category: "transactions",
-    keywords: ["classificação", "receita", "despesa", "transferência", "reembolso", "ajuste"],
-  },
-  {
-    id: "faq-class-3",
-    question: "Por que meu reembolso aparece como despesa negativa?",
-    answer: "Reembolsos são creditados na mesma categoria da despesa original, reduzindo o total gasto. Por exemplo: se você gastou R$500 em Alimentação e recebeu R$50 de reembolso, o relatório mostra R$450 líquidos. Isso reflete o custo real.",
-    category: "transactions",
-    keywords: ["reembolso", "despesa", "negativa", "categoria", "redução"],
-  },
-  {
-    id: "faq-class-4",
-    question: "Como classificar um PIX de reembolso?",
-    answer: "Na revisão de importação ou ao editar o lançamento, escolha 'Reembolso' no seletor de classificação. Depois, selecione a categoria da despesa original (ex: Alimentação). O valor será subtraído dos gastos dessa categoria.",
-    category: "transactions",
-    keywords: ["pix", "reembolso", "classificar", "como", "categoria"],
-  },
-  {
-    id: "faq-class-5",
-    question: "Transferência entre minhas contas conta como despesa?",
-    answer: "Não! Ao classificar como 'Transferência', o lançamento não entra no cálculo de despesas nem receitas. É apenas uma movimentação interna. Ideal para: PIX entre contas próprias, TED para investimentos, resgate de aplicação.",
-    category: "transactions",
-    keywords: ["transferência", "contas", "próprias", "não conta", "despesa", "interna"],
+    id: "faq-23",
+    question: "Como funciona o WhatsApp do Oik?",
+    answer: "O botão WhatsApp na tela inicial abre uma conversa com o número +55 48 98848-3333. A mensagem já vem pré-preenchida para agendar consultoria financeira familiar.",
+    category: "home",
+    keywords: ["whatsapp", "consultoria", "número"],
   },
 
-  // ===== IMPORTAÇÃO AVANÇADA =====
-  {
-    id: "faq-import-adv-1",
-    question: "Por que minha importação mostra 48 itens?",
-    answer: "O Oik extrai TODAS as transações do arquivo, sem limite. Se seu extrato Bradesco tem 48 linhas de lançamento, todas aparecem na revisão. Linhas de saldo, cabeçalho e rodapé são filtradas automaticamente.",
-    category: "import",
-    keywords: ["48", "itens", "limite", "todas", "transações"],
-  },
-  {
-    id: "faq-import-adv-2",
-    question: "Posso alterar a classificação na revisão de importação?",
-    answer: "Sim! Na tela de revisão, cada lançamento tem um seletor de classificação (Receita, Despesa, Transferência, Reembolso, Ajuste). Toque para alterar. A alteração é aplicada ao confirmar a importação.",
-    category: "import",
-    keywords: ["classificação", "revisão", "alterar", "importação", "seletor"],
-  },
-  {
-    id: "faq-import-adv-3",
-    question: "Como corrigir uma descrição antes de importar?",
-    answer: "Na revisão, toque no nome/descrição do lançamento. O campo se torna editável. Digite a nova descrição e toque em Salvar (ícone de check). A descrição corrigida é mantida ao confirmar.",
-    category: "import",
-    keywords: ["descrição", "corrigir", "editar", "nome", "antes", "importar"],
-  },
-  {
-    id: "faq-import-adv-4",
-    question: "Subcategoria sumiu ao trocar a categoria. É bug?",
-    answer: "Não! As subcategorias são dependentes da categoria. Ao trocar a categoria, a subcategoria reseta porque as opções mudam. Selecione a nova subcategoria desejada após escolher a categoria.",
-    category: "import",
-    keywords: ["subcategoria", "sumiu", "dependente", "categoria", "reset"],
-  },
-  {
-    id: "faq-import-adv-5",
-    question: "Qual a ordem dos lançamentos na revisão?",
-    answer: "Cronológica crescente (do mais antigo para o mais recente). Isso facilita conferir com o extrato original do banco, que geralmente segue a mesma ordem. O primeiro item é o mais antigo do período.",
-    category: "import",
-    keywords: ["ordem", "cronológica", "crescente", "primeiro", "antigo"],
-  },
-  {
-    id: "faq-import-adv-6",
-    question: "O OIK funciona com qualquer banco?",
-    answer: "Sim! O parser universal detecta colunas automaticamente (Data, Descrição, Valor/Crédito/Débito). Se seu banco exportar Excel com essas colunas, a importação funciona. Para PDFs, testamos Bradesco, BTG, Itaú e Santander. Para outros bancos, use OFX.",
-    category: "import",
-    keywords: ["qualquer", "banco", "universal", "parser", "funciona"],
-  },
-  {
-    id: "faq-import-adv-7",
-    question: "Como o OIK detecta as colunas do Excel?",
-    answer: "O sistema procura cabeçalhos com sinônimos: 'Data' ou 'Dt' ou 'Data Lançamento', 'Descrição' ou 'Histórico' ou 'Movimentação', 'Valor' ou 'Crédito'/'Débito'. Variações com acentos e maiúsculas são aceitas. Se encontrar Data + alguma coluna de valor, consegue importar.",
-    category: "import",
-    keywords: ["detecta", "colunas", "cabeçalho", "excel", "sinônimos", "heurística"],
-  },
-  {
-    id: "faq-import-adv-8",
-    question: "Por que algumas linhas foram ignoradas?",
-    answer: "O OIK filtra automaticamente: linhas sem data E sem valor, 'SALDO ANTERIOR', 'SALDO TOTAL', 'Total', 'Últimos Lançamentos', cabeçalhos repetidos, e linhas de rodapé com telefones/avisos. Apenas transações reais são importadas.",
-    category: "import",
-    keywords: ["ignoradas", "filtradas", "saldo", "linhas", "removidas"],
-  },
-  {
-    id: "faq-import-adv-9",
-    question: "Posso importar fatura de cartão de crédito?",
-    answer: "Sim! O OIK detecta automaticamente se é extrato de conta corrente ou fatura de cartão. Para faturas, identifica os 4 últimos dígitos e associa ao cartão cadastrado ou cria automaticamente.",
-    category: "import",
-    keywords: ["fatura", "cartão", "crédito", "detecta", "automaticamente"],
-  },
-  {
-    id: "faq-import-adv-10",
-    question: "Como funciona o 'date carry-forward'?",
-    answer: "Se uma linha tem valor mas não tem data, o OIK usa a data da linha anterior. Isso é comum em extratos Bradesco onde múltiplas transações do mesmo dia aparecem sem repetir a data. A ordem original do arquivo é preservada.",
-    category: "import",
-    keywords: ["data", "carry", "forward", "anterior", "mesma", "bradesco"],
-  },
-  // ===== SESSÃO E RASCUNHO =====
-  {
-    id: "faq-session-1",
-    question: "O que acontece se eu alternar de aba ou minimizar o app?",
-    answer: "Sua sessão permanece ativa e você continua na mesma tela ao retornar. Não há perda de dados ou redirecionamento para a tela inicial. O OIK mantém sua posição mesmo após ficar ausente por vários minutos.",
-    category: "settings",
-    keywords: ["aba", "minimizar", "sessão", "alternar", "janela", "voltar", "focus"],
-  },
-  {
-    id: "faq-session-2",
-    question: "Meus dados de formulário são salvos automaticamente?",
-    answer: "Sim! O OIK salva automaticamente rascunhos de formulários em edição. Se você alternar de aba ou fechar acidentalmente, ao retornar seus dados serão restaurados automaticamente. Um aviso discreto 'Rascunho restaurado' aparece quando isso acontece.",
-    category: "settings",
-    keywords: ["rascunho", "salvar", "automático", "formulário", "perder", "dados", "restaurar"],
-  },
-  {
-    id: "faq-session-3",
-    question: "Por quanto tempo o rascunho fica salvo?",
-    answer: "Os rascunhos são mantidos por 24 horas. Após esse período, são automaticamente descartados. Ao salvar com sucesso, o rascunho é imediatamente removido.",
-    category: "settings",
-    keywords: ["rascunho", "tempo", "expirar", "24 horas", "duração"],
-  },
-  // ===== LOGIN E SESSÃO =====
-  {
-    id: "faq-login-loading",
-    question: "O que fazer se o login ficar carregando infinitamente?",
-    answer: "Se o login demorar mais de 10 segundos, aparecerá uma tela com opções de 'Tentar novamente' ou 'Limpar sessão'. A opção 'Limpar sessão' remove dados de autenticação corrompidos e redireciona para o login. Se o problema persistir após limpar a sessão, tente: 1) Limpar os dados do site nas configurações do navegador, 2) Usar uma janela anônima, ou 3) Entrar em contato com o suporte.",
-    category: "settings",
-    keywords: ["login", "carregando", "infinito", "travado", "loading", "sessão", "limpar", "timeout"],
-  },
-  {
-    id: "faq-login-session-expired",
-    question: "Por que minha sessão expirou?",
-    answer: "Sessões expiram por segurança após um período de inatividade ou quando você faz login em outro dispositivo. Se isso acontecer frequentemente, verifique se o navegador não está bloqueando cookies ou se há extensões interferindo.",
-    category: "settings",
-    keywords: ["sessão", "expirou", "login", "deslogou", "automaticamente"],
-  },
-  {
-    id: "faq-login-tab-switch",
-    question: "Por que preciso fazer login novamente ao trocar de aba?",
-    answer: "Se você está sendo deslogado ao trocar de aba, isso pode indicar um problema de cache ou service worker. Tente: 1) Limpar o cache do navegador, 2) Desinstalar e reinstalar o PWA, ou 3) Acessar diretamente pelo navegador em vez do app instalado.",
-    category: "settings",
-    keywords: ["aba", "trocar", "logout", "sessão", "pwa", "cache"],
-  },
-  {
-    id: "faq-form-data-lost",
-    question: "Perdi os dados do formulário ao trocar de aba. O que fazer?",
-    answer: "Isso não deve mais acontecer: ao alternar de aba, o OIK mantém a tela atual montada e mostra um overlay temporário de 'Verificando sessão…' que bloqueia interação até a sessão estabilizar — sem reiniciar a página. Além disso, formulários críticos continuam com rascunho automático. Se você ainda perder dados, pode ser o navegador descartando a aba por falta de memória; nesse caso, reabra o app e procure pelo aviso de 'Rascunho restaurado'.",
-    category: "settings",
-    keywords: ["formulário", "dados", "perdeu", "aba", "trocar", "rascunho", "autosave", "overlay", "verificando sessão"],
-  },
-  {
-    id: "faq-draft-restored",
-    question: "O que significa 'Rascunho restaurado'?",
-    answer: "Quando você vê essa mensagem, significa que o Oik recuperou dados que você digitou anteriormente mas não salvou (ex: ao fechar a aba acidentalmente). Os rascunhos são mantidos por 24 horas. Você pode continuar de onde parou ou descartar os dados restaurados.",
-    category: "settings",
-    keywords: ["rascunho", "restaurado", "recuperado", "autosave", "dados"],
-  },
-];
-
-// ===== ADMIN DASHBOARD FAQ (Internal Use) =====
-export const adminFaqItems: FAQItem[] = [
-  {
-    id: "admin-faq-1",
-    question: "Quais são os perfis de acesso no Dashboard Admin?",
-    answer: "Admin Master (acesso total), Financeiro (métricas, planos, NF), Customer Success (engajamento, saúde do cliente), Suporte (erros, acesso assistido) e Tecnologia (APIs, logs, integrações). Cada perfil só vê os módulos autorizados.",
-    category: "admin",
-    keywords: ["perfil", "acesso", "rbac", "admin", "permissão"],
-  },
-  {
-    id: "admin-faq-2",
-    question: "Como funciona o acesso assistido no Suporte?",
-    answer: "O acesso assistido é somente leitura (read-only) por padrão. O colaborador pode visualizar a conta do usuário para ajudar na navegação. Todas as ações são registradas em trilha de auditoria para LGPD.",
-    category: "admin",
-    keywords: ["acesso", "assistido", "suporte", "read-only", "auditoria"],
-  },
-  {
-    id: "admin-faq-3",
-    question: "O que são os sinais de comportamento no CS?",
-    answer: "São indicadores automáticos como 'dias sem login', 'sem importação após cadastro', 'sem orçamento com transações'. Cada sinal pode disparar sugestões de ação ou automações configuráveis.",
-    category: "admin",
-    keywords: ["sinal", "comportamento", "cs", "automação", "engajamento"],
-  },
-  {
-    id: "admin-faq-4",
-    question: "Como a IA do CS funciona?",
-    answer: "A IA analisa PADRÕES DE USO (nunca dados financeiros), gera sugestões com explicação clara do motivo, e NUNCA executa ações automaticamente sem aprovação. Respeita preferências de consentimento do usuário.",
-    category: "admin",
-    keywords: ["ia", "cs", "sugestão", "automação", "consentimento"],
-  },
-  {
-    id: "admin-faq-5",
-    question: "O que são os Relatórios Executivos?",
-    answer: "Visão estratégica consolidada com métricas de crescimento, receita (MRR/ARR), engajamento e produto. Restrito para ADMIN_MASTER, DIRETORIA e GESTÃO ESTRATÉGICA. Todos os acessos são auditados.",
-    category: "admin",
-    keywords: ["executivo", "relatório", "mrr", "diretoria", "estratégico"],
-  },
-  {
-    id: "admin-faq-6",
-    question: "Como rotacionar chaves de API?",
-    answer: "No módulo Tecnologia > Chaves API, selecione a chave e use 'Rotacionar'. Uma nova chave é gerada e a anterior é desativada. A ação é registrada em auditoria.",
-    category: "admin",
-    keywords: ["api", "chave", "rotacionar", "tecnologia", "segurança"],
-  },
-  {
-    id: "admin-faq-7",
-    question: "O que são Feature Flags?",
-    answer: "Permitem ativar/desativar funcionalidades sem deploy. Útil para testes A/B, rollouts graduais e kill switches. Controlado pelo módulo Tecnologia.",
-    category: "admin",
-    keywords: ["feature", "flag", "toggle", "rollout", "tecnologia"],
-  },
-  {
-    id: "admin-faq-8",
-    question: "Como emitir Nota Fiscal pelo Dashboard?",
-    answer: "No módulo Financeiro > Notas Fiscais, selecione o pagamento e use 'Emitir NF'. O sistema integra com o provedor configurado. Erros de emissão são exibidos com opção de retry.",
-    category: "admin",
-    keywords: ["nota", "fiscal", "nf", "emitir", "financeiro"],
-  },
-  {
-    id: "admin-faq-9",
-    question: "Onde vejo os logs de auditoria?",
-    answer: "Cada módulo tem sua aba de 'Auditoria' com trilha de todas as ações realizadas por colaboradores. Logs incluem usuário, ação, timestamp e detalhes mascarados conforme LGPD.",
-    category: "admin",
-    keywords: ["auditoria", "log", "trilha", "lgpd", "registro"],
-  },
-  {
-    id: "admin-faq-10",
-    question: "Como verificar a saúde do sistema?",
-    answer: "Módulo Tecnologia > Saúde do Sistema mostra uptime, tempo médio de resposta, erros recentes e status das integrações. Alertas são exibidos quando há degradação.",
-    category: "admin",
-    keywords: ["saúde", "sistema", "uptime", "erro", "monitoramento"],
-  },
-  // ===== GESTÃO DE USUÁRIOS ADMIN =====
-  {
-    id: "admin-faq-11",
-    question: "Como criar um novo usuário administrativo?",
-    answer: "Acesse Usuários Admin > Novo Usuário. Informe email, nome e papel (CS, ADMIN, LEGAL ou MASTER). Uma senha temporária de 20 caracteres será gerada e exibida uma única vez. O usuário deverá trocá-la no primeiro login.",
-    category: "admin",
-    keywords: ["criar", "usuário", "admin", "novo", "senha", "temporária"],
-  },
-  {
-    id: "admin-faq-12",
-    question: "Quais são os papéis de usuários administrativos?",
-    answer: "CS: acesso operacional para consultoria de famílias. ADMIN: pode gerenciar CS/LEGAL/outros ADMIN e ver logs. LEGAL: acesso aos recursos LGPD e break-glass. MASTER: acesso total ao sistema, incluindo criar outros MASTER.",
-    category: "admin",
-    keywords: ["papel", "role", "cs", "admin", "legal", "master", "permissão"],
-  },
-  {
-    id: "admin-faq-13",
-    question: "Como resetar a senha de um usuário admin?",
-    answer: "No menu de ações do usuário, clique em 'Resetar senha'. Uma nova senha temporária será gerada e exibida UMA ÚNICA VEZ. O usuário será obrigado a trocar a senha no próximo login. A ação é registrada em auditoria.",
-    category: "admin",
-    keywords: ["resetar", "senha", "temporária", "trocar", "login"],
-  },
-  {
-    id: "admin-faq-14",
-    question: "O que acontece quando 'Exigir troca de senha' é ativado?",
-    answer: "O usuário verá um modal obrigatório no próximo login para definir uma nova senha forte. Não poderá acessar nenhuma outra funcionalidade até trocar a senha. A nova senha deve ter mínimo 8 caracteres com letras, números e símbolos.",
-    category: "admin",
-    keywords: ["exigir", "troca", "senha", "obrigatória", "login", "forte"],
-  },
-  {
-    id: "admin-faq-15",
-    question: "Posso alterar meu próprio papel ou me desativar?",
-    answer: "Não. Por segurança, nenhum usuário pode alterar seu próprio papel ou se desativar. Essas ações devem ser feitas por outro administrador autorizado. Isso evita lock-outs acidentais e abuso de privilégios.",
-    category: "admin",
-    keywords: ["próprio", "papel", "desativar", "segurança", "lock-out"],
-  },
-  {
-    id: "admin-faq-16",
-    question: "ADMIN pode criar ou alterar usuários MASTER?",
-    answer: "Não. Apenas usuários MASTER podem criar ou promover outros para MASTER. ADMIN pode gerenciar CS, LEGAL e outros ADMIN, mas não tem privilégios sobre MASTER. Esta é uma medida de segurança hierárquica.",
-    category: "admin",
-    keywords: ["admin", "master", "criar", "promover", "hierarquia"],
-  },
-  {
-    id: "admin-faq-17",
-    question: "Como funciona a auditoria de usuários admin?",
-    answer: "Todas as ações são registradas automaticamente: criação, edição, ativação/desativação, reset de senha, troca de papel e logins. Os logs incluem quem fez, quando, e detalhes (sem dados sensíveis). Acesse via aba Auditoria.",
-    category: "admin",
-    keywords: ["auditoria", "log", "registro", "ação", "trilha"],
-  },
-  {
-    id: "admin-faq-18",
-    question: "Devo excluir ou desativar usuários?",
-    answer: "SEMPRE prefira desativar (is_active=false). Isso mantém o histórico de auditoria e permite reativação futura. Exclusão física só é permitida para MASTER e deve ser usada apenas em casos excepcionais, com confirmação dupla.",
-    category: "admin",
-    keywords: ["excluir", "desativar", "soft", "delete", "auditoria"],
-  },
-  // ===== INTEGRAÇÕES =====
-  {
-    id: "admin-faq-19",
-    question: "O que são as Integrações no painel admin?",
-    answer: "As Integrações centralizam a configuração de conexões externas: Open Finance (Pluggy), Adquirentes de pagamento, Resend (e-mail) e eNotas (notas fiscais). Cada integração tem seu status, configurações, métricas e logs de eventos.",
-    category: "admin",
-    keywords: ["integrações", "pluggy", "resend", "adquirente", "enotas", "conexão", "api"],
-  },
-  {
-    id: "admin-faq-20",
-    question: "Como configurar a integração Open Finance?",
-    answer: "Acesse Integrações > Open Finance. Insira o Client ID e Client Secret da Pluggy. Clique em 'Testar conexão' para validar as credenciais. Os secrets são armazenados de forma segura e nunca são exibidos após salvar.",
-    category: "admin",
-    keywords: ["open", "finance", "pluggy", "configurar", "credencial", "secret"],
-  },
-  {
-    id: "admin-faq-21",
-    question: "Como funciona a integração com Resend?",
-    answer: "A integração Resend permite enviar e-mails transacionais (boas-vindas, alertas, relatórios). Configure a API Key e o e-mail de envio. As métricas mostram e-mails enviados, entregues e falhas.",
-    category: "admin",
-    keywords: ["resend", "email", "transacional", "envio", "notificação"],
-  },
-  {
-    id: "admin-faq-22",
-    question: "O que significam os status das integrações?",
-    answer: "ATIVO: funcionando normalmente. INATIVO: desabilitado manualmente. PENDENTE: aguardando configuração. ERRO: falha detectada no último teste. Use 'Testar conexão' para atualizar o status.",
-    category: "admin",
-    keywords: ["status", "ativo", "inativo", "pendente", "erro", "integração"],
-  },
-  {
-    id: "admin-faq-23",
-    question: "As credenciais de integração são seguras?",
-    answer: "Sim. API keys e secrets são armazenados de forma segura e nunca são exibidos após salvos. Após configurar, o sistema mostra apenas 'Configurado'. Todas as alterações são registradas em auditoria sem expor os valores.",
-    category: "admin",
-    keywords: ["segurança", "credencial", "secret", "api", "key", "auditoria"],
-  },
-  {
-    id: "admin-faq-24",
-    question: "Como funciona a integração com eNotas?",
-    answer: "A integração eNotas permite a emissão automática de notas fiscais de serviço (NFS-e). Configure a API Key, ID da Empresa e o ambiente (produção ou homologação). As métricas mostram notas emitidas, canceladas e pendentes. O sistema é compatível com mais de 2.000 prefeituras.",
-    category: "admin",
-    keywords: ["enotas", "nota fiscal", "nfse", "emissão", "fiscal", "prefeitura"],
-  },
-  // ===== INSIGHTS E RELATÓRIOS =====
-  {
-    id: "insights-faq-1",
-    question: "Como funcionam os Insights?",
-    answer: "Os Insights são recomendações personalizadas geradas automaticamente com base nos seus dados financeiros. Eles analisam padrões de gastos, orçamentos, metas e categorias para oferecer dicas práticas como alertas de orçamento excedido, metas sem aporte ou concentração excessiva de gastos em uma categoria.",
-    category: "insights",
-    keywords: ["insights", "recomendações", "dicas", "alertas", "análise", "personalizado"],
-  },
-  {
-    id: "insights-faq-2",
-    question: "O que são os Relatórios Mensais e fechamento do mês?",
-    answer: "Os Relatórios Mensais permitem visualizar o resumo financeiro de cada mês (receitas, despesas, saldo, categorias principais) e identificar pendências como transações sem categoria. Você pode 'fechar' o mês para registrar que o período foi revisado. Meses fechados podem ser reabertos a qualquer momento.",
-    category: "insights",
-    keywords: ["relatório", "mensal", "fechamento", "mês", "resumo", "pendências"],
-  },
-  {
-    id: "insights-faq-3",
-    question: "Como baixar seu relatório em PDF?",
-    answer: "Acesse Insights > Relatórios, selecione o mês desejado e toque em 'Baixar PDF'. O PDF contém o resumo do mês, principais categorias e pendências identificadas. O arquivo é gerado sob demanda e o link expira em 24 horas por segurança. Nenhum dado sensível (CPF) é incluído.",
-    category: "insights",
-    keywords: ["pdf", "baixar", "download", "relatório", "exportar", "imprimir"],
-  },
-  // ===== DASHBOARD vs APP =====
-  {
-    id: "dashboard-app-faq-1",
-    question: "Qual a diferença entre conta do Dashboard e do App?",
-    answer: "O OIK possui dois ambientes separados: o App (para usuários consumer organizarem suas finanças familiares) e o Dashboard (para administradores e equipe interna). Um login pode ser exclusivo de um ambiente ou ter acesso a ambos. Usuários que possuem apenas acesso ao Dashboard (admin/master) não podem acessar o App automaticamente — é necessário criar uma conta consumer separadamente.",
-    category: "admin",
-    keywords: ["dashboard", "app", "diferença", "admin", "consumer", "acesso", "conta"],
-  },
-  {
-    id: "dashboard-app-faq-2",
-    question: "O que acontece ao clicar em 'Voltar ao App' no Dashboard?",
-    answer: "Ao clicar em 'Voltar ao App', o sistema verifica se você possui uma conta consumer (membro de família) com onboarding completo. Se tiver, você é redirecionado ao App. Se não tiver, um modal explicativo aparece informando que é necessário criar uma conta consumer ou completar o onboarding primeiro. Isso garante que dados não sejam acessados indevidamente.",
-    category: "admin",
-    keywords: ["voltar", "app", "dashboard", "botão", "redirecionar", "acesso", "bloqueado"],
-  },
-  {
-    id: "dashboard-app-faq-3",
-    question: "Como criar uma conta consumer sendo admin/master?",
-    answer: "Se você é admin/master e deseja acessar o App como usuário comum, será necessário criar uma família e completar o onboarding. No entanto, isso normalmente não é recomendado pois mistura contextos de administração e uso pessoal. Entre em contato com o suporte se precisar de acesso dual aos dois ambientes.",
-    category: "admin",
-    keywords: ["criar", "conta", "consumer", "admin", "master", "família", "onboarding"],
-  },
-  {
-    id: "dashboard-app-faq-4",
-    question: "O que é onboarding e por que é obrigatório?",
-    answer: "O onboarding é o processo de configuração inicial do App onde você define sua família, faixa de renda, perfil financeiro e orçamento inicial. Ele é obrigatório porque garante que o App tenha dados mínimos para funcionar corretamente. Sem completar o onboarding, você não pode acessar as funcionalidades principais do App — ficará preso na tela de onboarding até concluir.",
-    category: "general",
-    keywords: ["onboarding", "obrigatório", "cadastro", "inicial", "configuração", "completo", "bloqueado"],
-  },
-  
-  // ===== ACESSO E AUTORIZAÇÃO =====
-  {
-    id: "access-faq-1",
-    question: "Por que vejo 'Acesso ao App indisponível' quando clico em 'Voltar ao App'?",
-    answer: "Seu login é do Dashboard administrativo e não possui um perfil de consumidor (family_member). Dashboard e App são ambientes separados por segurança. Para usar o App, saia da sessão atual e crie uma conta de consumidor pelo cadastro normal.",
-    category: "access-control",
-    keywords: ["acesso", "indisponível", "app", "voltar", "bloqueado", "modal"],
-  },
-  {
-    id: "access-faq-2",
-    question: "Fui para /app-access-blocked. O que isso significa?",
-    answer: "Você tentou acessar o App sem ter um perfil de consumidor. Se você é um administrador, isso é esperado — administradores não têm acesso automático ao App de finanças. Clique em 'Voltar ao Dashboard' ou 'Sair e criar conta do App' para prosseguir.",
-    category: "access-control",
-    keywords: ["app-access-blocked", "bloqueado", "administrador", "família"],
-  },
-  {
-    id: "access-faq-3",
-    question: "Tentei fazer signup mas aparece 'Sessão administrativa ativa'. O que fazer?",
-    answer: "Você está logado como admin/master e tentou criar conta no App. Por segurança, não permitimos isso na mesma sessão. Clique em 'Sair e criar conta do App' — isso faz logout e permite criar sua conta de consumidor normalmente.",
-    category: "access-control",
-    keywords: ["signup", "sessão", "administrativa", "bloqueado", "criar"],
-  },
-  {
-    id: "access-faq-4",
-    question: "A tela está travada em 'Verificando acesso'. O que fazer?",
-    answer: "Se o loading passar de 10 segundos, verá opções de recuperação: 'Tentar novamente' para recarregar a sessão ou 'Sair' para limpar a sessão. Isso pode acontecer por conexão lenta ou sessão expirada. Não se preocupe — seu formulário não será perdido durante a verificação.",
-    category: "access-control",
-    keywords: ["verificando", "acesso", "travado", "loading", "sessão", "timeout"],
-  },
-  {
-    id: "access-faq-5",
-    question: "Posso usar o mesmo email para Dashboard e App?",
-    answer: "Atualmente, cada ambiente tem perfis independentes vinculados ao mesmo usuário de autenticação. Você pode ter os dois perfis (admin_users e family_member) no mesmo email. Se tiver ambos, verá a tela de seleção de contexto ao fazer login.",
-    category: "access-control",
-    keywords: ["mesmo", "email", "dashboard", "app", "dois", "contexto"],
-  },
-
-  // ===== ORÇAMENTO SUGERIDO VERSIONADO =====
-  {
-    id: "faq-suggested-budget-1",
-    question: "O que é o Orçamento Sugerido?",
-    answer: "O Orçamento Sugerido é um orçamento inteligente gerado pelo Oik. Ele pode ser criado de duas formas: respondendo perguntas sobre seu perfil (diagnóstico) ou usando seus gastos reais importados. O sistema sugere limites mensais por categoria.",
-    category: "budgets",
-    keywords: ["orçamento", "sugerido", "inteligente", "automático", "o que é"],
-  },
-  {
-    id: "faq-suggested-budget-2",
-    question: "Por que meu orçamento tem versões?",
-    answer: "Cada vez que você gera um novo orçamento, ele se torna uma nova 'versão'. Versões anteriores são arquivadas, nunca apagadas. Isso permite histórico auditável e comparar diferentes planejamentos ao longo do tempo.",
-    category: "budgets",
-    keywords: ["versão", "versões", "histórico", "arquivado", "por que"],
-  },
-  {
-    id: "faq-suggested-budget-3",
-    question: "O que é vigência do orçamento?",
-    answer: "Vigência é o mês a partir do qual o orçamento vale. Ao criar um novo orçamento, você escolhe se ele vale 'a partir do mês atual' ou 'a partir do próximo mês'. Meses anteriores continuam usando a versão anterior.",
-    category: "budgets",
-    keywords: ["vigência", "mês", "validade", "a partir de", "quando"],
-  },
-  {
-    id: "faq-suggested-budget-4",
-    question: "Posso editar um orçamento sugerido depois de criado?",
-    answer: "As versões de orçamento são imutáveis depois de criadas. Se quiser mudar algo, você cria uma nova versão com vigência a partir do mês desejado. As metas individuais podem ser editadas normalmente na tela de Metas.",
-    category: "budgets",
-    keywords: ["editar", "mudar", "alterar", "depois", "criado"],
-  },
-  {
-    id: "faq-suggested-budget-5",
-    question: "Por que preciso categorizar 80% para usar gastos reais?",
-    answer: "O sistema precisa de dados representativos para calcular medianas confiáveis. Com menos de 80% categorizado, as sugestões podem ser imprecisas. Se a categorização estiver baixa, o app mostra um alerta e link para categorizar mais.",
-    category: "budgets",
-    keywords: ["80%", "categorizar", "categorização", "mínimo", "gastos reais"],
-  },
-  {
-    id: "faq-suggested-budget-6",
-    question: "Como o sistema calcula o orçamento baseado em gastos?",
-    answer: "O Oik calcula a mediana mensal de gastos por categoria no período escolhido (30, 60, 90 ou 180 dias). A mediana é mais estável que a média porque ignora gastos muito altos ou baixos esporádicos. O cálculo usa a 'data de caixa' (regime de caixa).",
-    category: "budgets",
-    keywords: ["calcula", "mediana", "média", "período", "como", "caixa"],
-  },
   // ===== REGIME DE CAIXA =====
   {
-    id: "faq-cash-basis-1",
+    id: "faq-24",
     question: "O que é regime de caixa?",
-    answer: "Regime de caixa significa que o Oik conta as transações no mês em que o dinheiro efetivamente sai ou entra. Para Pix, débito, dinheiro e transferência, é a data do pagamento. Para cartão de crédito, é o mês do pagamento da fatura. Para cheque, é a data de compensação.",
+    answer: "Regime de caixa significa que o Oik conta as transações no mês em que o dinheiro efetivamente sai ou entra. Para cartão de crédito, é o mês do pagamento da fatura. Para cheque, é a data de compensação.",
     category: "budgets",
     keywords: ["regime", "caixa", "quando", "conta", "mês", "orçamento"],
   },
   {
-    id: "faq-cash-basis-2",
-    question: "Por que compras no cartão não entram no orçamento do mês?",
-    answer: "O Oik usa regime de caixa: a compra no cartão é um evento, mas o dinheiro só sai quando você paga a fatura. Por isso, compras no cartão entram no orçamento do mês em que a fatura é paga (desembolso real).",
-    category: "budgets",
-    keywords: ["cartão", "crédito", "compra", "fatura", "orçamento", "mês"],
-  },
-  {
-    id: "faq-cash-basis-3",
+    id: "faq-25",
     question: "Como funciona o cheque no regime de caixa?",
     answer: "Cheques emitidos ficam 'pendentes' até você informar a data de compensação. Só então o valor entra no orçamento daquele mês. Isso evita contabilizar gastos que ainda não afetaram seu saldo.",
     category: "budgets",
     keywords: ["cheque", "compensação", "pendente", "data", "caixa"],
   },
-  {
-    id: "faq-cash-basis-4",
-    question: "O que é 'Data do evento' vs 'Mês do orçamento'?",
-    answer: "Data do evento é quando a transação aconteceu (ex: compra no cartão dia 15). Mês do orçamento é quando o dinheiro efetivamente saiu (ex: pagamento da fatura dia 5 do mês seguinte). O Oik mostra ambas as datas para transparência.",
-    category: "budgets",
-    keywords: ["evento", "data", "orçamento", "diferença", "compra", "fatura"],
-  },
-  {
-    id: "faq-cash-basis-5",
-    question: "Por que o aviso de 'compras de cartão sem fatura'?",
-    answer: "Se você tem compras no cartão mas não registrou o pagamento da fatura, o Oik avisa porque essas compras não entram no orçamento até o pagamento. Registre os pagamentos de fatura como despesa normal (Pix/débito) com a categoria 'Cartão'.",
-    category: "budgets",
-    keywords: ["aviso", "compras", "cartão", "fatura", "pagamento", "pendente"],
-  },
-  {
-    id: "faq-cash-basis-6",
-    question: "Qual a diferença entre 'data' e 'data de caixa'?",
-    answer: "A 'data' (ou data do evento) é quando a transação foi realizada. A 'data de caixa' é quando o dinheiro efetivamente movimentou. Para Pix/débito, ambas são iguais. Para cartão, a data de caixa é o pagamento da fatura. Para cheque, é a compensação.",
-    category: "transactions",
-    keywords: ["data", "caixa", "evento", "diferença", "cartão", "cheque"],
-  },
 ];
 
+// =====================================================
+// LABELS DE CATEGORIA
+// =====================================================
 export const categoryLabels: Record<string, string> = {
   "getting-started": "Primeiros Passos",
   "home": "Tela Inicial",
@@ -2151,9 +944,11 @@ export const categoryLabels: Record<string, string> = {
   "privacy": "Privacidade e Segurança",
   "insights": "Insights e Relatórios",
   "general": "Geral",
-  "access-control": "Acesso e Autorização",
 };
 
+// =====================================================
+// FUNÇÃO DE BUSCA
+// =====================================================
 export function searchHelp(query: string): { articles: HelpArticle[]; faqs: FAQItem[] } {
   const normalizedQuery = query.toLowerCase().trim();
   if (!normalizedQuery) {
@@ -2169,14 +964,8 @@ export function searchHelp(query: string): { articles: HelpArticle[]; faqs: FAQI
     for (const word of queryWords) {
       if (allText.includes(word)) {
         score += 1;
-        // Bonus for exact keyword match
-        if (keywords.some(k => k.includes(word))) {
-          score += 2;
-        }
-        // Bonus for title match
-        if (title.toLowerCase().includes(word)) {
-          score += 3;
-        }
+        if (keywords.some(k => k.includes(word))) score += 2;
+        if (title.toLowerCase().includes(word)) score += 3;
       }
     }
     return score;

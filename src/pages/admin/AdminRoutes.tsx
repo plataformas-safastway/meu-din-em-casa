@@ -26,6 +26,7 @@ const FinancialAuditPage = lazy(() => import("./finance/FinancialAuditPage").the
 // Support module
 const SupportErrorsPage = lazy(() => import("./support/SupportErrorsPage").then(m => ({ default: m.SupportErrorsPage })));
 const SupportUsersPage = lazy(() => import("./support/SupportUsersPage").then(m => ({ default: m.SupportUsersPage })));
+const AdminFAQPage = lazy(() => import("./support/AdminFAQPage").then(m => ({ default: m.AdminFAQPage })));
 const SupportAuditPage = lazy(() => import("./support/SupportAuditPage").then(m => ({ default: m.SupportAuditPage })));
 
 // CS module
@@ -141,6 +142,7 @@ export function AdminRoutes() {
         {/* Support module */}
         <Route path="support/errors" element={<LazyPage Component={SupportErrorsPage} />} />
         <Route path="support/users" element={<LazyPage Component={SupportUsersPage} />} />
+        <Route path="support/faq" element={<LazyPage Component={AdminFAQPage} />} />
         <Route path="support/audit" element={<LazyPage Component={SupportAuditPage} />} />
 
         {/* CS module */}
