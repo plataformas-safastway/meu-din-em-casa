@@ -305,6 +305,67 @@ export const helpArticles: HelpArticle[] = [
     keywords: ["categoria", "subcategoria", "organizar", "classificar", "tipo", "total", "soma"],
     deepLink: "categories",
   },
+  {
+    id: "categories-import-excel",
+    title: "Importar Categorias via Excel",
+    category: "categories",
+    icon: "📥",
+    summary: "Como importar categorias e subcategorias usando planilha Excel",
+    steps: [
+      {
+        title: "Acesse o Gerenciador",
+        description: "Vá em Configurações > Finanças > Gerenciar Categorias.",
+      },
+      {
+        title: "Baixe o modelo",
+        description: "Clique em 'Baixar Modelo Excel' para obter a planilha oficial do OIK.",
+        tip: "Use sempre o modelo oficial para garantir compatibilidade.",
+      },
+      {
+        title: "Preencha a planilha",
+        description: "Cada linha representa uma subcategoria. Repita o nome da categoria em várias linhas para adicionar subcategorias.",
+      },
+      {
+        title: "Importe o arquivo",
+        description: "Clique em 'Importar Planilha', selecione seu arquivo .xlsx e confira a pré-visualização.",
+      },
+      {
+        title: "Escolha como tratar o histórico",
+        description: "Decida entre 'Reclassificar histórico' (atualiza transações antigas) ou 'Aplicar daqui para frente' (mantém histórico intacto).",
+        tip: "Se escolher reclassificar, você mapeará categorias antigas para as novas.",
+      },
+    ],
+    keywords: ["importar", "excel", "planilha", "xlsx", "categoria", "subcategoria", "modelo"],
+    deepLink: "categories-management",
+  },
+  {
+    id: "categories-reclassify",
+    title: "Reclassificar Histórico de Categorias",
+    category: "categories",
+    icon: "🔄",
+    summary: "Entenda a diferença entre reclassificar ou aplicar apenas daqui para frente",
+    steps: [
+      {
+        title: "Quando escolher 'Reclassificar'",
+        description: "Use quando quiser que transações antigas sigam a nova estrutura de categorias. Útil para manter relatórios consistentes.",
+      },
+      {
+        title: "Como funciona o mapeamento",
+        description: "Você indica para qual nova categoria cada categoria antiga deve ser convertida. O sistema sugere mapeamentos automaticamente.",
+        tip: "Revise com atenção antes de confirmar — a ação atualiza todas as transações afetadas.",
+      },
+      {
+        title: "Quando escolher 'Daqui para frente'",
+        description: "Use quando quiser preservar o histórico exatamente como está. Transações antigas ficam com categorias antigas (versionamento).",
+      },
+      {
+        title: "Relatórios com versionamento",
+        description: "Ao usar 'daqui para frente', relatórios históricos mostrarão categorias da época. Relatórios futuros usarão as novas.",
+      },
+    ],
+    keywords: ["reclassificar", "histórico", "versão", "mapeamento", "categoria", "transação", "antigo"],
+    deepLink: "categories-management",
+  },
 
   // ===== OBJETIVOS =====
   {
@@ -1110,6 +1171,36 @@ export const faqItems: FAQItem[] = [
     answer: "A projeção atual é de visualização. Em breve, você poderá simular despesas extras e ver o impacto imediato no comprometimento e sobra projetada — sem salvar nada, apenas para educar sua decisão.",
     category: "projection",
     keywords: ["simular", "extra", "gasto", "projeção", "impacto"],
+  },
+  
+  // ===== IMPORTAÇÃO DE CATEGORIAS =====
+  {
+    id: "faq-38",
+    question: "Como importar categorias por planilha?",
+    answer: "Vá em Configurações > Finanças > Gerenciar Categorias > Importar Planilha. Use o modelo oficial do OIK (.xlsx). Cada linha representa uma subcategoria. Você pode baixar o modelo clicando em 'Baixar Modelo Excel'.",
+    category: "categories",
+    keywords: ["importar", "categoria", "planilha", "excel", "xlsx", "modelo"],
+  },
+  {
+    id: "faq-39",
+    question: "O que acontece ao substituir categorias?",
+    answer: "Ao importar, você escolhe: 'Reclassificar histórico' atualiza transações antigas para as novas categorias. 'Aplicar daqui para frente' mantém o histórico intacto e usa as novas categorias apenas para lançamentos futuros.",
+    category: "categories",
+    keywords: ["substituir", "categoria", "histórico", "reclassificar", "versão"],
+  },
+  {
+    id: "faq-40",
+    question: "Qual a diferença entre reclassificar e aplicar daqui para frente?",
+    answer: "Reclassificar: transações antigas são atualizadas para a nova estrutura, mantendo relatórios consistentes. Daqui para frente: histórico preservado na estrutura original (versionamento), útil quando você quer manter registros como eram.",
+    category: "categories",
+    keywords: ["diferença", "reclassificar", "daqui para frente", "histórico", "versão", "categoria"],
+  },
+  {
+    id: "faq-41",
+    question: "Posso editar categorias uma a uma?",
+    answer: "Sim! Em Configurações > Finanças > Gerenciar Categorias, toque no menu (⋮) de qualquer categoria para editar, adicionar subcategorias ou arquivar. Edição com 1 toque.",
+    category: "categories",
+    keywords: ["editar", "categoria", "subcategoria", "gerenciar", "toque"],
   },
 ];
 

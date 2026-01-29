@@ -33,6 +33,7 @@ const InsightsHubPage = lazy(() => import("./InsightsHubPage").then(m => ({ defa
 const LearnedRulesPage = lazy(() => import("./settings/LearnedRulesPage"));
 const DpoContactPage = lazy(() => import("./settings/DpoContactPage").then(m => ({ default: m.DpoContactPage })));
 const SuggestedBudgetPage = lazy(() => import("./SuggestedBudgetPage").then(m => ({ default: m.SuggestedBudgetPage })));
+const CategoriesManagementPage = lazy(() => import("./settings/CategoriesManagementPage").then(m => ({ default: m.CategoriesManagementPage })));
 
 // Minimal loading component for lazy modules
 const PageLoader = memo(() => (
@@ -112,6 +113,8 @@ const Index = () => {
         return <TransactionsPage onBack={() => setActiveTab("dashboard")} />;
       case "categories":
         return <CategoriesPage onBack={() => setActiveTab("dashboard")} />;
+      case "categories-management":
+        return <CategoriesManagementPage onBack={() => setActiveTab(getBackTab("settings"))} />;
       case "objectives":
         // Goals page - respects navigation source context
         return <GoalsPage onBack={() => setActiveTab(getBackTab("dashboard"))} />;
