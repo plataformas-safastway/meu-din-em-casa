@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, Wifi, BookOpen, LayoutDashboard, Wallet, Brain, Calculator } from "lucide-react";
+import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, Wifi, BookOpen, LayoutDashboard, Wallet, Brain, Calculator, FolderTree } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
@@ -61,6 +61,9 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
       case "dpo-contact":
         navigateToTab("dpo-contact");
         break;
+      case "categories-management":
+        navigateToTab("categories-management");
+        break;
       case "help":
         onNavigate?.("help");
         break;
@@ -94,6 +97,7 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
     {
       title: "Finanças",
       items: [
+        { id: "categories-management", label: "Gerenciar Categorias", icon: FolderTree, action: "navigate" },
         { id: "budget", label: "Orçamento Inteligente", icon: Wallet, action: "sheet" },
         { id: "accounting-regime", label: "Regime de Registro", icon: Calculator, action: "component" },
         { id: "learned-rules", label: "Categorizações Aprendidas", icon: Brain, action: "navigate" },
