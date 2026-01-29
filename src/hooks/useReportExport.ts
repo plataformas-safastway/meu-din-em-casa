@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import * as XLSX from 'xlsx';
+import { exportToExcel } from '@/lib/excelParser';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useLogReportAccess } from './useExecutiveReports';
@@ -83,27 +83,25 @@ export function useReportExport() {
         return;
       }
 
-      // Create workbook
-      const wb = XLSX.utils.book_new();
-      
-      // Add metadata sheet
-      const metaData = [
-        ['Relatório', title],
-        ['Período', formatPeriod(periodStart, periodEnd)],
-        ['Gerado em', format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })],
-        [''],
-        ['⚠️ Este relatório contém dados agregados. Dados pessoais foram omitidos conforme LGPD.'],
+      // Create sheet data with metadata header
+      const metaRows = [
+        { Informação: 'Relatório', Valor: title },
+        { Informação: 'Período', Valor: formatPeriod(periodStart, periodEnd) },
+        { Informação: 'Gerado em', Valor: format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) },
+        { Informação: '', Valor: '' },
+        { Informação: '⚠️ LGPD', Valor: 'Este relatório contém dados agregados. Dados pessoais foram omitidos.' },
       ];
-      const metaSheet = XLSX.utils.aoa_to_sheet(metaData);
-      XLSX.utils.book_append_sheet(wb, metaSheet, 'Info');
 
-      // Add data sheet
-      const dataSheet = XLSX.utils.json_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb, dataSheet, 'Dados');
-
-      // Download
       const fileName = `${title.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`;
-      XLSX.writeFile(wb, fileName);
+      
+      // Use secure excelParser to export
+      await exportToExcel(
+        [
+          { sheetName: 'Info', data: metaRows },
+          { sheetName: 'Dados', data: rows as Record<string, unknown>[] },
+        ],
+        fileName
+      );
 
       // Log access
       await logAccess.mutateAsync({
