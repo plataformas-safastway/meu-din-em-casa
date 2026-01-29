@@ -1697,6 +1697,7 @@ export type Database = {
       }
       families: {
         Row: {
+          accounting_regime: string
           budget_mode: string | null
           created_at: string
           email_report_day: number | null
@@ -1718,6 +1719,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accounting_regime?: string
           budget_mode?: string | null
           created_at?: string
           email_report_day?: number | null
@@ -1739,6 +1741,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accounting_regime?: string
           budget_mode?: string | null
           created_at?: string
           email_report_day?: number | null
