@@ -49,6 +49,7 @@ export function BatchItemDetailSheet({
   const [date, setDate] = useState<string>(item.normalizedDate || "");
   const [description, setDescription] = useState<string>(item.normalizedDescription || item.normalizedMerchant || "");
   const [categoryId, setCategoryId] = useState<string>(item.finalCategoryId || "");
+  const [subcategoryId, setSubcategoryId] = useState<string>(item.finalSubcategoryId || "");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>((item.finalPaymentMethod?.toLowerCase() as PaymentMethod) || "pix");
   const [bankAccountId, setBankAccountId] = useState<string>(item.finalBankAccountId || "");
   const [creditCardId, setCreditCardId] = useState<string>(item.finalCreditCardId || "");
@@ -60,6 +61,7 @@ export function BatchItemDetailSheet({
     setDate(item.normalizedDate || "");
     setDescription(item.normalizedDescription || item.normalizedMerchant || "");
     setCategoryId(item.finalCategoryId || "");
+    setSubcategoryId(item.finalSubcategoryId || "");
     setPaymentMethod((item.finalPaymentMethod?.toLowerCase() as PaymentMethod) || "pix");
     setBankAccountId(item.finalBankAccountId || "");
     setCreditCardId(item.finalCreditCardId || "");
@@ -200,6 +202,8 @@ export function BatchItemDetailSheet({
             <CategorySelector
               value={categoryId}
               onChange={setCategoryId}
+              subcategoryValue={subcategoryId}
+              onSubcategoryChange={setSubcategoryId}
               classification="expense"
             />
           </div>

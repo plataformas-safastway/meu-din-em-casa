@@ -25,6 +25,7 @@ import {
   QuickCreditCardSheet,
   InstallmentInput,
   BetterCardSuggestionToast,
+  CategorySelector,
 } from "@/components/transaction";
 import { GoalSelector } from "@/components/goals";
 import { ChargeType } from "@/components/transaction/InstallmentInput";
@@ -262,8 +263,15 @@ export function AddTransactionSheet({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
-    if (!amount || !category) return;
+    // Validation - category AND subcategory are required
+    if (!amount || !category || !subcategory) {
+      if (!subcategory && category) {
+        toast.error("Selecione uma subcategoria", {
+          description: "Todo lançamento precisa de categoria e subcategoria.",
+        });
+      }
+      return;
+    }
     if (paymentMethod === "cheque" && !checkNumber.trim()) return;
     
     // Validate instrument requirement
@@ -401,7 +409,7 @@ export function AddTransactionSheet({
 
   // Check if form is valid for submission
   const isFormValid = () => {
-    if (!amount || !category) return false;
+    if (!amount || !category || !subcategory) return false; // Subcategory is now required
     if (needsCheckNumber && !checkNumber.trim()) return false;
     if (needsAccount && bankAccounts.length > 0 && !bankAccountId) return false;
     if (needsCard && creditCards.length > 0 && !creditCardId) return false;
@@ -498,57 +506,22 @@ export function AddTransactionSheet({
                       </div>
                     )}
 
-                    {/* Category */}
-                    <div className="space-y-2">
-                      <Label className="text-base">Categoria</Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {filteredCategories.map((cat) => (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            onClick={() => handleCategorySelect(cat.id)}
-                            className={cn(
-                              "relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all min-h-[72px] active:scale-[0.97]",
-                              category === cat.id
-                                ? "border-primary bg-primary/5"
-                                : "border-border hover:border-primary/50"
-                            )}
-                          >
-                            <span className="text-2xl">{cat.icon}</span>
-                            <span className="text-[11px] text-center leading-tight text-muted-foreground font-medium line-clamp-2">
-                              {cat.name}
-                            </span>
-                            {category === cat.id && (
-                              <div className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
-                                <Check className="w-3.5 h-3.5 text-primary-foreground" />
-                              </div>
-                            )}
-                            {cat.subcategories.length > 0 && (
-                              <div className="absolute bottom-1.5 right-1.5">
-                                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Selected Subcategory Display */}
-                    {subcategory && selectedCategory && (
-                      <div className="space-y-2 animate-fade-in">
-                        <Label className="text-base">Subcategoria</Label>
-                        <button
-                          type="button"
-                          onClick={() => setShowSubcategories(true)}
-                          className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-primary bg-primary/5 min-h-[52px]"
-                        >
-                          <span className="font-medium text-base">
-                            {selectedCategory.subcategories.find((s) => s.id === subcategory)?.name}
-                          </span>
-                          <ChevronRight className="w-5 h-5 text-primary" />
-                        </button>
-                      </div>
-                    )}
+                    {/* Category and Subcategory - Using new unified selector */}
+                    <CategorySelector
+                      value={category}
+                      onChange={(catId) => {
+                        setCategory(catId);
+                        // If selecting Objetivos category via goal, keep the subcategory
+                        if (catId !== GOALS_CATEGORY_ID) {
+                          setShowSubcategories(false);
+                        }
+                      }}
+                      subcategoryValue={subcategory}
+                      onSubcategoryChange={setSubcategory}
+                      classification={classification}
+                      recentCategories={recentCategories}
+                      required={true}
+                    />
 
                     {/* Payment Method */}
                     <PaymentMethodSelector

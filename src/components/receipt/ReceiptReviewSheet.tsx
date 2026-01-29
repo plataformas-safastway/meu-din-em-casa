@@ -76,6 +76,7 @@ export function ReceiptReviewSheet({
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [categoryId, setCategoryId] = useState("");
+  const [subcategoryId, setSubcategoryId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("debit");
   const [isPrivate, setIsPrivate] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -314,6 +315,8 @@ export function ReceiptReviewSheet({
           <CategorySelector
             value={categoryId}
             onChange={setCategoryId}
+            subcategoryValue={subcategoryId}
+            onSubcategoryChange={setSubcategoryId}
             classification="expense"
           />
 
