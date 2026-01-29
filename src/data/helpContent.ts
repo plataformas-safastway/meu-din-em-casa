@@ -51,8 +51,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 29/01/2026 - Separação App x Dashboard
-export const HELP_CENTER_VERSION = "29/01/2026 v17";
+// Última atualização: 29/01/2026 - Adição de Regime Contábil
+export const HELP_CENTER_VERSION = "29/01/2026 v18";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -395,6 +395,41 @@ export const helpArticles: HelpArticle[] = [
       },
     ],
     keywords: ["orçamento", "inteligente", "faixa", "renda", "automático", "personalizado", "template"],
+    deepLink: "settings",
+  },
+
+  {
+    id: "accounting-regime",
+    title: "Regime de Registro: Fluxo de Caixa vs Competência",
+    category: "budgets",
+    icon: "🧾",
+    summary: "Entenda as duas formas de calcular o realizado no orçamento",
+    steps: [
+      {
+        title: "O que é o Regime de Registro?",
+        description: "O regime define QUANDO uma receita ou despesa entra no cálculo do seu orçamento mensal.",
+        tip: "Você pode escolher o regime em Configurações > Finanças > Regime de Registro.",
+      },
+      {
+        title: "Fluxo de Caixa (Padrão)",
+        description: "O dinheiro entra no orçamento quando REALMENTE sai ou entra na sua conta. Cartão de crédito conta no mês do pagamento da fatura.",
+        tip: "Recomendado para a maioria das famílias por ser mais simples e visual.",
+      },
+      {
+        title: "Competência (Opcional)",
+        description: "Receitas e despesas entram no mês em que ACONTECERAM, independente de quando foram pagas.",
+        tip: "Melhor para quem quer acompanhar compromissos por mês de origem.",
+      },
+      {
+        title: "Impacto no Orçamento",
+        description: "Seu orçamento planejado NÃO muda. Apenas a forma de calcular o realizado (quanto você gastou) é diferente.",
+      },
+      {
+        title: "Posso trocar depois?",
+        description: "Sim! Você pode alterar o regime a qualquer momento. Seus lançamentos não são apagados — apenas a forma de leitura muda.",
+      },
+    ],
+    keywords: ["regime", "fluxo", "caixa", "competência", "registro", "contábil", "realizado", "orçamento"],
     deepLink: "settings",
   },
 
@@ -908,13 +943,13 @@ export const faqItems: FAQItem[] = [
     keywords: ["whatsapp", "consultoria", "número"],
   },
 
-  // ===== REGIME DE CAIXA =====
+  // ===== REGIME DE CAIXA / COMPETÊNCIA =====
   {
     id: "faq-24",
     question: "O que é regime de caixa?",
-    answer: "Regime de caixa significa que o Oik conta as transações no mês em que o dinheiro efetivamente sai ou entra. Para cartão de crédito, é o mês do pagamento da fatura. Para cheque, é a data de compensação.",
+    answer: "Regime de caixa (Fluxo de Caixa) significa que o Oik conta as transações no mês em que o dinheiro efetivamente sai ou entra. Para cartão de crédito, é o mês do pagamento da fatura. Para cheque, é a data de compensação. Este é o regime padrão e recomendado.",
     category: "budgets",
-    keywords: ["regime", "caixa", "quando", "conta", "mês", "orçamento"],
+    keywords: ["regime", "caixa", "quando", "conta", "mês", "orçamento", "fluxo"],
   },
   {
     id: "faq-25",
@@ -922,6 +957,27 @@ export const faqItems: FAQItem[] = [
     answer: "Cheques emitidos ficam 'pendentes' até você informar a data de compensação. Só então o valor entra no orçamento daquele mês. Isso evita contabilizar gastos que ainda não afetaram seu saldo.",
     category: "budgets",
     keywords: ["cheque", "compensação", "pendente", "data", "caixa"],
+  },
+  {
+    id: "faq-26",
+    question: "O que é regime de competência?",
+    answer: "Regime de competência considera receitas e despesas no mês em que ACONTECERAM, independente de quando foram pagas. Por exemplo: aluguel de janeiro entra em janeiro mesmo se pago em fevereiro.",
+    category: "budgets",
+    keywords: ["regime", "competência", "quando", "aconteceu", "mês", "origem"],
+  },
+  {
+    id: "faq-27",
+    question: "Qual regime devo escolher?",
+    answer: "O Fluxo de Caixa (padrão) é mais simples e indicado para planejamento familiar — mostra exatamente o impacto no saldo. O regime de Competência é mais analítico, para quem quer acompanhar compromissos pelo mês de origem.",
+    category: "budgets",
+    keywords: ["qual", "regime", "escolher", "recomendado", "melhor"],
+  },
+  {
+    id: "faq-28",
+    question: "Posso trocar o regime de registro?",
+    answer: "Sim! Em Configurações > Finanças > Regime de Registro. A troca não apaga lançamentos — apenas muda a forma como o 'realizado' é calculado no orçamento.",
+    category: "budgets",
+    keywords: ["trocar", "mudar", "alterar", "regime", "configuração"],
   },
 ];
 

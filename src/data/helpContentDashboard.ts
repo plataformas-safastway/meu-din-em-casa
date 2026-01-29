@@ -36,7 +36,7 @@ export interface DashboardFAQItem {
   audience: "admin-only" | "cs-only" | "support-reference";
 }
 
-export const DASHBOARD_HELP_VERSION = "29/01/2026 v1";
+export const DASHBOARD_HELP_VERSION = "29/01/2026 v2";
 
 // =====================================================
 // LABELS DE CATEGORIA DO DASHBOARD
@@ -331,6 +331,42 @@ export const dashboardHelpArticles: DashboardHelpArticle[] = [
     ],
     keywords: ["orçamento", "meta", "limite", "alerta", "versão", "suporte"],
   },
+
+  // ===== REGIME CONTÁBIL (SUPORTE) =====
+  {
+    id: "app-support-accounting-regime-guide",
+    title: "📱 Guia de Regime Contábil (para Suporte)",
+    category: "app-support-budget",
+    icon: "🧾",
+    summary: "Como explicar Fluxo de Caixa vs Competência ao usuário",
+    audience: "support-reference",
+    steps: [
+      {
+        title: "Conceito Central",
+        description: "O regime define QUANDO uma transação conta no orçamento. Fluxo de Caixa = quando o dinheiro movimenta. Competência = quando o evento aconteceu.",
+        tip: "A maioria dos usuários deve permanecer no Fluxo de Caixa (padrão).",
+      },
+      {
+        title: "Fluxo de Caixa (cash_basis)",
+        description: "Transações contam no mês do DESEMBOLSO efetivo. Cartão de crédito entra no mês de pagamento da fatura. Cheque entra após compensação.",
+        tip: "Mais simples e visual. Reflete o saldo real da conta.",
+      },
+      {
+        title: "Competência (accrual_basis)",
+        description: "Transações contam no mês do EVENTO. Compra de janeiro em cartão entra em janeiro, mesmo com fatura paga em fevereiro.",
+        tip: "Mais analítico. Melhor para quem quer rastrear compromissos por período.",
+      },
+      {
+        title: "Impacto na troca",
+        description: "Alterar o regime NÃO apaga dados. Apenas muda a agregação do 'realizado'. Orçamento planejado permanece igual.",
+      },
+      {
+        title: "Campo técnico",
+        description: "Fluxo de Caixa usa 'cash_date' nas queries. Competência usa 'event_date'. A coluna 'accounting_regime' na tabela 'families' define a escolha.",
+      },
+    ],
+    keywords: ["regime", "fluxo", "caixa", "competência", "cash_basis", "accrual_basis", "suporte"],
+  },
 ];
 
 // =====================================================
@@ -546,6 +582,30 @@ export const dashboardFaqItems: DashboardFAQItem[] = [
     answer: "O usuário vai em Importar > 'Importar Recibos'. Tira ou seleciona múltiplas fotos. O OCR extrai valor, data, estabelecimento automaticamente. Na revisão, o usuário categoriza e confirma. Duplicados são detectados.",
     category: "app-support-import",
     keywords: ["ocr", "foto", "recibo", "comprovante", "importar"],
+    audience: "support-reference",
+  },
+  {
+    id: "support-faq-9",
+    question: "📱 Usuário trocou regime de Caixa para Competência. O que muda?",
+    answer: "O 'realizado' passa a usar event_date (data da compra) ao invés de cash_date (data do pagamento). Compras no cartão entram no mês da compra, não da fatura. Lançamentos NÃO são alterados — só a agregação muda.",
+    category: "app-support-budget",
+    keywords: ["regime", "competência", "troca", "impacto", "mudança"],
+    audience: "support-reference",
+  },
+  {
+    id: "support-faq-10",
+    question: "📱 Usuário pergunta qual regime usar. O que recomendar?",
+    answer: "Fluxo de Caixa (padrão) para 99% dos usuários — é mais simples e reflete o saldo real. Competência só para quem quer análise mais contábil ou tem experiência com gestão financeira analítica.",
+    category: "app-support-budget",
+    keywords: ["regime", "recomendar", "qual", "melhor", "escolher"],
+    audience: "support-reference",
+  },
+  {
+    id: "support-faq-11",
+    question: "📱 Usuário quer saber se pode voltar ao regime anterior. Pode?",
+    answer: "SIM! A troca é reversível a qualquer momento em Configurações > Finanças > Regime de Registro. Os dados não são perdidos — apenas a forma de leitura muda. O orçamento planejado permanece igual.",
+    category: "app-support-budget",
+    keywords: ["voltar", "reverter", "regime", "anterior", "trocar"],
     audience: "support-reference",
   },
 ];

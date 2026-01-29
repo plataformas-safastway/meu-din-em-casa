@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, Wifi, BookOpen, LayoutDashboard, Wallet, Brain } from "lucide-react";
+import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, Wifi, BookOpen, LayoutDashboard, Wallet, Brain, Calculator } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +8,7 @@ import { useUserAccess } from "@/hooks/useUserAccess";
 import { toast } from "sonner";
 import { EducationPreferences } from "@/components/onboarding";
 import { BudgetSetupSheet } from "@/components/budget";
+import { AccountingRegimeSettings } from "@/components/settings";
 
 type NavigationSource = 'home_onboarding' | 'settings' | 'dashboard' | 'default';
 
@@ -23,6 +24,7 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
   const { data: userAccess } = useUserAccess();
   const [showEducationPrefs, setShowEducationPrefs] = useState(false);
   const [showBudgetSetup, setShowBudgetSetup] = useState(false);
+  const [showAccountingRegime, setShowAccountingRegime] = useState(false);
 
   // Navigate with 'settings' as the source context for proper back button behavior
   const navigateToTab = (tab: string) => {
@@ -62,6 +64,9 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
       case "budget":
         setShowBudgetSetup(true);
         break;
+      case "accounting-regime":
+        setShowAccountingRegime(!showAccountingRegime);
+        break;
       default:
         break;
     }
@@ -87,6 +92,7 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
       title: "Finanças",
       items: [
         { id: "budget", label: "Orçamento Inteligente", icon: Wallet, action: "sheet" },
+        { id: "accounting-regime", label: "Regime de Registro", icon: Calculator, action: "component" },
         { id: "learned-rules", label: "Categorizações Aprendidas", icon: Brain, action: "navigate" },
         { id: "import", label: "Importar Extrato/Fatura", icon: Upload, action: "navigate" },
         { id: "export", label: "Exportar Dados (CSV)", icon: Download, action: "action" },
@@ -174,6 +180,11 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
             {section.title === "Suporte" && showEducationPrefs && (
               <div className="p-4 border-t border-border/30">
                 <EducationPreferences />
+              </div>
+            )}
+            {section.title === "Finanças" && showAccountingRegime && (
+              <div className="p-4 border-t border-border/30 bg-card">
+                <AccountingRegimeSettings />
               </div>
             )}
           </div>
