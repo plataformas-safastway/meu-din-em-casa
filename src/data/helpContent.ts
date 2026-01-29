@@ -1184,14 +1184,14 @@ export const faqItems: FAQItem[] = [
   {
     id: "faq-39",
     question: "O que acontece ao substituir categorias?",
-    answer: "Ao importar, você escolhe: 'Reclassificar histórico' atualiza transações antigas para as novas categorias. 'Aplicar daqui para frente' mantém o histórico intacto e usa as novas categorias apenas para lançamentos futuros.",
+    answer: "Ao importar categorias (seja via planilha de categorias ou planilha de gastos), suas categorias substituem completamente as categorias padrão do OIK. No OIK, não existem duas fontes de verdade — apenas suas categorias passam a valer.",
     category: "categories",
-    keywords: ["substituir", "categoria", "histórico", "reclassificar", "versão"],
+    keywords: ["substituir", "categoria", "histórico", "reclassificar", "versão", "fonte de verdade"],
   },
   {
     id: "faq-40",
     question: "Qual a diferença entre reclassificar e aplicar daqui para frente?",
-    answer: "Reclassificar: transações antigas são atualizadas para a nova estrutura, mantendo relatórios consistentes. Daqui para frente: histórico preservado na estrutura original (versionamento), útil quando você quer manter registros como eram.",
+    answer: "Reclassificar: transações antigas são atualizadas para a nova estrutura de categorias, mantendo relatórios consistentes. Daqui para frente: histórico preservado na estrutura original (versionamento), útil quando você quer manter registros como eram.",
     category: "categories",
     keywords: ["diferença", "reclassificar", "daqui para frente", "histórico", "versão", "categoria"],
   },
@@ -1201,6 +1201,20 @@ export const faqItems: FAQItem[] = [
     answer: "Sim! Em Configurações > Finanças > Gerenciar Categorias, toque no menu (⋮) de qualquer categoria para editar, adicionar subcategorias ou arquivar. Edição com 1 toque.",
     category: "categories",
     keywords: ["editar", "categoria", "subcategoria", "gerenciar", "toque"],
+  },
+  {
+    id: "faq-42",
+    question: "Importei uma planilha com minhas categorias — o que acontece?",
+    answer: "Suas categorias passam a ser as categorias oficiais da família. As categorias padrão do OIK deixam de existir para sua conta. Todas as transações (importadas ou manuais) usarão exclusivamente suas categorias. Se você já tinha lançamentos anteriores, poderá escolher entre reclassificá-los ou mantê-los como estavam.",
+    category: "categories",
+    keywords: ["importar", "planilha", "gastos", "categoria", "próprias", "substituir", "oficial"],
+  },
+  {
+    id: "faq-43",
+    question: "As categorias da planilha de gastos substituem as do OIK?",
+    answer: "Sim! Ao importar uma planilha de gastos com categorias próprias, essas categorias substituem as categorias padrão do OIK. A mesma lógica se aplica tanto para importação de categorias quanto para importação de gastos — não há duas fontes de verdade.",
+    category: "categories",
+    keywords: ["planilha", "gastos", "categoria", "substituir", "oik", "padrão", "fonte de verdade"],
   },
 ];
 

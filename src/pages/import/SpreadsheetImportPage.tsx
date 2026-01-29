@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
   CategoryMergeSheet, 
   CategoryReclassificationSheet 
 } from "@/components/import";
+import { CategoryHistoryDecisionModal } from "@/components/categories";
 import type { CategoryDecision } from "@/components/import/CategoryDecisionModal";
 import { 
   useCreateImportSession, 
@@ -22,8 +23,9 @@ import {
   useUpdateSessionDecision,
   useDeactivateImportedCategories,
 } from "@/hooks/useImportedCategories";
+import { useAuth } from "@/contexts/AuthContext";
 
-type Step = "upload" | "mapping" | "category_decision" | "review";
+type Step = "upload" | "mapping" | "category_decision" | "history_decision" | "review";
 
 const STEPS: { key: Step; label: string }[] = [
   { key: "upload", label: "Arquivo" },
@@ -35,6 +37,7 @@ const STEPS: { key: Step; label: string }[] = [
 export function SpreadsheetImportPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { family } = useAuth();
   const [step, setStep] = useState<Step>("upload");
   const [mapping, setMapping] = useState<ColumnMapping | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
@@ -46,6 +49,29 @@ export function SpreadsheetImportPage() {
   const [showMergeSheet, setShowMergeSheet] = useState(false);
   const [showReclassificationSheet, setShowReclassificationSheet] = useState(false);
   const [categoryDecision, setCategoryDecision] = useState<CategoryDecision | null>(null);
+  
+  // History decision state (reclassify vs forward-only)
+  const [showHistoryDecisionModal, setShowHistoryDecisionModal] = useState(false);
+  const [historyMode, setHistoryMode] = useState<"reclassify" | "forward_only" | null>(null);
+  const [hasExistingTransactions, setHasExistingTransactions] = useState(false);
+  
+  // Check if family has existing transactions
+  useEffect(() => {
+    const checkExistingTransactions = async () => {
+      if (!family) return;
+      
+      const { count, error } = await supabase
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("family_id", family.id);
+      
+      if (!error && count && count > 0) {
+        setHasExistingTransactions(true);
+      }
+    };
+    
+    checkExistingTransactions();
+  }, [family]);
 
   const {
     state,
@@ -104,16 +130,23 @@ export function SpreadsheetImportPage() {
     }
 
     if (decision === "keep_imported") {
-      // Save imported categories to database
-      await saveCategories.mutateAsync({
-        categories: state.extractedCategories.map((cat) => ({
-          name: cat.name,
-          type: cat.type,
-          subcategories: cat.subcategories,
-        })),
-        sessionId: sessionId || "",
-      });
-      setStep("review");
+      // User's categories REPLACE OIK defaults - this is the key principle
+      // If family has existing transactions, we need to decide what to do with them
+      if (hasExistingTransactions) {
+        // Show history decision modal
+        setShowHistoryDecisionModal(true);
+      } else {
+        // No existing transactions, just save categories and proceed
+        await saveCategories.mutateAsync({
+          categories: state.extractedCategories.map((cat) => ({
+            name: cat.name,
+            type: cat.type,
+            subcategories: cat.subcategories,
+          })),
+          sessionId: sessionId || "",
+        });
+        setStep("review");
+      }
     } else if (decision === "merge_with_oik") {
       // Show merge sheet
       setShowMergeSheet(true);
@@ -132,8 +165,34 @@ export function SpreadsheetImportPage() {
     deactivateCategories, 
     applyMapping, 
     mapping, 
-    accountId
+    accountId,
+    hasExistingTransactions,
   ]);
+
+  // Handle history decision (reclassify vs forward-only)
+  const handleHistoryDecision = useCallback(async (decision: 'reclassify' | 'forward_only') => {
+    setHistoryMode(decision);
+    setShowHistoryDecisionModal(false);
+    
+    // Save imported categories - they REPLACE OIK defaults
+    await saveCategories.mutateAsync({
+      categories: state.extractedCategories.map((cat) => ({
+        name: cat.name,
+        type: cat.type,
+        subcategories: cat.subcategories,
+      })),
+      sessionId: sessionId || "",
+    });
+
+    if (decision === 'reclassify') {
+      // Show reclassification mapping for existing transactions
+      setShowReclassificationSheet(true);
+    } else {
+      // Forward only - existing transactions keep old categories
+      // New transactions will use the imported categories
+      setStep("review");
+    }
+  }, [saveCategories, state.extractedCategories, sessionId]);
 
   const handleMergeConfirm = useCallback(async (selections: Array<{ oikCategoryId: string; action: string; targetImportedCategoryName?: string }>) => {
     // Save imported categories first
@@ -342,13 +401,15 @@ export function SpreadsheetImportPage() {
         }))}
         onConfirm={handleReclassificationConfirm}
       />
+
+      {/* History Decision Modal - Reclassify vs Forward Only */}
+      <CategoryHistoryDecisionModal
+        open={showHistoryDecisionModal}
+        onClose={() => setShowHistoryDecisionModal(false)}
+        onDecision={handleHistoryDecision}
+        isImport={true}
+      />
     </div>
   );
 }
 
-// Helper to get visible step index (category_decision is hidden in stepper)
-function getVisibleStepIndex(step: Step): number {
-  if (step === "upload") return 0;
-  if (step === "mapping") return 1;
-  return 2; // category_decision and review both show as step 3
-}
