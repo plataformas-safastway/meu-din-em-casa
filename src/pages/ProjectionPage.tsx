@@ -25,7 +25,7 @@ import { useHasPermission } from "@/hooks/useFamilyPermissions";
 import { getCategoryById } from "@/data/categories";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { EducationalInsight } from "@/components/projection";
+import { EducationalInsight, FixedCommitmentDetail } from "@/components/projection";
 import { ContextualTip } from "@/components/onboarding/ContextualTip";
 
 interface ProjectionPageProps {
@@ -87,11 +87,14 @@ function ProjectionDetail({ projection }: { projection: MonthProjection }) {
     <div className="space-y-4">
       {/* Educational Tip - only on first visit */}
       <EducationalInsight
-        title="O que é Projeção?"
-        content="A projeção mostra o impacto futuro das suas decisões atuais. Use para enxergar antes de sentir — sem editar nada, apenas observe e planeje."
+        title="O que é Comprometimento Fixo?"
+        content="OIK não começa pelo gasto. OIK começa pelo comprometimento. A projeção mostra quanto da sua renda já está destinado antes de qualquer decisão — isso define seu limite real."
         variant="info"
-        storageKey="projection_intro"
+        storageKey="projection_intro_v2"
       />
+
+      {/* Fixed Commitment Detail - Core Feature */}
+      <FixedCommitmentDetail projection={projection} />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3">

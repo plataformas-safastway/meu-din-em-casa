@@ -434,6 +434,40 @@ export const helpArticles: HelpArticle[] = [
   },
 
   // ===== PROJEÇÃO =====
+  // ===== PROJEÇÃO FINANCEIRA =====
+  {
+    id: "fixed-commitment-intro",
+    title: "O que é Comprometimento Fixo?",
+    category: "projection",
+    icon: "🔒",
+    summary: "Entenda o conceito central de projeção financeira do OIK",
+    steps: [
+      {
+        title: "O conceito",
+        description: "Comprometimento fixo é quanto da sua renda já está destinado a despesas inevitáveis antes de qualquer decisão de gasto.",
+        tip: "OIK não começa pelo gasto. OIK começa pelo comprometimento.",
+      },
+      {
+        title: "O que entra no cálculo",
+        description: "Despesas fixas recorrentes (aluguel, escola, planos) + parcelas de cartão de crédito = Comprometimento Fixo.",
+      },
+      {
+        title: "Por que isso importa",
+        description: "Saber quanto está comprometido te ajuda a entender seu limite real para gastos variáveis no mês.",
+      },
+      {
+        title: "Alertas de risco",
+        description: "Acima de 60%: atenção ao limite. Acima de 80%: comprometimento crítico - pouca margem para imprevistos.",
+      },
+      {
+        title: "Sobra Projetada",
+        description: "É o que resta da renda após o comprometimento fixo. Esse é seu limite real para gastos variáveis.",
+      },
+    ],
+    keywords: ["comprometimento", "fixo", "renda", "limite", "sobra", "projetada", "60%", "80%", "alerta"],
+    deepLink: "projection",
+  },
+
   {
     id: "projection-intro",
     title: "O que é Projeção Financeira?",
@@ -442,28 +476,28 @@ export const helpArticles: HelpArticle[] = [
     summary: "Entenda como ver o futuro financeiro",
     steps: [
       {
-        title: "Visualização, não controle",
-        description: "A Projeção mostra o impacto futuro das suas decisões atuais. Você não edita nada — apenas observa.",
+        title: "Visualização educativa",
+        description: "A Projeção mostra o impacto futuro das suas decisões atuais. Você não edita nada — apenas observa e aprende.",
         tip: "Enxergue antes de sentir. Essa é a ideia central da projeção.",
       },
       {
         title: "Timeline mensal",
-        description: "Veja os próximos 6 meses em cards horizontais. Cada card mostra o saldo projetado.",
+        description: "Veja até 12 meses à frente em cards horizontais. Cada card mostra o comprometimento e saldo projetado.",
       },
       {
-        title: "Receitas projetadas",
-        description: "Baseadas nas suas transações recorrentes (salário, pro-labore, renda fixa).",
+        title: "Três camadas de cálculo",
+        description: "1) Despesas fixas recorrentes. 2) Parcelas de cartão. 3) Renda projetada (fixa ou média de 3 meses).",
       },
       {
-        title: "Despesas projetadas",
-        description: "Incluem gastos fixos (recorrentes), parcelas de cartão e estimativa baseada no seu padrão.",
+        title: "Comprometimento Fixo",
+        description: "O card principal mostra quanto da renda está comprometido com despesas inevitáveis.",
       },
       {
-        title: "Saldo projetado",
-        description: "Receitas menos despesas. Se ficar negativo, o card fica vermelho com alerta.",
+        title: "Sobra Projetada",
+        description: "Renda menos comprometimento fixo. Esse é seu limite para gastos variáveis.",
       },
     ],
-    keywords: ["projeção", "futuro", "próximos meses", "previsão", "visualizar", "timeline", "saldo projetado"],
+    keywords: ["projeção", "futuro", "próximos meses", "previsão", "visualizar", "timeline", "saldo projetado", "comprometimento"],
     deepLink: "projection",
   },
 
@@ -475,19 +509,52 @@ export const helpArticles: HelpArticle[] = [
     summary: "Como as parcelas impactam seus meses futuros",
     steps: [
       {
+        title: "Parcelas são comprometimento",
+        description: "Toda compra parcelada cria um compromisso mensal inevitável até a quitação. Por isso, parcelas entram como comprometimento fixo.",
+      },
+      {
         title: "Detalhamento de parcelas",
         description: "A projeção mostra cada parcela individualmente: descrição, número da parcela (ex: 3/12) e valor.",
       },
       {
         title: "Impacto no orçamento",
-        description: "Se suas parcelas representam mais de 30% da receita projetada, você verá um alerta educativo.",
+        description: "Se seu comprometimento fixo (fixos + parcelas) passa de 60% da renda, você verá alertas educativos.",
       },
       {
-        title: "Concentração de parcelas",
-        description: "A projeção destaca quando um cartão concentra muitas parcelas em um período específico.",
+        title: "Planejamento de novas compras",
+        description: "Antes de parcelar, verifique na projeção como ficará seu comprometimento nos próximos meses.",
       },
     ],
-    keywords: ["cartão", "parcela", "crédito", "fatura", "projeção", "impacto", "futuro"],
+    keywords: ["cartão", "parcela", "crédito", "fatura", "projeção", "impacto", "futuro", "comprometimento"],
+    deepLink: "projection",
+  },
+
+  {
+    id: "projection-income",
+    title: "Como a Renda é Projetada",
+    category: "projection",
+    icon: "💰",
+    summary: "Entenda como o OIK calcula sua renda futura",
+    steps: [
+      {
+        title: "Renda fixa",
+        description: "Se você tem salário fixo configurado como recorrência, esse valor é usado diretamente.",
+      },
+      {
+        title: "Renda variável",
+        description: "Para rendas variáveis, o OIK usa a média dos últimos 3 meses realizados.",
+        tip: "Se houver menos de 3 meses de histórico, usa-se a média do período disponível.",
+      },
+      {
+        title: "Múltiplas fontes",
+        description: "Todas as recorrências de receita são somadas para formar a renda projetada mensal.",
+      },
+      {
+        title: "Atualização automática",
+        description: "A projeção recalcula automaticamente conforme você registra novas receitas.",
+      },
+    ],
+    keywords: ["renda", "salário", "projetada", "média", "variável", "fixa", "recorrência"],
     deepLink: "projection",
   },
 
@@ -999,6 +1066,50 @@ export const faqItems: FAQItem[] = [
     answer: "Se você está no regime de Fluxo de Caixa (padrão), compras no cartão só aparecem no realizado quando a FATURA é paga. Verifique se o pagamento da fatura foi registrado. Se preferir ver compras imediatamente, considere mudar para regime de Competência.",
     category: "budgets",
     keywords: ["cartão", "não aparece", "realizado", "fatura", "regime"],
+  },
+
+  // ===== PROJEÇÃO E COMPROMETIMENTO FIXO =====
+  {
+    id: "faq-32",
+    question: "O que é comprometimento fixo?",
+    answer: "Comprometimento fixo é quanto da sua renda já está destinado a despesas inevitáveis (despesas fixas recorrentes + parcelas de cartão) antes de qualquer decisão de gasto. É o conceito central do módulo de projeções do OIK.",
+    category: "projection",
+    keywords: ["comprometimento", "fixo", "despesas", "parcelas", "inevitável", "renda"],
+  },
+  {
+    id: "faq-33",
+    question: "Por que 60% e 80% são os limites de alerta?",
+    answer: "Acima de 60%: você tem pouca margem para imprevistos — requer atenção. Acima de 80%: comprometimento crítico — qualquer gasto extra pode apertar o mês. Esses percentuais são referências de planejamento financeiro familiar.",
+    category: "projection",
+    keywords: ["60%", "80%", "alerta", "limite", "comprometimento", "crítico"],
+  },
+  {
+    id: "faq-34",
+    question: "O que é Sobra Projetada?",
+    answer: "Sobra Projetada = Renda Projetada − Comprometimento Fixo. É o valor que você tem disponível para gastos variáveis no mês. Se for negativo, significa que seu comprometimento excede a renda prevista.",
+    category: "projection",
+    keywords: ["sobra", "projetada", "disponível", "variável", "limite"],
+  },
+  {
+    id: "faq-35",
+    question: "Como a renda é projetada para renda variável?",
+    answer: "Para rendas variáveis, o OIK calcula a média dos últimos 3 meses de receita realizada. Se houver menos de 3 meses de histórico, usa a média do período disponível. É uma estimativa educativa.",
+    category: "projection",
+    keywords: ["renda", "variável", "média", "3 meses", "projetada"],
+  },
+  {
+    id: "faq-36",
+    question: "As parcelas de cartão entram na projeção?",
+    answer: "Sim! Parcelas de cartão são compromissos fixos temporários — elas entram automaticamente em cada mês projetado até a quitação. Isso ajuda você a visualizar o impacto de parcelamentos futuros.",
+    category: "projection",
+    keywords: ["parcelas", "cartão", "projeção", "compromisso", "temporário", "quitação"],
+  },
+  {
+    id: "faq-37",
+    question: "Posso simular gastos extras na projeção?",
+    answer: "A projeção atual é de visualização. Em breve, você poderá simular despesas extras e ver o impacto imediato no comprometimento e sobra projetada — sem salvar nada, apenas para educar sua decisão.",
+    category: "projection",
+    keywords: ["simular", "extra", "gasto", "projeção", "impacto"],
   },
 ];
 

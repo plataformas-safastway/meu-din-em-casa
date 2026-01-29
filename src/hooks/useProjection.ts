@@ -7,18 +7,43 @@ export interface ProjectionDriver {
   label: string;
   amount: number;
   category?: string;
+  subcategory?: string;
 }
 
 export interface MonthProjection {
   month: string;
   monthLabel: string;
+  // Income
   incomeProjected: number;
-  expenseProjected: number;
-  creditCardInstallments: number;
   recurringIncome: number;
+  // Expenses total
+  expenseProjected: number;
   recurringExpense: number;
+  // Fixed Commitment breakdown (core feature)
+  fixedRecurringTotal: number;
+  creditCardInstallments: number;
+  fixedCommitmentTotal: number;
+  fixedCommitmentPercentage: number;
+  // Projected surplus
+  projectedSurplus: number;
+  variableExpenseEstimate: number;
+  // Balance
   balanceProjected: number;
+  // Drivers/details
   drivers: ProjectionDriver[];
+  fixedExpenses: ProjectionDriver[];
+  installmentDetails: ProjectionDriver[];
+}
+
+export interface CurrentMonthSummary {
+  month: string;
+  fixedCommitmentTotal: number;
+  fixedCommitmentPercentage: number;
+  projectedSurplus: number;
+  incomeProjected: number;
+  fixedRecurringTotal: number;
+  creditCardInstallments: number;
+  alertLevel: 'healthy' | 'warning' | 'critical';
 }
 
 export interface AITips {
@@ -29,15 +54,17 @@ export interface AITips {
 
 export interface ProjectionData {
   projections: MonthProjection[];
+  currentMonthSummary: CurrentMonthSummary | null;
   aiTips: AITips | null;
   metadata: {
     generatedAt: string;
     monthsProjected: number;
     historicalMonths: number;
+    accountingRegime: string;
   };
 }
 
-export function useProjection(months: number = 6, includeAiTips: boolean = true) {
+export function useProjection(months: number = 12, includeAiTips: boolean = true) {
   const { family } = useAuth();
 
   return useQuery({
@@ -69,4 +96,42 @@ export function useMonthProjectionSummary(monthIndex: number = 0) {
     isLoading,
     error,
   };
+}
+
+// Get current month's fixed commitment summary (for Home widget)
+export function useCurrentMonthCommitment() {
+  const { data, isLoading, error } = useProjection(1, false);
+
+  return {
+    data: data?.currentMonthSummary || null,
+    projection: data?.projections[0] || null,
+    isLoading,
+    error,
+  };
+}
+
+// Helper to get alert level color
+export function getAlertLevelColor(level: CurrentMonthSummary['alertLevel']) {
+  switch (level) {
+    case 'critical':
+      return 'destructive';
+    case 'warning':
+      return 'warning';
+    case 'healthy':
+    default:
+      return 'success';
+  }
+}
+
+// Helper to get alert level text
+export function getAlertLevelText(level: CurrentMonthSummary['alertLevel']) {
+  switch (level) {
+    case 'critical':
+      return 'Comprometimento alto';
+    case 'warning':
+      return 'Atenção ao limite';
+    case 'healthy':
+    default:
+      return 'Saudável';
+  }
 }

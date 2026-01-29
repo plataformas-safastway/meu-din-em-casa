@@ -6,21 +6,43 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface ProjectionDriver {
+  type: "INSTALLMENT" | "RECURRING" | "AVERAGE";
+  label: string;
+  amount: number;
+  category?: string;
+  subcategory?: string;
+}
+
 interface MonthProjection {
   month: string;
   monthLabel: string;
+  // Income
   incomeProjected: number;
-  expenseProjected: number;
-  creditCardInstallments: number;
   recurringIncome: number;
+  // Expenses total
+  expenseProjected: number;
   recurringExpense: number;
+  // Fixed Commitment breakdown (NEW)
+  fixedRecurringTotal: number;
+  creditCardInstallments: number;
+  fixedCommitmentTotal: number;
+  fixedCommitmentPercentage: number;
+  // Projected surplus (what's left for variable spending)
+  projectedSurplus: number;
+  variableExpenseEstimate: number;
+  // Balance
   balanceProjected: number;
-  drivers: Array<{
-    type: "INSTALLMENT" | "RECURRING" | "AVERAGE";
-    label: string;
-    amount: number;
-    category?: string;
-  }>;
+  // Drivers/details
+  drivers: ProjectionDriver[];
+  fixedExpenses: ProjectionDriver[];
+  installmentDetails: ProjectionDriver[];
+}
+
+interface AITips {
+  tips: string[];
+  alert: string | null;
+  recommendation: string;
 }
 
 serve(async (req) => {
@@ -41,12 +63,10 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     
-    // Create client with user token for auth
     const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
     
-    // Validate token with getClaims
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await supabaseUser.auth.getClaims(token);
     
@@ -59,11 +79,9 @@ serve(async (req) => {
     }
 
     const userId = claimsData.claims.sub;
-    
-    // Use service role for data queries
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get family - filter by ACTIVE status
+    // Get family and its accounting regime
     const { data: member, error: memberError } = await supabase
       .from("family_members")
       .select("family_id")
@@ -82,19 +100,28 @@ serve(async (req) => {
     }
 
     const familyId = member.family_id;
-    const { months = 6, includeAiTips = true } = await req.json().catch(() => ({}));
 
-    // Get historical data (last 3 months)
+    // Get family settings including accounting regime
+    const { data: familyData } = await supabase
+      .from("families")
+      .select("income_anchor_value, income_type, accounting_regime")
+      .eq("id", familyId)
+      .single();
+
+    const accountingRegime = familyData?.accounting_regime || "cash_basis";
+    const { months = 12, includeAiTips = true } = await req.json().catch(() => ({}));
+
     const today = new Date();
     const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1);
     
+    // Get historical transactions for income average calculation
     const { data: historicalTransactions } = await supabase
       .from("transactions")
       .select("type, amount, category_id, date")
       .eq("family_id", familyId)
       .gte("date", threeMonthsAgo.toISOString().split("T")[0]);
 
-    // Calculate averages
+    // Calculate income averages (for variable income families)
     const incomeByMonth: Record<string, number> = {};
     const expenseByMonth: Record<string, number> = {};
     const expenseByCategory: Record<string, number[]> = {};
@@ -110,25 +137,27 @@ serve(async (req) => {
       }
     });
 
-    const monthCount = Object.keys(incomeByMonth).length || 1;
-    const avgIncome = Object.values(incomeByMonth).reduce((a, b) => a + b, 0) / monthCount;
-    const avgExpense = Object.values(expenseByMonth).reduce((a, b) => a + b, 0) / monthCount;
+    const incomeMonths = Object.keys(incomeByMonth).length || 1;
+    const avgIncome = Object.values(incomeByMonth).reduce((a, b) => a + b, 0) / incomeMonths;
+    
+    const expenseMonths = Object.keys(expenseByMonth).length || 1;
+    const avgExpense = Object.values(expenseByMonth).reduce((a, b) => a + b, 0) / expenseMonths;
 
-    // Get recurring transactions
+    // Get recurring transactions (both income and expense)
     const { data: recurring } = await supabase
       .from("recurring_transactions")
       .select("*")
       .eq("family_id", familyId)
       .eq("is_active", true);
 
-    // Get legacy installments (for backwards compatibility)
+    // Get legacy installments
     const { data: legacyInstallments } = await supabase
       .from("installments")
       .select("*")
       .eq("family_id", familyId)
       .eq("is_active", true);
 
-    // Get new planned installments (PLANNED status only)
+    // Get planned installments (PLANNED status only)
     const { data: plannedInstallments } = await supabase
       .from("planned_installments")
       .select(`
@@ -155,34 +184,51 @@ serve(async (req) => {
       const monthKey = projDate.toISOString().split("T")[0].substring(0, 7);
       const monthLabel = `${monthNames[projDate.getMonth()]}/${projDate.getFullYear().toString().slice(-2)}`;
       
-      const drivers: MonthProjection["drivers"] = [];
+      const drivers: ProjectionDriver[] = [];
+      const fixedExpenses: ProjectionDriver[] = [];
+      const installmentDetails: ProjectionDriver[] = [];
       
-      // Calculate recurring income
+      // === LAYER A: FIXED RECURRING EXPENSES ===
       let recurringIncome = 0;
       let recurringExpense = 0;
+      let fixedRecurringTotal = 0;
       
       (recurring || []).forEach((r: any) => {
         const startDate = new Date(r.start_date);
         const endDate = r.end_date ? new Date(r.end_date) : null;
         
+        // Check if this recurring item is active in this projection month
         if (startDate <= projDate && (!endDate || endDate >= projDate)) {
+          const amount = Number(r.amount);
+          
           if (r.type === "income") {
-            recurringIncome += Number(r.amount);
-            if (Number(r.amount) >= avgIncome * 0.1) {
+            recurringIncome += amount;
+            if (amount >= avgIncome * 0.05) {
               drivers.push({
                 type: "RECURRING",
                 label: r.description,
-                amount: Number(r.amount),
+                amount,
                 category: r.category_id,
               });
             }
           } else {
-            recurringExpense += Number(r.amount);
-            if (Number(r.amount) >= avgExpense * 0.05) {
+            recurringExpense += amount;
+            fixedRecurringTotal += amount;
+            
+            // Add to fixed expenses breakdown
+            fixedExpenses.push({
+              type: "RECURRING",
+              label: r.description,
+              amount,
+              category: r.category_id,
+              subcategory: r.subcategory_id,
+            });
+            
+            if (amount >= avgExpense * 0.03) {
               drivers.push({
                 type: "RECURRING",
                 label: r.description,
-                amount: Number(r.amount),
+                amount,
                 category: r.category_id,
               });
             }
@@ -190,7 +236,7 @@ serve(async (req) => {
         }
       });
 
-      // Calculate installments for this month
+      // === LAYER B: CREDIT CARD INSTALLMENTS ===
       let creditCardInstallments = 0;
       
       // Process legacy installments table
@@ -201,11 +247,21 @@ serve(async (req) => {
         const installmentNum = inst.current_installment + monthsDiff;
         
         if (installmentNum >= inst.current_installment && installmentNum <= inst.total_installments) {
-          creditCardInstallments += Number(inst.installment_amount);
+          const amount = Number(inst.installment_amount);
+          creditCardInstallments += amount;
+          
+          const label = `${inst.description} (${installmentNum}/${inst.total_installments})`;
+          installmentDetails.push({
+            type: "INSTALLMENT",
+            label,
+            amount,
+            category: inst.category_id,
+          });
+          
           drivers.push({
             type: "INSTALLMENT",
-            label: `${inst.description} (${installmentNum}/${inst.total_installments})`,
-            amount: Number(inst.installment_amount),
+            label,
+            amount,
             category: inst.category_id,
           });
         }
@@ -218,60 +274,107 @@ serve(async (req) => {
         if (dueDate.getFullYear() === projDate.getFullYear() && 
             dueDate.getMonth() === projDate.getMonth()) {
           const group = planned.installment_group;
-          creditCardInstallments += Number(planned.amount);
+          const amount = Number(planned.amount);
+          creditCardInstallments += amount;
+          
+          const label = `${group?.description || 'Parcela'} (${planned.installment_index}/${group?.installments_total || '?'})`;
+          installmentDetails.push({
+            type: "INSTALLMENT",
+            label,
+            amount,
+            category: group?.category_id,
+            subcategory: group?.subcategory_id,
+          });
+          
           drivers.push({
             type: "INSTALLMENT",
-            label: `${group?.description || 'Parcela'} (${planned.installment_index}/${group?.installments_total || '?'})`,
-            amount: Number(planned.amount),
+            label,
+            amount,
             category: group?.category_id,
           });
         }
       });
 
-      // Calculate projected values
-      const incomeProjected = recurringIncome > 0 ? recurringIncome : avgIncome;
-      const expenseProjected = recurringExpense + creditCardInstallments + (avgExpense * 0.5); // 50% variable
+      // === LAYER C: INCOME PROJECTION ===
+      // Use configured income if available, otherwise use average
+      let incomeProjected = 0;
+      if (familyData?.income_anchor_value && familyData.income_type === 'fixed') {
+        incomeProjected = Number(familyData.income_anchor_value);
+      } else if (recurringIncome > 0) {
+        incomeProjected = recurringIncome;
+      } else {
+        incomeProjected = avgIncome;
+      }
+
+      // === FIXED COMMITMENT CALCULATION ===
+      const fixedCommitmentTotal = fixedRecurringTotal + creditCardInstallments;
+      const fixedCommitmentPercentage = incomeProjected > 0 
+        ? (fixedCommitmentTotal / incomeProjected) * 100 
+        : 0;
+      
+      // === PROJECTED SURPLUS ===
+      // This is what's available for variable spending
+      const projectedSurplus = incomeProjected - fixedCommitmentTotal;
+      
+      // === VARIABLE EXPENSE ESTIMATE ===
+      // Estimate variable expenses based on historical average minus fixed
+      const variableExpenseEstimate = Math.max(0, avgExpense - fixedRecurringTotal);
+      
+      // === TOTAL EXPENSE AND BALANCE ===
+      const expenseProjected = fixedCommitmentTotal + variableExpenseEstimate;
       const balanceProjected = incomeProjected - expenseProjected;
 
       projections.push({
         month: monthKey,
         monthLabel,
+        // Income
         incomeProjected: Math.round(incomeProjected * 100) / 100,
-        expenseProjected: Math.round(expenseProjected * 100) / 100,
-        creditCardInstallments: Math.round(creditCardInstallments * 100) / 100,
         recurringIncome: Math.round(recurringIncome * 100) / 100,
+        // Expenses
+        expenseProjected: Math.round(expenseProjected * 100) / 100,
         recurringExpense: Math.round(recurringExpense * 100) / 100,
+        // Fixed Commitment (NEW - core feature)
+        fixedRecurringTotal: Math.round(fixedRecurringTotal * 100) / 100,
+        creditCardInstallments: Math.round(creditCardInstallments * 100) / 100,
+        fixedCommitmentTotal: Math.round(fixedCommitmentTotal * 100) / 100,
+        fixedCommitmentPercentage: Math.round(fixedCommitmentPercentage * 10) / 10,
+        // Surplus
+        projectedSurplus: Math.round(projectedSurplus * 100) / 100,
+        variableExpenseEstimate: Math.round(variableExpenseEstimate * 100) / 100,
+        // Balance
         balanceProjected: Math.round(balanceProjected * 100) / 100,
-        drivers: drivers.slice(0, 5), // Top 5 drivers
+        // Details
+        drivers: drivers.slice(0, 8),
+        fixedExpenses: fixedExpenses.slice(0, 10),
+        installmentDetails: installmentDetails.slice(0, 10),
       });
     }
 
     // Generate AI tips if requested
-    let aiTips = null;
+    let aiTips: AITips | null = null;
     if (includeAiTips) {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       
       if (LOVABLE_API_KEY) {
         try {
-          // Prepare aggregated data for AI (no sensitive info)
+          // Current month's fixed commitment for analysis
+          const currentMonth = projections[0];
+          const avgFixedCommitment = projections.slice(0, 6).reduce((sum, p) => sum + p.fixedCommitmentPercentage, 0) / Math.min(6, projections.length);
+          
           const aggregatedData = {
             avgMonthlyIncome: Math.round(avgIncome),
             avgMonthlyExpense: Math.round(avgExpense),
-            savingsRate: avgIncome > 0 ? Math.round(((avgIncome - avgExpense) / avgIncome) * 100) : 0,
-            totalInstallments: (legacyInstallments || []).length + (plannedInstallments || []).length,
-            totalRecurring: (recurring || []).length,
-            projectedBalances: projections.map(p => ({
+            currentFixedCommitment: currentMonth?.fixedCommitmentTotal || 0,
+            currentFixedCommitmentPercentage: currentMonth?.fixedCommitmentPercentage || 0,
+            avgFixedCommitmentPercentage: Math.round(avgFixedCommitment),
+            totalActiveInstallments: (legacyInstallments || []).length + (plannedInstallments || []).length,
+            totalRecurringExpenses: (recurring || []).filter((r: any) => r.type === 'expense').length,
+            monthsWithNegativeSurplus: projections.filter(p => p.projectedSurplus < 0).length,
+            projectedSurplusNext3Months: projections.slice(0, 3).map(p => ({
               month: p.monthLabel,
-              balance: p.balanceProjected,
-              hasNegative: p.balanceProjected < 0,
+              surplus: p.projectedSurplus,
+              commitmentPct: p.fixedCommitmentPercentage,
             })),
-            topCategories: Object.entries(expenseByCategory)
-              .map(([cat, amounts]) => ({
-                category: cat,
-                avgAmount: Math.round(amounts.reduce((a, b) => a + b, 0) / amounts.length),
-              }))
-              .sort((a, b) => b.avgAmount - a.avgAmount)
-              .slice(0, 5),
           };
 
           const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -285,14 +388,22 @@ serve(async (req) => {
               messages: [
                 {
                   role: "system",
-                  content: `Você é um consultor financeiro familiar brasileiro. Analise os dados agregados e forneça dicas práticas e acolhedoras em português. 
-                  Seja breve e direto. Use linguagem simples e encorajadora.
-                  Retorne EXATAMENTE um JSON com: { "tips": ["dica1", "dica2", "dica3"], "alert": "alerta se houver risco", "recommendation": "recomendação prática" }`,
+                  content: `Você é um consultor financeiro familiar brasileiro. Analise os dados de comprometimento fixo e projeções.
+                  
+FOCO: O conceito central é "Comprometimento Fixo" - quanto da renda já está comprometida antes de qualquer decisão de gasto.
+
+Regras:
+- Comprometimento > 60%: Alerta leve - "Atenção ao limite de gastos variáveis"
+- Comprometimento > 80%: Alerta crítico - "Risco de aperto financeiro"
+- Sobra negativa: Alertar sobre meses críticos
+
+Seja breve, educativo e acolhedor. Use linguagem simples.
+Retorne EXATAMENTE um JSON com: { "tips": ["dica1", "dica2", "dica3"], "alert": "alerta se houver risco ou null", "recommendation": "recomendação prática" }`,
                 },
                 {
                   role: "user",
-                  content: `Analise estes dados financeiros agregados e dê 3 dicas práticas:
-                  ${JSON.stringify(aggregatedData, null, 2)}`,
+                  content: `Analise o comprometimento fixo desta família:
+${JSON.stringify(aggregatedData, null, 2)}`,
                 },
               ],
             }),
@@ -303,57 +414,69 @@ serve(async (req) => {
             const content = aiData.choices?.[0]?.message?.content;
             if (content) {
               try {
-                // Extract JSON from response
                 const jsonMatch = content.match(/\{[\s\S]*\}/);
                 if (jsonMatch) {
                   aiTips = JSON.parse(jsonMatch[0]);
                 }
               } catch {
-                aiTips = {
-                  tips: [
-                    "Revise seus gastos fixos mensalmente",
-                    "Tente manter uma reserva de emergência",
-                    "Acompanhe suas parcelas de cartão",
-                  ],
-                  alert: null,
-                  recommendation: "Continue acompanhando suas finanças regularmente",
-                };
+                // Fallback tips
               }
             }
           }
         } catch (aiError) {
           console.error("AI tips error:", aiError);
-          aiTips = {
-            tips: [
-              "Revise seus gastos fixos mensalmente",
-              "Tente manter uma reserva de emergência",
-              "Acompanhe suas parcelas de cartão",
-            ],
-            alert: null,
-            recommendation: "Continue acompanhando suas finanças regularmente",
-          };
         }
-      } else {
+      }
+      
+      // Default tips if AI fails
+      if (!aiTips) {
+        const currentCommitment = projections[0]?.fixedCommitmentPercentage || 0;
+        let alert = null;
+        
+        if (currentCommitment > 80) {
+          alert = "Seu comprometimento fixo está acima de 80% da renda. Revise parcelas e despesas fixas.";
+        } else if (currentCommitment > 60) {
+          alert = "Atenção: comprometimento fixo acima de 60%. Há pouca margem para imprevistos.";
+        }
+        
         aiTips = {
           tips: [
-            "Revise seus gastos fixos mensalmente",
-            "Tente manter uma reserva de emergência",
-            "Acompanhe suas parcelas de cartão",
+            "O comprometimento fixo mostra quanto da renda já está destinado antes de qualquer gasto",
+            "Parcelas de cartão são compromissos inevitáveis até a quitação",
+            "A sobra projetada é seu limite real para gastos variáveis",
           ],
-          alert: null,
-          recommendation: "Continue acompanhando suas finanças regularmente",
+          alert,
+          recommendation: currentCommitment > 60 
+            ? "Considere quitar parcelas ou renegociar despesas fixas para aumentar sua margem"
+            : "Mantenha o comprometimento fixo abaixo de 60% para ter folga no orçamento",
         };
       }
     }
 
+    // Current month summary for Home widget
+    const currentMonthSummary = projections[0] ? {
+      month: projections[0].monthLabel,
+      fixedCommitmentTotal: projections[0].fixedCommitmentTotal,
+      fixedCommitmentPercentage: projections[0].fixedCommitmentPercentage,
+      projectedSurplus: projections[0].projectedSurplus,
+      incomeProjected: projections[0].incomeProjected,
+      fixedRecurringTotal: projections[0].fixedRecurringTotal,
+      creditCardInstallments: projections[0].creditCardInstallments,
+      alertLevel: projections[0].fixedCommitmentPercentage > 80 ? 'critical' 
+                : projections[0].fixedCommitmentPercentage > 60 ? 'warning' 
+                : 'healthy',
+    } : null;
+
     return new Response(
       JSON.stringify({
         projections,
+        currentMonthSummary,
         aiTips,
         metadata: {
           generatedAt: new Date().toISOString(),
           monthsProjected: months,
-          historicalMonths: monthCount,
+          historicalMonths: incomeMonths,
+          accountingRegime,
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
