@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Plus, Building2, CreditCard, MoreVertical, Trash2, Edit, Key, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Plus, Building2, CreditCard, MoreVertical, Trash2, Edit, Key, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -12,6 +12,7 @@ import { EditCreditCardSheet } from "@/components/EditCreditCardSheet";
 import { AddPixKeySheet } from "@/components/AddPixKeySheet";
 import { useBankAccounts, useCreditCards, useDeleteBankAccount, useDeleteCreditCard, usePixKeys, useDeletePixKey } from "@/hooks/useBankData";
 import { formatCurrency } from "@/lib/formatters";
+import { formatBankAccountLabel, formatCreditCardLabel, formatTitleholders } from "@/lib/bankAccountLabel";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -187,12 +188,27 @@ export function BanksPage({ onBack }: BanksPageProps) {
                                   <h3 className="font-semibold text-foreground truncate">
                                     {account.nickname}
                                   </h3>
+                                  {account.ownership_type === 'joint' && (
+                                    <Badge variant="secondary" className="text-xs gap-1">
+                                      <Users className="w-3 h-3" />
+                                      Conjunta
+                                    </Badge>
+                                  )}
                                   {!account.is_active && (
-                                    <Badge variant="secondary" className="text-xs">Inativa</Badge>
+                                    <Badge variant="outline" className="text-xs">Inativa</Badge>
                                   )}
                                 </div>
                                 <p className="text-sm text-muted-foreground">
-                                  {account.banks?.name || account.custom_bank_name} • {accountTypeLabels[account.account_type]}
+                                  {formatBankAccountLabel({
+                                    bankName: account.banks?.name,
+                                    bankCode: account.banks?.bank_code,
+                                    customBankName: account.custom_bank_name,
+                                    agency: account.agency,
+                                    accountNumber: account.account_number,
+                                    accountDigit: account.account_digit,
+                                    ownershipType: account.ownership_type,
+                                    titleholders: account.titleholders,
+                                  })}
                                 </p>
                               </div>
                             </div>
@@ -355,11 +371,19 @@ export function BanksPage({ onBack }: BanksPageProps) {
                             <div className="flex items-center gap-2">
                               <h3 className="font-semibold text-foreground">{card.card_name}</h3>
                               {!card.is_active && (
-                                <Badge variant="secondary" className="text-xs">Inativo</Badge>
+                                <Badge variant="outline" className="text-xs">Inativo</Badge>
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              {brandLabels[card.brand]} • Fecha dia {card.closing_day} • Vence dia {card.due_day}
+                              {formatCreditCardLabel({
+                                bankName: card.banks?.name,
+                                brand: card.brand,
+                                cardHolder: card.card_holder,
+                                lastFourDigits: card.last_four_digits,
+                              })}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Fecha dia {card.closing_day} • Vence dia {card.due_day}
                             </p>
                           </div>
                         </div>

@@ -381,39 +381,66 @@ export type Database = {
       }
       bank_accounts: {
         Row: {
+          account_digit: string | null
+          account_number: string | null
           account_type: Database["public"]["Enums"]["bank_account_type"]
+          agency: string | null
           bank_id: string | null
           created_at: string
           custom_bank_name: string | null
+          external_id: string | null
           family_id: string
           id: string
           initial_balance: number | null
           is_active: boolean
           nickname: string
+          ownership_type:
+            | Database["public"]["Enums"]["account_ownership_type"]
+            | null
+          source: string | null
+          titleholders: string[] | null
           updated_at: string
         }
         Insert: {
+          account_digit?: string | null
+          account_number?: string | null
           account_type?: Database["public"]["Enums"]["bank_account_type"]
+          agency?: string | null
           bank_id?: string | null
           created_at?: string
           custom_bank_name?: string | null
+          external_id?: string | null
           family_id: string
           id?: string
           initial_balance?: number | null
           is_active?: boolean
           nickname: string
+          ownership_type?:
+            | Database["public"]["Enums"]["account_ownership_type"]
+            | null
+          source?: string | null
+          titleholders?: string[] | null
           updated_at?: string
         }
         Update: {
+          account_digit?: string | null
+          account_number?: string | null
           account_type?: Database["public"]["Enums"]["bank_account_type"]
+          agency?: string | null
           bank_id?: string | null
           created_at?: string
           custom_bank_name?: string | null
+          external_id?: string | null
           family_id?: string
           id?: string
           initial_balance?: number | null
           is_active?: boolean
           nickname?: string
+          ownership_type?:
+            | Database["public"]["Enums"]["account_ownership_type"]
+            | null
+          source?: string | null
+          titleholders?: string[] | null
           updated_at?: string
         }
         Relationships: [
@@ -435,6 +462,7 @@ export type Database = {
       }
       banks: {
         Row: {
+          bank_code: string | null
           created_at: string
           id: string
           is_system: boolean
@@ -442,6 +470,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          bank_code?: string | null
           created_at?: string
           id?: string
           is_system?: boolean
@@ -449,6 +478,7 @@ export type Database = {
           name: string
         }
         Update: {
+          bank_code?: string | null
           created_at?: string
           id?: string
           is_system?: boolean
@@ -1069,44 +1099,59 @@ export type Database = {
       credit_cards: {
         Row: {
           bank_account_id: string | null
+          bank_id: string | null
           brand: Database["public"]["Enums"]["card_brand"]
+          card_holder: string | null
           card_name: string
           card_type: Database["public"]["Enums"]["card_type"]
           closing_day: number | null
           created_at: string
           credit_limit: number | null
           due_day: number | null
+          external_id: string | null
           family_id: string
           id: string
           is_active: boolean
+          last_four_digits: string | null
+          source: string | null
           updated_at: string
         }
         Insert: {
           bank_account_id?: string | null
+          bank_id?: string | null
           brand?: Database["public"]["Enums"]["card_brand"]
+          card_holder?: string | null
           card_name: string
           card_type?: Database["public"]["Enums"]["card_type"]
           closing_day?: number | null
           created_at?: string
           credit_limit?: number | null
           due_day?: number | null
+          external_id?: string | null
           family_id: string
           id?: string
           is_active?: boolean
+          last_four_digits?: string | null
+          source?: string | null
           updated_at?: string
         }
         Update: {
           bank_account_id?: string | null
+          bank_id?: string | null
           brand?: Database["public"]["Enums"]["card_brand"]
+          card_holder?: string | null
           card_name?: string
           card_type?: Database["public"]["Enums"]["card_type"]
           closing_day?: number | null
           created_at?: string
           credit_limit?: number | null
           due_day?: number | null
+          external_id?: string | null
           family_id?: string
           id?: string
           is_active?: boolean
+          last_four_digits?: string | null
+          source?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1115,6 +1160,13 @@ export type Database = {
             columns: ["bank_account_id"]
             isOneToOne: false
             referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_cards_bank_id_fkey"
+            columns: ["bank_id"]
+            isOneToOne: false
+            referencedRelation: "banks"
             referencedColumns: ["id"]
           },
           {
@@ -6737,6 +6789,7 @@ export type Database = {
       }
     }
     Enums: {
+      account_ownership_type: "individual" | "joint"
       admin_role: "CS" | "ADMIN" | "LEGAL" | "MASTER"
       app_role:
         | "user"
@@ -6975,6 +7028,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_ownership_type: ["individual", "joint"],
       admin_role: ["CS", "ADMIN", "LEGAL", "MASTER"],
       app_role: [
         "user",
