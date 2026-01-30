@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { captureEvent, captureException } from '@/lib/observability';
 
 export type AdminRole = 'CS' | 'ADMIN' | 'LEGAL' | 'MASTER';
 
@@ -105,7 +106,18 @@ export function useAdminUsersList() {
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('[useAdminUsersList] Error:', error);
+        // Log to observability
+        captureEvent({
+          category: 'network',
+          name: 'admin_users_list_failed',
+          severity: 'error',
+          message: `Failed to fetch admin users: ${error.message}`,
+          data: {
+            errorCode: error.code,
+            errorHint: error.hint,
+            screen: '/admin/users',
+          },
+        });
         throw error;
       }
       

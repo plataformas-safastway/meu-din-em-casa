@@ -5,6 +5,8 @@
  * - Fetching current admin user profile
  * - Updating profile data (name, phone, avatar)
  * - Password change via Supabase Auth
+ * 
+ * All errors are logged to observability for monitoring
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +14,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { captureEvent, captureException } from "@/lib/observability";
 
 // Schema for admin profile form
 export const adminProfileSchema = z.object({
@@ -108,7 +111,18 @@ export function useUpdateAdminProfile() {
         .single();
 
       if (error) {
-        console.error("[useUpdateAdminProfile] Error:", error);
+        // Log to observability
+        captureEvent({
+          category: 'storage',
+          name: 'admin_profile_update_failed',
+          severity: 'error',
+          message: `Failed to update admin profile: ${error.message}`,
+          data: {
+            userId: user.id.substring(0, 8) + '...',
+            errorCode: error.code,
+            screen: '/admin/profile',
+          },
+        });
         throw error;
       }
 
@@ -119,7 +133,10 @@ export function useUpdateAdminProfile() {
       queryClient.invalidateQueries({ queryKey: ["admin-profile"] });
     },
     onError: (error: Error) => {
-      console.error("[useUpdateAdminProfile] Mutation error:", error);
+      captureException(error, { 
+        context: 'useUpdateAdminProfile',
+        screen: '/admin/profile',
+      });
       toast.error("Erro ao atualizar perfil");
     },
   });
@@ -148,7 +165,16 @@ export function useUpdateAdminAvatar() {
         .single();
 
       if (error) {
-        console.error("[useUpdateAdminAvatar] Error:", error);
+        captureEvent({
+          category: 'storage',
+          name: 'admin_avatar_update_failed',
+          severity: 'error',
+          message: `Failed to update admin avatar URL: ${error.message}`,
+          data: {
+            userId: user.id.substring(0, 8) + '...',
+            errorCode: error.code,
+          },
+        });
         throw error;
       }
 
@@ -159,8 +185,77 @@ export function useUpdateAdminAvatar() {
       queryClient.invalidateQueries({ queryKey: ["admin-profile"] });
     },
     onError: (error: Error) => {
-      console.error("[useUpdateAdminAvatar] Mutation error:", error);
+      captureException(error, { context: 'useUpdateAdminAvatar' });
       toast.error("Erro ao atualizar foto");
+    },
+  });
+}
+
+/**
+ * Upload admin avatar to storage and update profile
+ */
+export function useUploadAdminAvatar() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const updateAvatar = useUpdateAdminAvatar();
+
+  return useMutation({
+    mutationFn: async (file: File) => {
+      if (!user?.id) throw new Error("Usuário não autenticado");
+
+      // Validate file
+      const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+      const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        throw new Error("Tipo de arquivo não permitido. Use JPG, PNG ou WebP.");
+      }
+
+      if (file.size > MAX_SIZE) {
+        throw new Error("Arquivo muito grande. Máximo 5MB.");
+      }
+
+      // Create unique path
+      const timestamp = Date.now();
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `admin/${user.id}/${timestamp}.${ext}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+
+      if (uploadError) {
+        captureEvent({
+          category: 'storage',
+          name: 'admin_avatar_upload_failed',
+          severity: 'error',
+          message: `Storage upload failed: ${uploadError.message}`,
+          data: {
+            userId: user.id.substring(0, 8) + '...',
+            fileSize: file.size,
+            fileType: file.type,
+          },
+        });
+        throw new Error("Falha no upload da imagem");
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(path);
+
+      // Update database with new URL
+      await updateAvatar.mutateAsync(publicUrl);
+
+      return publicUrl;
+    },
+    onError: (error: Error) => {
+      captureException(error, { context: 'useUploadAdminAvatar' });
+      toast.error(error.message || "Erro ao fazer upload da foto");
     },
   });
 }

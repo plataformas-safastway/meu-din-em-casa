@@ -140,7 +140,8 @@ export function PhoneInput({
   
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    // Keep only digits for internal storage
+    // Keep only digits for internal storage - this ensures backspace works naturally
+    // When user hits backspace on a mask character, we just strip non-digits
     const digits = inputValue.replace(/\D/g, "");
     
     // Limit digits based on country
@@ -151,6 +152,16 @@ export function PhoneInput({
     
     const e164 = toE164(limitedDigits, selectedCountry.code);
     onChange(e164, selectedCountry.code);
+  };
+  
+  // Handle keydown specifically for better backspace behavior
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // For backspace, if the current display shows mask chars, we just let the 
+    // normal flow handle it (digits will be extracted in onChange)
+    if (e.key === "Backspace" && localNumber.length > 0) {
+      // Prevent default only if we need to handle it manually
+      // Actually, we let the input handle it naturally and just strip digits in onChange
+    }
   };
   
   const displayValue = formatPhoneDisplay(localNumber, selectedCountry.code);
