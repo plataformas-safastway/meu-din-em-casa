@@ -56,88 +56,110 @@ function getEmailCategory(eventType: EmailEventType): EmailCategory {
   return 'education';
 }
 
-// Email templates
+// Email templates with official OIK copy
 function getEmailTemplate(eventType: EmailEventType, payload: Record<string, unknown>): { subject: string; html: string } {
   const appUrl = Deno.env.get("APP_URL") || "https://oik-finance.lovable.app";
-  const familyName = (payload.familyName as string) || '';
-  const userName = (payload.userName as string) || '';
   
   const templates: Record<string, { subject: string; html: string }> = {
-    // SECURITY
+    // ══════════════════════════════════════════════════════════════════
+    // 🔐 CONTA & SEGURANÇA
+    // ══════════════════════════════════════════════════════════════════
+    
     'user.account_created': {
-      subject: '🎉 Bem-vindo ao OIK - Sua conta foi criada!',
+      subject: 'Conta criada com sucesso',
       html: buildTemplate({
-        title: 'Conta criada com sucesso!',
-        subtitle: familyName ? `Bem-vindos, ${familyName}!` : 'Bem-vindos!',
+        title: 'Conta criada com sucesso! 🎉',
         content: `
-          <p>Olá${userName ? `, ${userName}` : ''},</p>
-          <p>Sua conta foi criada com sucesso no OIK! A partir de agora, você pode organizar as finanças da família com mais clareza.</p>
+          <p>Oi,</p>
+          <p>A conta da sua família foi criada com sucesso.</p>
+          <p>A partir de agora, vocês já podem organizar as finanças da família com mais clareza, acompanhar os gastos e entender melhor o que está acontecendo com o dinheiro.</p>
           <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; border-radius: 0 8px 8px 0; margin: 24px 0;">
-            <p style="color: #166534; margin: 0;">💚 Sem julgamentos, sem complicação. Apenas informação clara para decisões melhores.</p>
+            <p style="color: #166534; margin: 0; font-style: italic;">💚 Sem julgamentos, sem complicação. Apenas informação clara para decisões melhores.</p>
           </div>
           <p>🔒 Seus dados são privados e acessíveis apenas pela sua família.</p>
         `,
         ctaText: 'Acessar minha conta',
+        ctaUrl: `${appUrl}/login`,
+        signoff: 'Sejam bem-vindos.<br>Estamos aqui para ajudar a trazer mais tranquilidade para a vida financeira da família.'
+      })
+    },
+    
+    'user.email_confirmed': {
+      subject: 'E-mail confirmado com sucesso',
+      html: buildTemplate({
+        title: 'E-mail confirmado com sucesso ✅',
+        content: `
+          <p>Oi,</p>
+          <p>Tudo certo por aqui.<br>Seu e-mail foi confirmado e sua conta está ativa.</p>
+          <p>Agora você já pode usar o OIK com tranquilidade e segurança.</p>
+          <p>Sempre que precisar, estaremos por perto.</p>
+        `,
+        ctaText: 'Acessar OIK',
         ctaUrl: `${appUrl}/login`
       })
     },
     
     'user.password_reset_requested': {
-      subject: '🔐 Recuperação de senha - OIK',
+      subject: 'Vamos redefinir sua senha',
       html: buildTemplate({
-        title: 'Recuperação de senha',
+        title: 'Vamos redefinir sua senha 🔁',
         content: `
-          <p>Olá,</p>
-          <p>Recebemos uma solicitação para redefinir sua senha. Se você não fez essa solicitação, ignore este e-mail.</p>
-          <p>Se foi você, clique no botão abaixo para criar uma nova senha:</p>
+          <p>Oi,</p>
+          <p>Recebemos um pedido para redefinir sua senha no OIK.</p>
+          <p>Para continuar, basta seguir o link abaixo e criar uma nova senha com calma.<br>Se não foi você, ignore este e-mail.</p>
+          <p>Cuidar da sua segurança é parte do nosso compromisso.</p>
         `,
         ctaText: 'Redefinir senha',
-        ctaUrl: payload.resetUrl as string || `${appUrl}/reset-password`,
-        footer: 'Este link expira em 1 hora por segurança.'
+        ctaUrl: payload.resetUrl as string || `${appUrl}/reset-password`
       })
     },
     
     'user.password_changed': {
-      subject: '✅ Senha alterada com sucesso - OIK',
+      subject: 'Sua senha foi alterada',
       html: buildTemplate({
-        title: 'Senha alterada',
+        title: 'Sua senha foi alterada 🔐',
         content: `
-          <p>Olá,</p>
+          <p>Oi,</p>
           <p>Sua senha foi alterada com sucesso.</p>
-          <p>Se você não fez essa alteração, entre em contato conosco imediatamente.</p>
+          <p>Se foi você, está tudo certo.<br>Se não reconhece essa alteração, recomendamos entrar em contato conosco imediatamente.</p>
+          <p>Seguimos atentos para proteger sua conta.</p>
         `,
-        ctaText: 'Acessar minha conta',
+        ctaText: 'Acessar OIK',
         ctaUrl: `${appUrl}/login`
       })
     },
     
     'user.login_new_device': {
-      subject: '🔔 Novo acesso detectado - OIK',
+      subject: 'Novo acesso detectado',
       html: buildTemplate({
-        title: 'Novo acesso à sua conta',
+        title: 'Novo acesso detectado 🔔',
         content: `
-          <p>Olá,</p>
+          <p>Oi,</p>
           <p>Detectamos um novo acesso à sua conta:</p>
-          <ul style="color: #374151;">
+          <ul style="color: #374151; padding-left: 20px;">
             <li><strong>Dispositivo:</strong> ${payload.device || 'Não identificado'}</li>
             <li><strong>Localização:</strong> ${payload.location || 'Não identificada'}</li>
             <li><strong>Data:</strong> ${payload.date || new Date().toLocaleDateString('pt-BR')}</li>
           </ul>
-          <p>Se foi você, pode ignorar este e-mail. Caso contrário, recomendamos alterar sua senha imediatamente.</p>
+          <p>Se foi você, pode ignorar este e-mail.<br>Caso contrário, recomendamos alterar sua senha imediatamente.</p>
         `,
         ctaText: 'Alterar senha',
         ctaUrl: `${appUrl}/app/settings/security`
       })
     },
+
+    // ══════════════════════════════════════════════════════════════════
+    // 🚀 ONBOARDING & PRIMEIROS PASSOS
+    // ══════════════════════════════════════════════════════════════════
     
-    // ONBOARDING
     'onboarding.completed': {
-      subject: '🎯 Parabéns! Você completou a configuração - OIK',
+      subject: 'Configuração concluída',
       html: buildTemplate({
-        title: 'Configuração concluída!',
+        title: 'Configuração concluída! 🎯',
         content: `
-          <p>Olá${userName ? `, ${userName}` : ''},</p>
-          <p>Você completou a configuração inicial do OIK! Agora você está pronto para ter uma visão completa das finanças da família.</p>
+          <p>Oi,</p>
+          <p>Você completou a configuração inicial do OIK.</p>
+          <p>Agora você está pronto para ter uma visão completa das finanças da família.</p>
           <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 0 8px 8px 0; margin: 24px 0;">
             <p style="color: #1e40af; margin: 0;">💡 <strong>Dica:</strong> Explore os relatórios e projeções para entender melhor seus gastos.</p>
           </div>
@@ -148,12 +170,13 @@ function getEmailTemplate(eventType: EmailEventType, payload: Record<string, unk
     },
     
     'onboarding.incomplete_24h': {
-      subject: '👋 Falta pouco para completar sua configuração - OIK',
+      subject: 'Falta pouco para completar',
       html: buildTemplate({
-        title: 'Falta pouco!',
+        title: 'Falta pouco! 👋',
         content: `
-          <p>Olá${userName ? `, ${userName}` : ''},</p>
-          <p>Notamos que você ainda não completou a configuração do OIK. São apenas alguns passos para ter sua vida financeira organizada.</p>
+          <p>Oi,</p>
+          <p>Notamos que você ainda não completou a configuração do OIK.</p>
+          <p>São apenas alguns passos para ter sua vida financeira organizada.</p>
           <p>Que tal continuar de onde parou?</p>
         `,
         ctaText: 'Continuar configuração',
@@ -162,26 +185,94 @@ function getEmailTemplate(eventType: EmailEventType, payload: Record<string, unk
     },
     
     'onboarding.incomplete_72h': {
-      subject: '⏰ Última chance: complete sua configuração - OIK',
+      subject: 'Estamos por aqui, no seu tempo',
       html: buildTemplate({
-        title: 'Não deixe para depois!',
+        title: 'Estamos por aqui, no seu tempo ⏰',
         content: `
-          <p>Olá${userName ? `, ${userName}` : ''},</p>
-          <p>Sua configuração ainda está incompleta. Sabemos que a vida é corrida, mas organizar as finanças leva apenas alguns minutos.</p>
-          <p>Este é o último lembrete que enviaremos. Estamos aqui quando você precisar!</p>
+          <p>Oi,</p>
+          <p>Passando só para lembrar que seu cadastro ainda não foi finalizado.</p>
+          <p>Sem pressa.<br>Quando fizer sentido, é só voltar ao app e continuar de onde parou.</p>
+          <p>O OIK respeita seu ritmo.</p>
         `,
-        ctaText: 'Completar agora',
+        ctaText: 'Continuar cadastro',
         ctaUrl: `${appUrl}/app/onboarding`
       })
     },
     
-    // FINANCIAL
-    'budget.category_exceeded': {
-      subject: `⚠️ Orçamento ultrapassado: ${payload.categoryName || 'categoria'} - OIK`,
+    'budget.first_created': {
+      subject: 'Seu primeiro orçamento foi criado',
       html: buildTemplate({
-        title: 'Orçamento ultrapassado',
+        title: 'Orçamento criado! 📊',
         content: `
-          <p>Olá${userName ? `, ${userName}` : ''},</p>
+          <p>Oi,</p>
+          <p>Seu primeiro orçamento foi criado com sucesso.</p>
+          <p>Agora você tem uma referência para acompanhar seus gastos e tomar decisões mais conscientes.</p>
+          <p>Lembre-se: o orçamento é um guia, não uma prisão. Ajuste quando precisar.</p>
+        `,
+        ctaText: 'Ver meu orçamento',
+        ctaUrl: `${appUrl}/app/budget`
+      })
+    },
+    
+    'budget.skipped': {
+      subject: 'Quando quiser, a gente monta juntos',
+      html: buildTemplate({
+        title: 'Quando quiser, a gente monta juntos 🧩',
+        content: `
+          <p>Oi,</p>
+          <p>Percebemos que você pulou a etapa de criar seu orçamento — e tudo bem.</p>
+          <p>Essa parte existe para ajudar, não para engessar.<br>Você pode montar agora ou ajustar depois, do seu jeito.</p>
+          <p>Clareza não precisa ser imediata.<br>Ela se constrói.</p>
+        `,
+        ctaText: 'Montar orçamento',
+        ctaUrl: `${appUrl}/app/budget`
+      })
+    },
+    
+    'family.invite_sent': {
+      subject: `${payload.inviterName || 'Alguém'} convidou você para a família ${payload.familyName || ''}`,
+      html: buildTemplate({
+        title: 'Você foi convidado! 🎉',
+        content: `
+          <p>Oi,</p>
+          <p><strong>${payload.inviterName || 'Um membro'}</strong> convidou você para fazer parte da família <strong>${payload.familyName || 'Família'}</strong> no OIK.</p>
+          <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; margin: 24px 0;">
+            <p style="color: #166534; font-size: 14px; margin: 0; line-height: 1.5;">
+              Com o OIK, vocês podem organizar as finanças da família de forma colaborativa, acompanhar gastos e planejar o futuro juntos.
+            </p>
+          </div>
+        `,
+        ctaText: 'Aceitar convite',
+        ctaUrl: payload.inviteUrl as string || `${appUrl}/invite`,
+        footer: 'Se você não esperava este convite, pode ignorar este e-mail.'
+      })
+    },
+    
+    'family.invite_accepted': {
+      subject: 'Sua família agora faz parte do OIK',
+      html: buildTemplate({
+        title: 'Sua família agora faz parte do OIK 👤',
+        content: `
+          <p>Oi,</p>
+          <p>Um membro da sua família aceitou o convite para participar do OIK.</p>
+          <p>Organizar juntos ajuda a alinhar decisões e evitar ruídos no caminho.<br>Agora vocês podem construir essa clareza em conjunto.</p>
+          <p>Seguimos acompanhando vocês.</p>
+        `,
+        ctaText: 'Ver família',
+        ctaUrl: `${appUrl}/app/settings/family`
+      })
+    },
+
+    // ══════════════════════════════════════════════════════════════════
+    // 💰 AÇÕES FINANCEIRAS RELEVANTES
+    // ══════════════════════════════════════════════════════════════════
+    
+    'budget.category_exceeded': {
+      subject: `Orçamento ultrapassado: ${payload.categoryName || 'categoria'}`,
+      html: buildTemplate({
+        title: 'Orçamento ultrapassado ⚠️',
+        content: `
+          <p>Oi,</p>
           <p>O orçamento da categoria <strong>${payload.categoryName || 'categoria'}</strong> foi ultrapassado.</p>
           <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 0 8px 8px 0; margin: 24px 0;">
             <p style="color: #92400e; margin: 0;">
@@ -196,46 +287,124 @@ function getEmailTemplate(eventType: EmailEventType, payload: Record<string, unk
       })
     },
     
-    'spending.no_activity_7d': {
-      subject: '📊 Sentimos sua falta! - OIK',
+    'budget.if_zeroed': {
+      subject: 'Um ponto de atenção no seu orçamento',
       html: buildTemplate({
-        title: 'Tudo bem por aí?',
+        title: 'Um ponto de atenção no seu orçamento ⚠️',
         content: `
-          <p>Olá${userName ? `, ${userName}` : ''},</p>
-          <p>Faz uma semana que não vemos novos lançamentos na sua conta. Se estiver tudo certo, ótimo!</p>
-          <p>Mas se precisar de ajuda ou tiver alguma dúvida, estamos aqui. 💚</p>
+          <p>Oi,</p>
+          <p>O indicador (+/-) IF chegou a zero neste mês.</p>
+          <p>Isso não é um erro — é um sinal.<br>Talvez seja hora de rever prioridades, ajustar categorias ou apenas observar.</p>
+          <p>Decisão boa começa com informação clara.</p>
         `,
-        ctaText: 'Fazer um lançamento',
-        ctaUrl: `${appUrl}/app/transactions`
+        ctaText: 'Ver orçamento',
+        ctaUrl: `${appUrl}/app/budget`
       })
     },
     
-    // GOALS
-    'goal.created': {
-      subject: `🎯 Nova meta criada: ${payload.goalTitle || 'sua meta'} - OIK`,
+    'spending.decrease_detected': {
+      subject: 'Redução de gastos detectada',
       html: buildTemplate({
-        title: 'Meta criada!',
+        title: 'Redução de gastos detectada 📉',
         content: `
-          <p>Olá${userName ? `, ${userName}` : ''},</p>
+          <p>Oi,</p>
+          <p>Identificamos uma redução nos seus gastos recentes.</p>
+          <p>Isso pode ser resultado de um esforço consciente ou simplesmente uma variação natural.</p>
+          <p>O importante é perceber o movimento e decidir os próximos passos.</p>
+        `,
+        ctaText: 'Ver análise',
+        ctaUrl: `${appUrl}/app`
+      })
+    },
+    
+    'spending.increase_detected': {
+      subject: 'Um gasto chamou atenção este mês',
+      html: buildTemplate({
+        title: 'Um gasto chamou atenção este mês 📈',
+        content: `
+          <p>Oi,</p>
+          <p>Identificamos um aumento relevante em alguns gastos recentes.</p>
+          <p>Pode ser algo pontual.<br>Ou pode ser um padrão começando a se formar.</p>
+          <p>Vale a pena olhar com calma e decidir o próximo passo.<br>O OIK está aqui para apoiar essa leitura.</p>
+        `,
+        ctaText: 'Ver detalhes',
+        ctaUrl: `${appUrl}/app`
+      })
+    },
+    
+    'spending.no_activity_7d': {
+      subject: 'O OIK continua por aqui',
+      html: buildTemplate({
+        title: 'O OIK continua por aqui 🔍',
+        content: `
+          <p>Oi,</p>
+          <p>Faz um tempo que não vemos movimentações no seu OIK.</p>
+          <p>Sem cobrança.<br>Só um lembrete de que pequenas atualizações já ajudam bastante.</p>
+          <p>Quando fizer sentido, é só voltar.</p>
+        `,
+        ctaText: 'Acessar OIK',
+        ctaUrl: `${appUrl}/app`
+      })
+    },
+
+    // ══════════════════════════════════════════════════════════════════
+    // 🎯 METAS & COMPORTAMENTO
+    // ══════════════════════════════════════════════════════════════════
+    
+    'goal.created': {
+      subject: `Nova meta criada: ${payload.goalTitle || 'sua meta'}`,
+      html: buildTemplate({
+        title: 'Meta criada! 🎯',
+        content: `
+          <p>Oi,</p>
           <p>Você criou uma nova meta: <strong>${payload.goalTitle || 'sua meta'}</strong>.</p>
-          <p>Meta: R$ ${payload.targetAmount || '0,00'} até ${payload.dueDate || 'data não definida'}</p>
-          <p>Vamos juntos alcançar esse objetivo! 🚀</p>
+          <p>Meta: R$ ${payload.targetAmount || '0,00'}</p>
+          <p>Vamos juntos alcançar esse objetivo!</p>
         `,
         ctaText: 'Ver minha meta',
         ctaUrl: `${appUrl}/app/goals`
       })
     },
     
-    'goal.progress_50': {
-      subject: `🎉 Metade do caminho! ${payload.goalTitle || 'Sua meta'} - OIK`,
+    'goal.progress_25': {
+      subject: 'Sua meta está avançando',
       html: buildTemplate({
-        title: 'Você está na metade!',
+        title: 'Sua meta está avançando 📈',
         content: `
-          <p>Olá${userName ? `, ${userName}` : ''},</p>
-          <p>Parabéns! Você já atingiu <strong>50%</strong> da meta <strong>${payload.goalTitle || 'sua meta'}</strong>.</p>
-          <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; border-radius: 0 8px 8px 0; margin: 24px 0;">
-            <p style="color: #166534; margin: 0;">💪 Continue assim! Você está no caminho certo.</p>
-          </div>
+          <p>Oi,</p>
+          <p>Você atingiu mais um marco importante da sua meta financeira.</p>
+          <p>Progresso não é sobre velocidade.<br>É sobre constância.</p>
+          <p>Siga no seu ritmo — cada passo conta.</p>
+        `,
+        ctaText: 'Ver progresso',
+        ctaUrl: `${appUrl}/app/goals`
+      })
+    },
+    
+    'goal.progress_50': {
+      subject: 'Sua meta está avançando',
+      html: buildTemplate({
+        title: 'Sua meta está avançando 📈',
+        content: `
+          <p>Oi,</p>
+          <p>Você atingiu mais um marco importante da sua meta financeira — <strong>metade do caminho</strong>!</p>
+          <p>Progresso não é sobre velocidade.<br>É sobre constância.</p>
+          <p>Siga no seu ritmo — cada passo conta.</p>
+        `,
+        ctaText: 'Ver progresso',
+        ctaUrl: `${appUrl}/app/goals`
+      })
+    },
+    
+    'goal.progress_75': {
+      subject: 'Sua meta está avançando',
+      html: buildTemplate({
+        title: 'Sua meta está avançando 📈',
+        content: `
+          <p>Oi,</p>
+          <p>Você atingiu mais um marco importante da sua meta financeira — <strong>75% concluído</strong>!</p>
+          <p>Progresso não é sobre velocidade.<br>É sobre constância.</p>
+          <p>Siga no seu ritmo — cada passo conta.</p>
         `,
         ctaText: 'Ver progresso',
         ctaUrl: `${appUrl}/app/goals`
@@ -243,47 +412,234 @@ function getEmailTemplate(eventType: EmailEventType, payload: Record<string, unk
     },
     
     'goal.completed': {
-      subject: `🏆 Meta alcançada: ${payload.goalTitle || 'sua meta'}! - OIK`,
+      subject: `Meta alcançada: ${payload.goalTitle || 'sua meta'}!`,
       html: buildTemplate({
-        title: 'Parabéns! Meta alcançada!',
+        title: 'Parabéns! Meta alcançada! 🏆',
         content: `
-          <p>Olá${userName ? `, ${userName}` : ''},</p>
-          <p>Você conseguiu! A meta <strong>${payload.goalTitle || 'sua meta'}</strong> foi alcançada. 🎉</p>
-          <p>Isso mostra seu comprometimento e disciplina. Comemore essa conquista!</p>
+          <p>Oi,</p>
+          <p>Você conseguiu! A meta <strong>${payload.goalTitle || 'sua meta'}</strong> foi alcançada.</p>
+          <p>Isso mostra seu comprometimento e disciplina.<br>Comemore essa conquista!</p>
         `,
         ctaText: 'Criar nova meta',
         ctaUrl: `${appUrl}/app/goals`
       })
     },
     
-    // FAMILY
-    'family.invite_sent': {
-      subject: `👨‍👩‍👧‍👦 Convite para a família ${payload.familyName || ''} - OIK`,
+    'goal.at_risk': {
+      subject: 'Um cuidado com uma das suas metas',
       html: buildTemplate({
-        title: 'Você foi convidado!',
+        title: 'Um cuidado com uma das suas metas ⚠️',
         content: `
-          <p>Olá,</p>
-          <p><strong>${payload.inviterName || 'Alguém'}</strong> convidou você para fazer parte da família <strong>${payload.familyName || ''}</strong> no OIK.</p>
-          <p>Clique no botão abaixo para aceitar o convite e começar a organizar as finanças juntos.</p>
+          <p>Oi,</p>
+          <p>Uma das suas metas está há algum tempo sem novos aportes.</p>
+          <p>Não é um alerta de cobrança.<br>É só um convite à reflexão:<br>essa meta ainda faz sentido agora?</p>
+          <p>Se precisar ajustar, está tudo bem.</p>
         `,
-        ctaText: 'Aceitar convite',
-        ctaUrl: payload.inviteUrl as string || `${appUrl}/invite`
+        ctaText: 'Ver metas',
+        ctaUrl: `${appUrl}/app/goals`
+      })
+    },
+    
+    'goal.abandoned': {
+      subject: 'Tudo bem ajustar o caminho',
+      html: buildTemplate({
+        title: 'Tudo bem ajustar o caminho ❌',
+        content: `
+          <p>Oi,</p>
+          <p>Percebemos que uma das suas metas ficou sem movimentação por um período maior.</p>
+          <p>Às vezes as prioridades mudam — e isso faz parte da vida real.<br>Rever metas também é uma forma de cuidado financeiro.</p>
+          <p>Quando quiser, você pode criar uma nova.</p>
+        `,
+        ctaText: 'Gerenciar metas',
+        ctaUrl: `${appUrl}/app/goals`
+      })
+    },
+    
+    'behavior.pattern_changed': {
+      subject: 'Um padrão diferente apareceu',
+      html: buildTemplate({
+        title: 'Um padrão diferente apareceu 🔄',
+        content: `
+          <p>Oi,</p>
+          <p>Notamos uma mudança no seu padrão de gastos recente.</p>
+          <p>Não é bom nem ruim por si só.<br>É apenas informação para te ajudar a decidir melhor.</p>
+          <p>Clareza começa por perceber.</p>
+        `,
+        ctaText: 'Ver análise',
+        ctaUrl: `${appUrl}/app`
+      })
+    },
+    
+    'behavior.low_activity': {
+      subject: 'O OIK continua por aqui',
+      html: buildTemplate({
+        title: 'O OIK continua por aqui 🔍',
+        content: `
+          <p>Oi,</p>
+          <p>Faz um tempo que não vemos movimentações no seu OIK.</p>
+          <p>Sem cobrança.<br>Só um lembrete de que pequenas atualizações já ajudam bastante.</p>
+          <p>Quando fizer sentido, é só voltar.</p>
+        `,
+        ctaText: 'Acessar OIK',
+        ctaUrl: `${appUrl}/app`
+      })
+    },
+    
+    'behavior.month_balanced': {
+      subject: 'Um mês mais equilibrado',
+      html: buildTemplate({
+        title: 'Um mês mais equilibrado 🧘',
+        content: `
+          <p>Oi,</p>
+          <p>Seu mês financeiro esteve mais equilibrado do que o habitual.</p>
+          <p>Isso mostra mais consciência e menos impulso.<br>Mesmo mudanças sutis fazem diferença no longo prazo.</p>
+          <p>Bom trabalho.</p>
+        `,
+        ctaText: 'Ver resumo',
+        ctaUrl: `${appUrl}/app`
+      })
+    },
+    
+    'behavior.month_above_average': {
+      subject: 'Um ótimo resultado este mês',
+      html: buildTemplate({
+        title: 'Um ótimo resultado este mês 🔥',
+        content: `
+          <p>Oi,</p>
+          <p>Seu desempenho financeiro neste mês ficou acima da sua média histórica.</p>
+          <p>Mais do que comemorar, vale observar o que funcionou.<br>Esses aprendizados ajudam nos próximos passos.</p>
+          <p>Seguimos juntos.</p>
+        `,
+        ctaText: 'Ver análise',
+        ctaUrl: `${appUrl}/app`
+      })
+    },
+
+    // ══════════════════════════════════════════════════════════════════
+    // 👨‍👩‍👧‍👦 FAMÍLIA, COMPARTILHAMENTO & COLABORAÇÃO
+    // ══════════════════════════════════════════════════════════════════
+    
+    'family.invite_expired': {
+      subject: 'Convite expirado',
+      html: buildTemplate({
+        title: 'Convite expirado ❌',
+        content: `
+          <p>Oi,</p>
+          <p>O convite enviado para um membro da sua família expirou.</p>
+          <p>Se ainda fizer sentido, você pode enviar um novo a qualquer momento.<br>Organizar em conjunto continua sendo uma escolha possível.</p>
+        `,
+        ctaText: 'Enviar novo convite',
+        ctaUrl: `${appUrl}/app/settings/family`
+      })
+    },
+    
+    'family.permission_changed': {
+      subject: 'Permissões atualizadas',
+      html: buildTemplate({
+        title: 'Permissões atualizadas 🔐',
+        content: `
+          <p>Oi,</p>
+          <p>As permissões de acesso de um membro da família foram alteradas.</p>
+          <p>Essa mensagem é apenas para manter transparência entre todos.<br>Clareza também é parte da organização financeira.</p>
+        `,
+        ctaText: 'Ver família',
+        ctaUrl: `${appUrl}/app/settings/family`
+      })
+    },
+    
+    'family.member_removed': {
+      subject: 'Atualização na sua família do OIK',
+      html: buildTemplate({
+        title: 'Atualização na sua família do OIK 🚫',
+        content: `
+          <p>Oi,</p>
+          <p>Um membro foi removido da sua família no OIK.</p>
+          <p>Se precisar ajustar acessos ou rever configurações, tudo pode ser feito no app.</p>
+          <p>Seguimos à disposição.</p>
+        `,
+        ctaText: 'Ver família',
+        ctaUrl: `${appUrl}/app/settings/family`
       })
     },
     
     'family.sensitive_action': {
-      subject: '⚠️ Ação importante na família - OIK',
+      subject: 'Uma ação importante foi realizada',
       html: buildTemplate({
-        title: 'Ação importante detectada',
+        title: 'Uma ação importante foi realizada ⚠️',
         content: `
-          <p>Olá,</p>
-          <p>Uma ação importante foi realizada na sua família:</p>
-          <p><strong>${payload.actionDescription || 'Ação não especificada'}</strong></p>
-          <p>Por: ${payload.actorName || 'Membro da família'}</p>
-          <p>Se você não reconhece essa ação, entre em contato conosco.</p>
+          <p>Oi,</p>
+          <p>Uma ação sensível foi realizada por outro membro da sua família no OIK<br>(ex.: alteração de orçamento ou meta).</p>
+          <p>Essa mensagem é apenas para garantir transparência.<br>Se quiser revisar, o histórico está disponível no app.</p>
         `,
         ctaText: 'Ver atividade',
         ctaUrl: `${appUrl}/app/settings/family`
+      })
+    },
+
+    // ══════════════════════════════════════════════════════════════════
+    // 💳 PLANOS & PAGAMENTOS
+    // ══════════════════════════════════════════════════════════════════
+    
+    'plan.upgraded': {
+      subject: 'Plano atualizado com sucesso',
+      html: buildTemplate({
+        title: 'Plano atualizado com sucesso 🧾',
+        content: `
+          <p>Oi,</p>
+          <p>Seu plano foi atualizado.</p>
+          <p>Agora você tem acesso a novos recursos para acompanhar sua vida financeira com mais profundidade.</p>
+          <p>Use no seu ritmo.<br>O OIK continua simples, mesmo crescendo com você.</p>
+        `,
+        ctaText: 'Explorar recursos',
+        ctaUrl: `${appUrl}/app`
+      })
+    },
+    
+    'plan.downgraded': {
+      subject: 'Plano ajustado',
+      html: buildTemplate({
+        title: 'Plano ajustado 🧾',
+        content: `
+          <p>Oi,</p>
+          <p>Seu plano foi ajustado conforme solicitado.</p>
+          <p>Nada muda no que é essencial:<br>clareza, organização e cuidado continuam aqui.</p>
+          <p>Se precisar, é só ajustar novamente.</p>
+        `,
+        ctaText: 'Acessar OIK',
+        ctaUrl: `${appUrl}/app`
+      })
+    },
+    
+    'plan.payment_failed': {
+      subject: 'Tivemos um problema com o pagamento',
+      html: buildTemplate({
+        title: 'Tivemos um problema com o pagamento ⚠️',
+        content: `
+          <p>Oi,</p>
+          <p>Identificamos uma falha no pagamento do seu plano.</p>
+          <p>Pode ter sido algo pontual.<br>Quando puder, vale conferir para evitar interrupções.</p>
+          <p>Se precisar de ajuda, estamos por aqui.</p>
+        `,
+        ctaText: 'Atualizar pagamento',
+        ctaUrl: `${appUrl}/app/settings/billing`
+      })
+    },
+
+    // ══════════════════════════════════════════════════════════════════
+    // 📚 EDUCAÇÃO
+    // ══════════════════════════════════════════════════════════════════
+    
+    'education.content_released': {
+      subject: 'Novo conteúdo disponível',
+      html: buildTemplate({
+        title: 'Novo conteúdo disponível 📚',
+        content: `
+          <p>Oi,</p>
+          <p>Temos um novo conteúdo disponível para você.</p>
+          <p>Educação financeira não precisa ser complicada.<br>Pequenos aprendizados fazem grandes diferenças.</p>
+        `,
+        ctaText: 'Ver conteúdo',
+        ctaUrl: `${appUrl}/app/learn`
       })
     }
   };
@@ -299,7 +655,7 @@ function getEmailTemplate(eventType: EmailEventType, payload: Record<string, unk
   };
 }
 
-// Build email template
+// Build email template with OIK branding
 function buildTemplate(params: {
   title: string;
   subtitle?: string;
@@ -307,8 +663,9 @@ function buildTemplate(params: {
   ctaText?: string;
   ctaUrl?: string;
   footer?: string;
+  signoff?: string;
 }): string {
-  const { title, subtitle, content, ctaText, ctaUrl, footer } = params;
+  const { title, subtitle, content, ctaText, ctaUrl, footer, signoff } = params;
   const appUrl = Deno.env.get("APP_URL") || "https://oik-finance.lovable.app";
   
   return `
@@ -317,50 +674,88 @@ function buildTemplate(params: {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${title}</title>
     </head>
-    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5;">
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5;">
       <table role="presentation" style="width: 100%; border-collapse: collapse;">
         <tr>
           <td align="center" style="padding: 40px 20px;">
-            <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+            <table role="presentation" style="max-width: 480px; width: 100%; border-collapse: collapse;">
+              
+              <!-- Logo -->
               <tr>
-                <td style="padding: 40px;">
-                  <!-- Header -->
-                  <div style="text-align: center; margin-bottom: 32px;">
-                    <div style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 16px; border-radius: 16px; margin-bottom: 24px;">
-                      <span style="font-size: 32px;">🏠</span>
-                    </div>
-                    <h1 style="color: #111827; font-size: 24px; font-weight: 700; margin: 0 0 8px 0;">${title}</h1>
-                    ${subtitle ? `<p style="color: #6b7280; font-size: 16px; margin: 0;">${subtitle}</p>` : ''}
+                <td align="center" style="padding-bottom: 32px;">
+                  <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center;">
+                    <span style="font-size: 32px;">💰</span>
                   </div>
+                </td>
+              </tr>
+              
+              <!-- Main Card -->
+              <tr>
+                <td style="background-color: #ffffff; border-radius: 16px; padding: 40px 32px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                  
+                  <!-- Header -->
+                  <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 700; color: #18181b; text-align: center;">
+                    ${title}
+                  </h1>
+                  ${subtitle ? `<p style="margin: 0 0 24px 0; font-size: 16px; color: #71717a; text-align: center;">${subtitle}</p>` : '<div style="margin-bottom: 24px;"></div>'}
                   
                   <!-- Content -->
-                  <div style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 32px;">
+                  <div style="font-size: 16px; color: #374151; line-height: 1.6;">
                     ${content}
                   </div>
                   
                   ${ctaText && ctaUrl ? `
-                  <!-- CTA -->
-                  <div style="text-align: center; margin-bottom: 32px;">
-                    <a href="${ctaUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">
-                      ${ctaText}
-                    </a>
+                  <!-- CTA Button -->
+                  <table role="presentation" style="width: 100%; border-collapse: collapse; margin-top: 24px;">
+                    <tr>
+                      <td align="center">
+                        <a href="${ctaUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; padding: 14px 32px; border-radius: 12px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">
+                          ${ctaText}
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                  ` : ''}
+                  
+                  ${signoff ? `
+                  <!-- Signoff -->
+                  <div style="border-top: 1px solid #e5e7eb; margin-top: 24px; padding-top: 24px;">
+                    <p style="margin: 0; font-size: 14px; color: #6b7280; line-height: 1.6;">
+                      ${signoff}
+                    </p>
                   </div>
                   ` : ''}
                   
                   ${footer ? `
-                  <div style="border-top: 1px solid #e5e7eb; padding-top: 24px; text-align: center;">
-                    <p style="color: #6b7280; font-size: 14px; margin: 0;">${footer}</p>
-                  </div>
+                  <!-- Security Note -->
+                  <p style="margin: 24px 0 0 0; font-size: 12px; color: #a1a1aa; text-align: center; line-height: 1.5;">
+                    ${footer}
+                  </p>
                   ` : ''}
+                  
+                  <!-- Signature -->
+                  <p style="margin: 24px 0 0 0; font-size: 14px; color: #71717a; text-align: left;">
+                    Equipe OIK
+                  </p>
+                  
                 </td>
               </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td align="center" style="padding-top: 24px;">
+                  <p style="margin: 0; font-size: 12px; color: #a1a1aa;">
+                    OIK - Finanças em família
+                  </p>
+                  <p style="margin: 8px 0 0 0; font-size: 11px; color: #d4d4d8;">
+                    <a href="${appUrl}/app/settings/notifications" style="color: #a1a1aa; text-decoration: underline;">Gerenciar notificações</a>
+                  </p>
+                </td>
+              </tr>
+              
             </table>
-            
-            <!-- Email Footer -->
-            <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">
-              OIK - Finanças Familiares | <a href="${appUrl}/app/settings/notifications" style="color: #9ca3af;">Gerenciar notificações</a>
-            </p>
           </td>
         </tr>
       </table>
@@ -428,8 +823,7 @@ const handler = async (req: Request): Promise<Response> => {
         recipient_email: email,
         subject: 'BLOCKED',
         status: 'blocked',
-        blocked_reason: rateCheck.reason,
-        metadata: { payload }
+        blocked_reason: rateCheck.reason
       });
 
       return new Response(
@@ -442,7 +836,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check user preferences (non-security only)
+    // Check user preferences (security emails always sent)
     if (category !== 'security') {
       const { data: prefCheck } = await supabase.rpc('check_email_preference', {
         p_user_id: userId,
@@ -450,8 +844,8 @@ const handler = async (req: Request): Promise<Response> => {
         p_category: category
       });
 
-      if (prefCheck === false) {
-        console.log(`Email disabled by user preference: ${userId}, ${category}`);
+      if (prefCheck && !prefCheck.allowed) {
+        console.log(`Email blocked by preference for ${userId}: category ${category}`);
         
         await supabase.from('email_logs').insert({
           user_id: userId,
@@ -459,10 +853,9 @@ const handler = async (req: Request): Promise<Response> => {
           event_type: eventType,
           category: category,
           recipient_email: email,
-          subject: 'PREFERENCE_DISABLED',
+          subject: 'BLOCKED',
           status: 'blocked',
-          blocked_reason: 'user_preference_disabled',
-          metadata: { payload }
+          blocked_reason: 'user_preference_disabled'
         });
 
         return new Response(
@@ -477,73 +870,76 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Get email template
-    const template = getEmailTemplate(eventType, payload);
+    const { subject, html } = getEmailTemplate(eventType, payload);
 
-    // Send via Resend
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendApiKey) {
-      console.warn("RESEND_API_KEY not configured");
+    // Send email via Resend
+    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    
+    if (!RESEND_API_KEY) {
+      console.log("RESEND_API_KEY not configured, skipping email");
       return new Response(
-        JSON.stringify({ error: "Email service not configured" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        JSON.stringify({ message: "Email service not configured" }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    const resendResponse = await fetch("https://api.resend.com/emails", {
+    const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${resendApiKey}`,
+        Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "OIK <noreply@resend.dev>",
+        from: "OIK <onboarding@resend.dev>",
         to: [email],
-        subject: template.subject,
-        html: template.html,
+        subject: subject,
+        html: html,
       }),
     });
 
-    const resendData = await resendResponse.json();
+    if (!emailResponse.ok) {
+      const errorData = await emailResponse.text();
+      console.error("Error sending email:", errorData);
+      
+      await supabase.from('email_logs').insert({
+        user_id: userId,
+        family_id: familyId,
+        event_type: eventType,
+        category: category,
+        recipient_email: email,
+        subject: subject,
+        status: 'failed',
+        provider_response: { error: errorData }
+      });
 
-    // Log email
+      throw new Error("Failed to send email");
+    }
+
+    const result = await emailResponse.json();
+    console.log(`Email sent successfully: ${eventType} to ${email}`);
+
+    // Log successful email
     await supabase.from('email_logs').insert({
       user_id: userId,
       family_id: familyId,
       event_type: eventType,
       category: category,
       recipient_email: email,
-      subject: template.subject,
-      template_id: eventType,
-      status: resendResponse.ok ? 'sent' : 'failed',
-      sent_at: resendResponse.ok ? new Date().toISOString() : null,
-      provider_response: resendData,
-      metadata: { payload }
+      subject: subject,
+      status: 'sent',
+      sent_at: new Date().toISOString(),
+      provider_response: result
     });
 
-    if (!resendResponse.ok) {
-      console.error("Resend API error:", resendData);
-      return new Response(
-        JSON.stringify({ error: "Failed to send email" }),
-        { status: resendResponse.status, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    console.log(`Email sent successfully: ${eventType} to ${email}`);
-
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        emailId: resendData.id,
-        eventType,
-        category
-      }),
+      JSON.stringify({ success: true, emailId: result.id }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in send-email function:", error);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
+      JSON.stringify({ error: "An error occurred while sending the email" }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
