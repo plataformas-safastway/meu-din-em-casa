@@ -12,7 +12,7 @@
  * - Session remains active after password change
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,7 +29,8 @@ import {
   Eye,
   EyeOff,
   Check,
-  X
+  X,
+  Camera
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ import { PhoneInput } from "@/components/profile/PhoneInput";
 import { 
   useAdminProfile, 
   useUpdateAdminProfile,
+  useUploadAdminAvatar,
   useChangeAdminPassword,
   adminProfileSchema, 
   adminPasswordSchema,
@@ -57,9 +59,13 @@ import { cn } from "@/lib/utils";
 export function AdminProfilePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: profile, isLoading } = useAdminProfile();
+  const { data: profile, isLoading, refetch } = useAdminProfile();
   const updateProfile = useUpdateAdminProfile();
+  const uploadAvatar = useUploadAdminAvatar();
   const changePassword = useChangeAdminPassword();
+
+  // Avatar file input ref
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Password visibility states
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -99,6 +105,8 @@ export function AdminProfilePage() {
 
   const handleProfileSubmit = async (data: AdminProfileFormData) => {
     await updateProfile.mutateAsync(data);
+    // Refetch to ensure UI is in sync
+    await refetch();
   };
 
   const handlePhoneChange = (phoneE164: string, countryCode: string) => {
@@ -108,6 +116,23 @@ export function AdminProfilePage() {
     
     profileForm.setValue("phone_country", country, { shouldDirty: true });
     profileForm.setValue("phone_number", number, { shouldDirty: true });
+  };
+
+  const handleAvatarClick = () => {
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await uploadAvatar.mutateAsync(file);
+    await refetch();
+    
+    // Reset input so same file can be selected again
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = "";
+    }
   };
 
   const handlePasswordSubmit = async (data: AdminPasswordFormData) => {
@@ -179,20 +204,41 @@ export function AdminProfilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Avatar */}
+            {/* Avatar with upload */}
             <div className="flex items-center gap-4">
-              <Avatar className="w-20 h-20">
-                <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback className="text-lg bg-primary/10 text-primary">
-                  {getInitials(profile?.display_name)}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
+                <Avatar className="w-20 h-20">
+                  <AvatarImage src={profile?.avatar_url || undefined} />
+                  <AvatarFallback className="text-lg bg-primary/10 text-primary">
+                    {getInitials(profile?.display_name)}
+                  </AvatarFallback>
+                </Avatar>
+                {/* Overlay for hover */}
+                <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  {uploadAvatar.isPending ? (
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  ) : (
+                    <Camera className="w-6 h-6 text-white" />
+                  )}
+                </div>
+                {/* Hidden file input */}
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+              </div>
               <div className="flex-1">
                 <p className="font-medium">{profile?.display_name || "Sem nome"}</p>
                 <p className="text-sm text-muted-foreground">{profile?.email}</p>
                 <Badge variant="secondary" className="mt-1">
                   {getRoleDisplayName(profile?.admin_role || "")}
                 </Badge>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Clique na foto para alterar
+                </p>
               </div>
             </div>
 

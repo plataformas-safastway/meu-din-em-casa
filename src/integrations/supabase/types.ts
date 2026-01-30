@@ -6460,13 +6460,14 @@ export type Database = {
       is_admin_master: { Args: { _user_id: string }; Returns: boolean }
       is_admin_user:
         | { Args: never; Returns: boolean }
-        | { Args: { _user_id: string }; Returns: boolean }
+        | { Args: { p_user_id: string }; Returns: boolean }
       is_family_member: { Args: { f_id: string }; Returns: boolean }
       is_family_owner: { Args: { p_family_id: string }; Returns: boolean }
       is_family_owner_or_manager: {
         Args: { p_family_id: string }
         Returns: boolean
       }
+      is_master_admin: { Args: { p_user_id: string }; Returns: boolean }
       is_openfinance_connection_member: {
         Args: { p_connection_id: string }
         Returns: boolean
