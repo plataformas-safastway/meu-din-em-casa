@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useBanks, useUpdateBankAccount } from "@/hooks/useBankData";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown, Lock, Users, User } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface EditBankAccountSheetProps {
   open: boolean;
@@ -20,6 +23,11 @@ interface EditBankAccountSheetProps {
     nickname: string;
     initial_balance: number | null;
     is_active: boolean;
+    agency?: string | null;
+    account_number?: string | null;
+    account_digit?: string | null;
+    ownership_type?: 'individual' | 'joint' | null;
+    titleholders?: string[] | null;
   } | null;
 }
 
@@ -30,6 +38,17 @@ export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAc
   const [nickname, setNickname] = useState("");
   const [balance, setBalance] = useState("");
   const [isActive, setIsActive] = useState(true);
+  
+  // Ownership
+  const [ownershipType, setOwnershipType] = useState<"individual" | "joint">("individual");
+  const [titleholder, setTitleholder] = useState("");
+  const [jointTitleholders, setJointTitleholders] = useState<string[]>([""]);
+  
+  // Optional account details
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [agency, setAgency] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [accountDigit, setAccountDigit] = useState("");
   
   const { data: banks = [] } = useBanks();
   const updateAccount = useUpdateBankAccount();
@@ -42,6 +61,25 @@ export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAc
       setNickname(account.nickname);
       setBalance(account.initial_balance?.toString() || "");
       setIsActive(account.is_active);
+      
+      // New fields
+      setOwnershipType(account.ownership_type || "individual");
+      setAgency(account.agency || "");
+      setAccountNumber(account.account_number || "");
+      setAccountDigit(account.account_digit || "");
+      
+      // Titleholders
+      const holders = account.titleholders || [];
+      if (account.ownership_type === "joint" && holders.length > 1) {
+        setJointTitleholders(holders);
+        setTitleholder("");
+      } else {
+        setTitleholder(holders[0] || "");
+        setJointTitleholders([""]);
+      }
+      
+      // Show advanced if there's data
+      setShowAdvanced(!!(account.agency || account.account_number));
     }
   }, [account, open]);
 
@@ -51,7 +89,26 @@ export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAc
       toast.error("Dê um apelido para a conta");
       return;
     }
+    
+    // Validate titleholder
+    if (ownershipType === "individual" && !titleholder.trim()) {
+      toast.error("Informe o nome do titular da conta");
+      return;
+    }
+    
+    if (ownershipType === "joint") {
+      const validTitleholders = jointTitleholders.filter(t => t.trim());
+      if (validTitleholders.length < 2) {
+        toast.error("Conta conjunta precisa de pelo menos 2 titulares");
+        return;
+      }
+    }
+    
     try {
+      const titleholders = ownershipType === "individual" 
+        ? [titleholder.trim()]
+        : jointTitleholders.filter(t => t.trim());
+      
       await updateAccount.mutateAsync({
         id: account.id,
         bank_id: bankId !== "other" ? bankId : undefined,
@@ -60,6 +117,11 @@ export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAc
         nickname,
         initial_balance: balance ? parseFloat(balance.replace(",", ".")) : undefined,
         is_active: isActive,
+        ownership_type: ownershipType,
+        titleholders,
+        agency: agency || undefined,
+        account_number: accountNumber || undefined,
+        account_digit: accountDigit || undefined,
       });
       toast.success("Conta atualizada!");
       onOpenChange(false);
@@ -68,13 +130,33 @@ export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAc
     }
   };
 
+  const addJointTitleholder = () => {
+    if (jointTitleholders.length < 4) {
+      setJointTitleholders([...jointTitleholders, ""]);
+    }
+  };
+
+  const updateJointTitleholder = (index: number, value: string) => {
+    const updated = [...jointTitleholders];
+    updated[index] = value;
+    setJointTitleholders(updated);
+  };
+
+  const removeJointTitleholder = (index: number) => {
+    if (jointTitleholders.length > 1) {
+      setJointTitleholders(jointTitleholders.filter((_, i) => i !== index));
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl overflow-y-auto">
+      <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Editar Conta Bancária</SheetTitle>
+          <SheetDescription>Atualize os dados da sua conta</SheetDescription>
         </SheetHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-6 pb-6">
+        <form onSubmit={handleSubmit} className="space-y-5 mt-6 pb-6">
+          {/* Bank Selection */}
           <div className="space-y-2">
             <Label>Banco</Label>
             <Select value={bankId} onValueChange={setBankId}>
@@ -102,6 +184,7 @@ export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAc
             </div>
           )}
           
+          {/* Account Type */}
           <div className="space-y-2">
             <Label>Tipo de conta</Label>
             <Select value={accountType} onValueChange={setAccountType}>
@@ -115,8 +198,9 @@ export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAc
             </Select>
           </div>
           
+          {/* Nickname */}
           <div className="space-y-2">
-            <Label>Apelido da conta</Label>
+            <Label>Apelido da conta *</Label>
             <Input 
               value={nickname} 
               onChange={(e) => setNickname(e.target.value)} 
@@ -126,6 +210,95 @@ export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAc
             />
           </div>
           
+          {/* Ownership Type */}
+          <div className="space-y-3">
+            <Label>Titularidade da conta *</Label>
+            <RadioGroup 
+              value={ownershipType} 
+              onValueChange={(v) => setOwnershipType(v as "individual" | "joint")}
+              className="grid grid-cols-2 gap-3"
+            >
+              <Label 
+                htmlFor="edit-individual" 
+                className={cn(
+                  "flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all",
+                  ownershipType === "individual" 
+                    ? "border-primary bg-primary/5 ring-1 ring-primary" 
+                    : "border-border hover:border-primary/50"
+                )}
+              >
+                <RadioGroupItem value="individual" id="edit-individual" />
+                <User className="w-5 h-5 text-muted-foreground" />
+                <span className="font-medium">Individual</span>
+              </Label>
+              
+              <Label 
+                htmlFor="edit-joint" 
+                className={cn(
+                  "flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all",
+                  ownershipType === "joint" 
+                    ? "border-primary bg-primary/5 ring-1 ring-primary" 
+                    : "border-border hover:border-primary/50"
+                )}
+              >
+                <RadioGroupItem value="joint" id="edit-joint" />
+                <Users className="w-5 h-5 text-muted-foreground" />
+                <span className="font-medium">Conjunta</span>
+              </Label>
+            </RadioGroup>
+          </div>
+          
+          {/* Titleholder(s) */}
+          {ownershipType === "individual" ? (
+            <div className="space-y-2">
+              <Label>Nome do titular *</Label>
+              <Input 
+                value={titleholder} 
+                onChange={e => setTitleholder(e.target.value)} 
+                placeholder="Ex: Thiago" 
+                className="h-12" 
+                required 
+              />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Label>Titulares da conta *</Label>
+              {jointTitleholders.map((holder, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input 
+                    value={holder} 
+                    onChange={e => updateJointTitleholder(index, e.target.value)} 
+                    placeholder={`Titular ${index + 1}`} 
+                    className="h-12 flex-1" 
+                  />
+                  {jointTitleholders.length > 1 && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon" 
+                      className="h-12 w-12"
+                      onClick={() => removeJointTitleholder(index)}
+                    >
+                      ×
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {jointTitleholders.length < 4 && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={addJointTitleholder}
+                  className="w-full"
+                >
+                  + Adicionar titular
+                </Button>
+              )}
+            </div>
+          )}
+          
+          {/* Initial Balance */}
           <div className="space-y-2">
             <Label>Saldo inicial (opcional)</Label>
             <Input 
@@ -136,7 +309,61 @@ export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAc
               inputMode="decimal" 
             />
           </div>
+          
+          {/* Advanced/Optional Fields */}
+          <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+            <CollapsibleTrigger asChild>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                className="w-full flex items-center justify-between h-12 px-4 text-muted-foreground"
+              >
+                <span className="flex items-center gap-2">
+                  <Lock className="w-4 h-4" />
+                  Dados bancários (opcional)
+                </span>
+                <ChevronDown className={cn(
+                  "w-4 h-4 transition-transform",
+                  showAdvanced && "rotate-180"
+                )} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Agência</Label>
+                  <Input 
+                    value={agency} 
+                    onChange={e => setAgency(e.target.value)} 
+                    placeholder="0000" 
+                    className="h-12" 
+                    maxLength={10}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Conta</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      value={accountNumber} 
+                      onChange={e => setAccountNumber(e.target.value)} 
+                      placeholder="00000" 
+                      className="h-12 flex-1" 
+                      maxLength={20}
+                    />
+                    <Input 
+                      value={accountDigit} 
+                      onChange={e => setAccountDigit(e.target.value)} 
+                      placeholder="-0" 
+                      className="h-12 w-16" 
+                      maxLength={2}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
+          {/* Active Status */}
           <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50">
             <div>
               <Label className="text-base">Conta ativa</Label>
