@@ -2025,11 +2025,13 @@ export type Database = {
         Row: {
           birth_date: string | null
           cpf: string | null
+          cpf_enc: string | null
           created_at: string
           family_member_id: string
           id: string
           phone_country: string | null
           phone_e164: string | null
+          phone_e164_enc: string | null
           profession: string | null
           updated_at: string
           user_id: string
@@ -2037,11 +2039,13 @@ export type Database = {
         Insert: {
           birth_date?: string | null
           cpf?: string | null
+          cpf_enc?: string | null
           created_at?: string
           family_member_id: string
           id?: string
           phone_country?: string | null
           phone_e164?: string | null
+          phone_e164_enc?: string | null
           profession?: string | null
           updated_at?: string
           user_id: string
@@ -2049,11 +2053,13 @@ export type Database = {
         Update: {
           birth_date?: string | null
           cpf?: string | null
+          cpf_enc?: string | null
           created_at?: string
           family_member_id?: string
           id?: string
           phone_country?: string | null
           phone_e164?: string | null
+          phone_e164_enc?: string | null
           profession?: string | null
           updated_at?: string
           user_id?: string
@@ -6269,6 +6275,9 @@ export type Database = {
         Args: { _target_user_id: string }
         Returns: boolean
       }
+      app_decrypt_text: { Args: { p_enc: string }; Returns: string }
+      app_encrypt_text: { Args: { p_text: string }; Returns: string }
+      app_get_enc_key: { Args: never; Returns: string }
       auto_reveal_expired_privacy: { Args: never; Returns: undefined }
       bulk_reclassify_transactions: {
         Args: {
@@ -6365,6 +6374,13 @@ export type Database = {
         Args: { _period_end?: string; _period_start?: string }
         Returns: Json
       }
+      get_family_member_sensitive: {
+        Args: { p_family_member_id: string }
+        Returns: {
+          cpf: string
+          phone_e164: string
+        }[]
+      }
       get_growth_metrics: { Args: { _months?: number }; Returns: Json }
       get_learned_categorization: {
         Args: {
@@ -6386,6 +6402,13 @@ export type Database = {
       get_member_permissions: {
         Args: { _family_id: string; _user_id: string }
         Returns: Json
+      }
+      get_my_sensitive_private: {
+        Args: never
+        Returns: {
+          cpf: string
+          phone_e164: string
+        }[]
       }
       get_product_stability_metrics: { Args: never; Returns: Json }
       get_revenue_metrics: { Args: { _months?: number }; Returns: Json }
