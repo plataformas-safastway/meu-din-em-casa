@@ -128,6 +128,8 @@ export const Dashboard = memo(function Dashboard({
   }, [hasMarkedRender]);
 
   // Get user's first name for greeting - memoized
+  // SECURITY: Never use generic fallback like "Usuário" - this indicates incomplete auth
+  // If we don't have a valid display name, return null to avoid displaying fake data
   const userName = useMemo(() => {
     if (homeSummary?.greeting?.firstName) {
       return homeSummary.greeting.firstName;
@@ -138,7 +140,8 @@ export const Dashboard = memo(function Dashboard({
     if (family?.name) {
       return family.name;
     }
-    return "Usuário";
+    // Return null instead of generic fallback - Header handles null gracefully
+    return null;
   }, [homeSummary?.greeting?.firstName, user?.user_metadata?.display_name, family?.name]);
 
   // Memoized callbacks to prevent child re-renders

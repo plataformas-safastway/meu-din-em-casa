@@ -100,7 +100,7 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
         <div className="flex flex-col items-center gap-4 py-4">
           <AvatarUpload
             avatarUrl={familyMember?.avatar_url}
-            displayName={familyMember?.display_name || "Usuário"}
+            displayName={familyMember?.display_name || ""}
             size="lg"
           />
           <div className="text-center">
