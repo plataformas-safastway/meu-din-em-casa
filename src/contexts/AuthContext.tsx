@@ -450,6 +450,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfileStatus('unknown');
     setUserContext(null);
     
+    // Clear login form drafts so email field is clean on next login
+    try {
+      localStorage.removeItem('oik_draft_login_form_email');
+      // Signal to LoginPage to clear form if it's mounted
+      sessionStorage.setItem('oik:just_logged_out', 'true');
+    } catch (e) {
+      console.warn('[Auth] Failed to clear login draft:', e);
+    }
+    
     try {
       await supabase.auth.signOut();
       console.log('[Auth] signOut completed successfully');
