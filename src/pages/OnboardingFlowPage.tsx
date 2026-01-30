@@ -18,15 +18,27 @@ import {
 } from "@/data/budgetModes";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
 import { DraftRestoredToast } from "@/components/ui/draft-restored-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { Loader2 } from "lucide-react";
 import type { BudgetCategoryItem } from "@/components/budget/BudgetMetaAdjustment";
 
 type FlowStep = 'wizard' | 'budget-acceptance' | 'budget-adjustment' | 'budget-proposal';
 
 export function OnboardingFlowPage() {
   const navigate = useNavigate();
+  const { family, loading: authLoading } = useAuth();
   const [flowStep, setFlowStep] = useState<FlowStep>('wizard');
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const { saveOnboarding, generateAISuggestions, isLoading } = useOnboardingWizard();
+
+  // CRITICAL: Redirect to family selection if no active family
+  // Onboarding REQUIRES an existing family context
+  useEffect(() => {
+    if (!authLoading && !family) {
+      console.log("[OnboardingFlowPage] No active family - redirecting to select-family");
+      navigate("/select-family", { replace: true });
+    }
+  }, [family, authLoading, navigate]);
   
   // Draft persistence for onboarding data
   const { 
@@ -209,6 +221,24 @@ export function OnboardingFlowPage() {
   const budgetModeName = onboardingData 
     ? getBudgetModeById(onboardingData.budgetMode)?.label || 'Personalizado'
     : 'Personalizado';
+
+  // Show loading while checking for family
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // If no family, the useEffect will redirect - show loading in the meantime
+  if (!family) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (flowStep === 'wizard') {
     return (

@@ -179,6 +179,23 @@ serve(async (req) => {
       });
     }
 
+    // Create user_onboarding record for the new user/family
+    // This is required for authorization checks in the App
+    const { error: onboardingError } = await adminClient.from("user_onboarding").upsert({
+      user_id: userData.user.id,
+      family_id: familyId,
+      status: "not_started",
+      has_seen_welcome: false,
+      step_account_created_at: new Date().toISOString(),
+    }, {
+      onConflict: "user_id",
+    });
+
+    if (onboardingError) {
+      console.error("create-family: user_onboarding insert error", onboardingError);
+      // Non-critical, continue - the onboarding hook will create this if missing
+    }
+
     return new Response(JSON.stringify({ familyId }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },

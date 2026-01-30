@@ -15,6 +15,7 @@ import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicato
 import { validatePassword } from "@/lib/passwordValidation";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
 import { DraftRestoredToast } from "@/components/ui/draft-restored-toast";
+import { supabase } from "@/integrations/supabase/client";
 import oikMarca from "@/assets/oik-marca.png";
 
 /**
@@ -213,8 +214,33 @@ export function SignupPage() {
       // Store name in session storage for the onboarding flow
       sessionStorage.setItem("onboarding_name", name);
 
+      // CRITICAL: Create family EXPLICITLY during signup (not during onboarding)
+      // This is the ONLY place where family creation should happen for new users
+      // Onboarding will then configure this family, never create a new one
+      const familyData = {
+        name: `Família ${name.split(' ')[0]}`,
+        displayName: name,
+        membersCount: 1,
+      };
+      
+      const { data: familyResp, error: familyError } = await supabase.functions.invoke('create-family', {
+        body: familyData,
+      });
+      
+      if (familyError) {
+        console.error("[SignupPage] Error creating family:", familyError);
+        toast.error("Erro ao criar família. Tente novamente.");
+        setLoading(false);
+        return;
+      }
+      
+      console.log("[SignupPage] Family created successfully:", familyResp);
+
       // Clear draft on successful signup
       clearDraft();
+      
+      // Small delay to let auth context refresh with new family data
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Redirect to onboarding wizard
       navigate("/onboarding", { replace: true });
