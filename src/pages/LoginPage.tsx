@@ -205,6 +205,18 @@ export function LoginPage() {
         return;
       }
 
+      // ============================================================
+      // SUCCESSFUL LOGIN - CLEAR HARD LOGOUT FLAG
+      // ============================================================
+      // This allows auto-login to work again (until next explicit logout)
+      try {
+        localStorage.removeItem('oik:logout_required');
+        console.log('[LoginPage] Manual login successful - logout_required flag CLEARED');
+      } catch (e) {
+        console.warn('[LoginPage] Failed to clear logout_required flag:', e);
+      }
+      // ============================================================
+
       // Clear failed attempts on successful login
       clearFailedAttempts();
       
