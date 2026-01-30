@@ -154,13 +154,25 @@ export function PhoneInput({
     onChange(e164, selectedCountry.code);
   };
   
-  // Handle keydown specifically for better backspace behavior
+  // Handle keydown for backspace/delete - bypass mask completely
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // For backspace, if the current display shows mask chars, we just let the 
-    // normal flow handle it (digits will be extracted in onChange)
-    if (e.key === "Backspace" && localNumber.length > 0) {
-      // Prevent default only if we need to handle it manually
-      // Actually, we let the input handle it naturally and just strip digits in onChange
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      if (localNumber.length > 0) {
+        const newLocalNumber = localNumber.slice(0, -1);
+        setLocalNumber(newLocalNumber);
+        const e164 = toE164(newLocalNumber, selectedCountry.code);
+        onChange(e164, selectedCountry.code);
+      }
+    } else if (e.key === "Delete") {
+      // For Delete key, also remove last digit (simpler UX)
+      e.preventDefault();
+      if (localNumber.length > 0) {
+        const newLocalNumber = localNumber.slice(0, -1);
+        setLocalNumber(newLocalNumber);
+        const e164 = toE164(newLocalNumber, selectedCountry.code);
+        onChange(e164, selectedCountry.code);
+      }
     }
   };
   
@@ -220,6 +232,7 @@ export function PhoneInput({
           type="tel"
           value={displayValue}
           onChange={handlePhoneChange}
+          onKeyDown={handleKeyDown}
           placeholder={selectedCountry.code === "BR" ? "(48) 99999-9999" : "Número de telefone"}
           className={cn(
             "pl-9",
