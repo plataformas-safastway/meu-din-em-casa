@@ -20,6 +20,7 @@ import { ImportOwnershipConfirmation } from "@/components/import/ImportOwnership
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
+import { useHasCpf } from "@/hooks/useSensitiveProfile";
 
 type FileType = "ofx" | "xlsx" | "xls" | "pdf" | null;
 
@@ -49,8 +50,8 @@ export function ImportUploadStep({ onComplete }: ImportUploadStepProps) {
   const [isCreditCardStatement, setIsCreditCardStatement] = useState(false);
   const [invoiceMonth, setInvoiceMonth] = useState("");
 
-  // Check if user has CPF registered
-  const hasCpf = !!((familyMember as { cpf?: string })?.cpf) && ((familyMember as { cpf?: string })?.cpf?.length || 0) === 11;
+  // Check if user has CPF registered (from private data table)
+  const { hasCpf } = useHasCpf();
 
   // Handle file selection
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

@@ -21,6 +21,7 @@ import { CpfVerificationModal } from "@/components/import/CpfVerificationModal";
 import { ImportOwnershipConfirmation } from "@/components/import/ImportOwnershipConfirmation";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useHasCpf } from "@/hooks/useSensitiveProfile";
 
 type FileType = "ofx" | "xlsx" | "pdf" | null;
 
@@ -41,8 +42,8 @@ export function SmartImportPage({ onBack }: SmartImportPageProps) {
   const [loading, setLoading] = useState(false);
   const [showCpfModal, setShowCpfModal] = useState(false);
 
-  // Check if user has CPF registered
-  const hasCpf = !!((familyMember as { cpf?: string })?.cpf) && ((familyMember as { cpf?: string })?.cpf?.length || 0) === 11;
+  // Check if user has CPF registered (from private data table)
+  const { hasCpf } = useHasCpf();
 
   // Handle file selection
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

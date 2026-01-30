@@ -99,7 +99,6 @@ interface FamilyWithMembers {
     user_id: string;
     display_name: string;
     role: string;
-    cpf: string | null;
     status: string;
   }[];
 }
@@ -193,7 +192,6 @@ export function AdminUsersPage() {
             user_id,
             display_name,
             role,
-            cpf,
             status
           )
         `)
@@ -1000,11 +998,7 @@ function MemberCard({ member, showStatus }: { member: FamilyWithMembers['family_
         </Select>
       </div>
 
-      {member.cpf && (
-        <p className="text-xs text-muted-foreground">
-          CPF: {member.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.***.***-$4')}
-        </p>
-      )}
+      {/* CPF is now stored in family_member_private - not shown to admins by default */}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useHasCpf } from "@/hooks/useSensitiveProfile";
 
 interface ImportResult {
   success: boolean;
@@ -15,6 +16,7 @@ interface ImportResult {
 
 interface UseImportWithCpfReturn {
   hasCpf: boolean;
+  isLoadingCpf: boolean;
   needsCpfModal: boolean;
   setNeedsCpfModal: (value: boolean) => void;
   familyMemberId: string | undefined;
@@ -32,8 +34,8 @@ export function useImportWithCpf(): UseImportWithCpfReturn {
   const [needsCpfModal, setNeedsCpfModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Check if user has CPF registered (familyMember may have cpf field)
-  const hasCpf = !!(familyMember as { cpf?: string })?.cpf && ((familyMember as { cpf?: string })?.cpf?.length || 0) === 11;
+  // Use the new sensitive profile hook to check CPF
+  const { hasCpf, isLoading: isLoadingCpf } = useHasCpf();
 
   // Check CPF and return whether to proceed
   const checkCpfAndProceed = useCallback((): boolean => {
@@ -119,6 +121,7 @@ export function useImportWithCpf(): UseImportWithCpfReturn {
 
   return {
     hasCpf,
+    isLoadingCpf,
     needsCpfModal,
     setNeedsCpfModal,
     familyMemberId: familyMember?.id,
