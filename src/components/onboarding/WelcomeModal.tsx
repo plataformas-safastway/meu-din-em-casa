@@ -30,10 +30,12 @@ export function WelcomeModal({ onClose }: WelcomeModalProps) {
   };
 
   // Get user's first name
-  const firstName = user?.user_metadata?.display_name?.split(" ")[0] || "Usuário";
-  const familyName = family?.name || "sua família";
+  // SECURITY: If user data not loaded, don't show modal at all (handled by render check below)
+  const firstName = user?.user_metadata?.display_name?.split(" ")[0] || null;
+  const familyName = family?.name || null;
 
-  if (isLoading || !isNewUser) return null;
+  // SECURITY: Don't render if user data is incomplete - prevents showing "Olá, null"
+  if (isLoading || !isNewUser || !firstName || !familyName) return null;
 
   return (
     <AnimatePresence>
