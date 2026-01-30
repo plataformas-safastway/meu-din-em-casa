@@ -148,44 +148,86 @@ export function useRemoveAvatar() {
   });
 }
 
-// Hook to update profile (including phone)
+// Hook to update profile
+// NOTE: Sensitive data (phone, birth_date, profession) is now stored in family_member_private
+// Use useUpdateSensitiveProfile from useSensitiveProfile.ts for those fields
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
-  const { refreshFamily } = useAuth();
+  const { user, familyMember, refreshFamily } = useAuth();
 
   return useMutation({
     mutationFn: async (data: { memberId: string; updates: Partial<ProfileFormData> }) => {
-      const updatePayload: Record<string, unknown> = {};
+      // Split updates between public and private data
+      const publicPayload: Record<string, unknown> = {};
+      const privatePayload: Record<string, unknown> = {};
       
+      // Public field (stays in family_members)
       if (data.updates.display_name !== undefined) {
-        updatePayload.display_name = data.updates.display_name;
+        publicPayload.display_name = data.updates.display_name;
       }
       
+      // Sensitive fields (go to family_member_private)
       if (data.updates.phone_e164 !== undefined) {
-        updatePayload.phone_e164 = data.updates.phone_e164 || null;
+        privatePayload.phone_e164 = data.updates.phone_e164 || null;
       }
       
       if (data.updates.phone_country !== undefined) {
-        updatePayload.phone_country = data.updates.phone_country || "BR";
+        privatePayload.phone_country = data.updates.phone_country || "BR";
       }
 
       if (data.updates.birth_date !== undefined) {
-        updatePayload.birth_date = data.updates.birth_date || null;
+        privatePayload.birth_date = data.updates.birth_date || null;
       }
 
       if (data.updates.profession !== undefined) {
-        updatePayload.profession = data.updates.profession || null;
+        privatePayload.profession = data.updates.profession || null;
       }
 
-      const { error } = await supabase
-        .from("family_members")
-        .update(updatePayload)
-        .eq("id", data.memberId);
+      // Update public data if any
+      if (Object.keys(publicPayload).length > 0) {
+        const { error } = await supabase
+          .from("family_members")
+          .update(publicPayload)
+          .eq("id", data.memberId);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
+
+      // Update private data if any
+      if (Object.keys(privatePayload).length > 0 && user?.id && familyMember?.id) {
+        // Check if private record exists
+        const { data: existing } = await supabase
+          .from("family_member_private")
+          .select("id")
+          .eq("family_member_id", familyMember.id)
+          .maybeSingle();
+
+        if (existing) {
+          const { error } = await supabase
+            .from("family_member_private")
+            .update({
+              ...privatePayload,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("family_member_id", familyMember.id);
+
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("family_member_private")
+            .insert({
+              family_member_id: familyMember.id,
+              user_id: user.id,
+              ...privatePayload,
+            });
+
+          if (error) throw error;
+        }
+      }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["family"] });
+      await queryClient.invalidateQueries({ queryKey: ["sensitive-profile"] });
       await refreshFamily();
       toast.success("Perfil atualizado com sucesso!");
     },

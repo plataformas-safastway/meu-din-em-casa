@@ -12,8 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useUpdateCpf } from "@/hooks/useSensitiveProfile";
 
 interface CpfVerificationModalProps {
   open: boolean;
@@ -68,12 +67,13 @@ export function CpfVerificationModal({
 }: CpfVerificationModalProps) {
   const [cpf, setCpf] = useState("");
   const [confirmed, setConfirmed] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const updateCpf = useUpdateCpf();
 
   const cleanCpf = cpf.replace(/\D/g, "");
   const isValid = isValidCpf(cleanCpf);
-  const canSubmit = isValid && confirmed && !loading;
+  const canSubmit = isValid && confirmed && !updateCpf.isPending;
 
   const handleCpfChange = (value: string) => {
     setCpf(formatCpf(value));
@@ -83,23 +83,11 @@ export function CpfVerificationModal({
   const handleSubmit = async () => {
     if (!canSubmit || !familyMemberId) return;
 
-    setLoading(true);
     setError(null);
 
     try {
-      // Update the family member's CPF
-      const { error: updateError } = await supabase
-        .from("family_members")
-        .update({ cpf: cleanCpf })
-        .eq("id", familyMemberId);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      toast.success("CPF confirmado com sucesso!", {
-        description: "Agora você pode importar arquivos protegidos por senha.",
-      });
+      // Update CPF in family_member_private table
+      await updateCpf.mutateAsync(cleanCpf);
 
       onSuccess();
       onOpenChange(false);
@@ -110,8 +98,6 @@ export function CpfVerificationModal({
     } catch (err) {
       console.error("Error saving CPF:", err);
       setError("Não foi possível salvar o CPF. Tente novamente.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -161,7 +147,7 @@ export function CpfVerificationModal({
               </p>
             )}
             {isValid && (
-              <p className="text-xs text-green-600 flex items-center gap-1">
+              <p className="text-xs text-emerald-600 dark:text-emerald-500 flex items-center gap-1">
                 <Check className="w-3 h-3" />
                 CPF válido
               </p>
@@ -204,7 +190,7 @@ export function CpfVerificationModal({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={loading}
+            disabled={updateCpf.isPending}
             className="w-full sm:w-auto"
           >
             Cancelar
@@ -214,7 +200,7 @@ export function CpfVerificationModal({
             disabled={!canSubmit}
             className="w-full sm:w-auto"
           >
-            {loading ? "Salvando..." : "Confirmar e continuar"}
+            {updateCpf.isPending ? "Salvando..." : "Confirmar e continuar"}
           </Button>
         </DialogFooter>
       </DialogContent>
