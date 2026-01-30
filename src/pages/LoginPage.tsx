@@ -68,11 +68,13 @@ export function LoginPage() {
 
   // Clear login form when component mounts after a logout
   // This ensures the form is always clean on a fresh page load
+  // NOTE: The useDraftPersistence hook also checks this flag to prevent restoration race condition
   useEffect(() => {
     const wasLoggedOut = sessionStorage.getItem('oik:just_logged_out');
     if (wasLoggedOut) {
+      // Remove flag first to prevent re-triggering
       sessionStorage.removeItem('oik:just_logged_out');
-      // Clear email draft and reset form
+      // Clear email draft and reset form state
       clearDraft();
       setEmail("");
       setPassword("");

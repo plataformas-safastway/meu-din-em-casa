@@ -36,6 +36,15 @@ export function useDraftPersistence<T extends Record<string, any>>(
   useEffect(() => {
     if (!enabled) return;
 
+    // CRITICAL: Check if user just logged out - skip restoration to avoid race condition
+    // The logout flow sets this flag before the component mounts
+    const wasLoggedOut = sessionStorage.getItem('oik:just_logged_out');
+    if (wasLoggedOut) {
+      // Don't restore drafts after logout - let the cleanup effect handle it
+      console.log('[Draft] Skipping restoration - user just logged out');
+      return;
+    }
+
     try {
       const stored = localStorage.getItem(fullKey);
       if (stored) {
