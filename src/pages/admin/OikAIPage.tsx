@@ -1,6 +1,8 @@
 /**
  * OIK AI Dashboard Page
  * Monitoring and analytics for the OIK AI Assistant product
+ * 
+ * Updated: Real metrics from get_ai_dashboard_metrics RPC
  */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -18,9 +20,9 @@ import {
   Activity,
   RefreshCw,
   Settings,
-  FileText,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Info
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,51 +30,74 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 
-// Mock data for initial implementation - will be replaced with real analytics
-const mockMetrics = {
-  totalConversations: 1247,
-  activeUsers: 89,
-  avgResponseTime: 1.8,
-  satisfactionRate: 94,
-  tokensUsed: 2450000,
-  costEstimate: 12.50,
-  topQuestions: [
-    { question: "Como organizar meu orçamento?", count: 156 },
-    { question: "Dicas para economizar", count: 134 },
-    { question: "Como criar uma reserva de emergência?", count: 98 },
-    { question: "Como sair das dívidas?", count: 87 },
-    { question: "Qual a melhor forma de investir?", count: 76 },
-  ],
-  recentErrors: [
-    { timestamp: "2026-01-28 21:30", error: "Rate limit exceeded", count: 3 },
-    { timestamp: "2026-01-28 20:15", error: "Timeout", count: 1 },
-  ],
-  dailyUsage: [
-    { day: "Seg", conversations: 145 },
-    { day: "Ter", conversations: 189 },
-    { day: "Qua", conversations: 210 },
-    { day: "Qui", conversations: 178 },
-    { day: "Sex", conversations: 234 },
-    { day: "Sáb", conversations: 156 },
-    { day: "Dom", conversations: 135 },
-  ],
-};
+interface AIMetrics {
+  total_conversations: number;
+  prev_total_conversations: number;
+  active_users: number;
+  response_p50_ms: number;
+  satisfaction_rate: number;
+  tokens_used: number;
+  tokens_in: number;
+  tokens_out: number;
+  top_questions: Array<{ question: string; count: number }>;
+  daily_usage: Array<{ date: string; day: string; conversations: number }>;
+  recent_errors: Array<{ timestamp: string; error: string; count: number }>;
+  period_days: number;
+  calculated_at: string;
+}
+
+// Cost estimation based on Gemini pricing (approximate)
+const COST_PER_1M_TOKENS = 0.35; // gemini-3-flash-preview
 
 export function OikAIPage() {
   const [activeTab, setActiveTab] = useState("overview");
+  const [periodDays, setPeriodDays] = useState(7);
 
-  // Future: Query real analytics from database
-  const { data: metrics, isLoading, refetch } = useQuery({
-    queryKey: ["oik-ai-metrics"],
+  // Query real metrics from RPC
+  const { data: metrics, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ["oik-ai-metrics", periodDays],
     queryFn: async () => {
-      // For now, return mock data
-      // TODO: Implement real analytics table and queries
-      return mockMetrics;
+      const { data, error } = await supabase.rpc("get_ai_dashboard_metrics", {
+        days_back: periodDays
+      });
+      
+      if (error) {
+        console.error("Error fetching AI metrics:", error);
+        throw error;
+      }
+      
+      return data as unknown as AIMetrics;
     },
     staleTime: 60000, // 1 minute
   });
+
+  // Calculate growth percentage
+  const getGrowthPercent = () => {
+    if (!metrics) return 0;
+    const prev = metrics.prev_total_conversations;
+    const curr = metrics.total_conversations;
+    if (prev === 0) return curr > 0 ? 100 : 0;
+    return Math.round(((curr - prev) / prev) * 100);
+  };
+
+  // Format response time for display
+  const formatResponseTime = (ms: number | undefined) => {
+    if (!ms || ms === 0) return "—";
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+  };
+
+  // Estimate cost based on tokens
+  const estimateCost = (tokens: number) => {
+    return ((tokens / 1_000_000) * COST_PER_1M_TOKENS).toFixed(2);
+  };
+
+  // Check if we have any data
+  const hasData = metrics && (metrics.total_conversations > 0 || metrics.active_users > 0);
 
   return (
     <div className="space-y-6">
@@ -94,12 +119,54 @@ export function OikAIPage() {
             <CheckCircle className="h-3 w-3 text-green-500" />
             Operacional
           </Badge>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => refetch()}
+            disabled={isRefetching}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
         </div>
       </div>
+
+      {/* Period Selector */}
+      <div className="flex gap-2">
+        <Button 
+          variant={periodDays === 7 ? "default" : "outline"} 
+          size="sm"
+          onClick={() => setPeriodDays(7)}
+        >
+          7 dias
+        </Button>
+        <Button 
+          variant={periodDays === 30 ? "default" : "outline"} 
+          size="sm"
+          onClick={() => setPeriodDays(30)}
+        >
+          30 dias
+        </Button>
+        <Button 
+          variant={periodDays === 90 ? "default" : "outline"} 
+          size="sm"
+          onClick={() => setPeriodDays(90)}
+        >
+          90 dias
+        </Button>
+      </div>
+
+      {/* No Data Alert */}
+      {!isLoading && !hasData && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Sem dados suficientes</AlertTitle>
+          <AlertDescription>
+            O módulo de IA ainda não tem conversas registradas. 
+            As métricas serão exibidas quando os usuários começarem a interagir com o assistente.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -109,10 +176,24 @@ export function OikAIPage() {
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics?.totalConversations.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-green-500">+12%</span> vs. semana anterior
-            </p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">
+                  {metrics?.total_conversations.toLocaleString() ?? 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {getGrowthPercent() !== 0 && (
+                    <span className={getGrowthPercent() > 0 ? "text-green-500" : "text-red-500"}>
+                      {getGrowthPercent() > 0 ? "+" : ""}{getGrowthPercent()}%
+                    </span>
+                  )}
+                  {getGrowthPercent() !== 0 && " vs. período anterior"}
+                  {getGrowthPercent() === 0 && `Últimos ${periodDays} dias`}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -122,8 +203,14 @@ export function OikAIPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics?.activeUsers}</div>
-            <p className="text-xs text-muted-foreground">Últimos 7 dias</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{metrics?.active_users ?? 0}</div>
+                <p className="text-xs text-muted-foreground">Últimos {periodDays} dias</p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -133,8 +220,18 @@ export function OikAIPage() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics?.avgResponseTime}s</div>
-            <p className="text-xs text-muted-foreground">Média (p50)</p>
+            {isLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">
+                  {formatResponseTime(metrics?.response_p50_ms)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {metrics?.response_p50_ms ? "Mediana (p50)" : "Aguardando dados"}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -144,8 +241,19 @@ export function OikAIPage() {
             <ThumbsUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics?.satisfactionRate}%</div>
-            <Progress value={metrics?.satisfactionRate} className="mt-2" />
+            {isLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : metrics?.satisfaction_rate && metrics.satisfaction_rate > 0 ? (
+              <>
+                <div className="text-2xl font-bold">{metrics.satisfaction_rate}%</div>
+                <Progress value={metrics.satisfaction_rate} className="mt-2" />
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-muted-foreground">—</div>
+                <p className="text-xs text-muted-foreground">Sem feedback ainda</p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -181,48 +289,79 @@ export function OikAIPage() {
                 <CardDescription>Tópicos mais consultados pelos usuários</CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[250px]">
+                {isLoading ? (
                   <div className="space-y-3">
-                    {metrics?.topQuestions.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-medium text-muted-foreground w-6">
-                            #{index + 1}
-                          </span>
-                          <span className="text-sm">{item.question}</span>
-                        </div>
-                        <Badge variant="secondary">{item.count}</Badge>
-                      </div>
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <Skeleton key={i} className="h-8 w-full" />
                     ))}
                   </div>
-                </ScrollArea>
+                ) : metrics?.top_questions && metrics.top_questions.length > 0 ? (
+                  <ScrollArea className="h-[250px]">
+                    <div className="space-y-3">
+                      {metrics.top_questions.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-muted-foreground w-6">
+                              #{index + 1}
+                            </span>
+                            <span className="text-sm truncate max-w-[200px]" title={item.question}>
+                              {item.question}
+                            </span>
+                          </div>
+                          <Badge variant="secondary">{item.count}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">
+                    Sem perguntas registradas ainda
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Daily Usage Chart Placeholder */}
+            {/* Daily Usage Chart */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Uso Diário</CardTitle>
-                <CardDescription>Conversas por dia da semana</CardDescription>
+                <CardDescription>Conversas por dia</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-end justify-between h-[250px] gap-2">
-                  {metrics?.dailyUsage.map((day, index) => (
-                    <div key={index} className="flex flex-col items-center gap-2 flex-1">
-                      <div 
-                        className="w-full bg-primary/80 rounded-t"
-                        style={{ height: `${(day.conversations / 250) * 200}px` }}
-                      />
-                      <span className="text-xs text-muted-foreground">{day.day}</span>
-                    </div>
-                  ))}
-                </div>
+                {isLoading ? (
+                  <div className="flex items-end justify-between h-[250px] gap-2">
+                    {[1, 2, 3, 4, 5, 6, 7].map(i => (
+                      <Skeleton key={i} className="flex-1 h-24" />
+                    ))}
+                  </div>
+                ) : metrics?.daily_usage && metrics.daily_usage.length > 0 ? (
+                  <div className="flex items-end justify-between h-[250px] gap-2">
+                    {metrics.daily_usage.map((day, index) => {
+                      const maxConvs = Math.max(...metrics.daily_usage.map(d => d.conversations), 1);
+                      const height = (day.conversations / maxConvs) * 200;
+                      return (
+                        <div key={index} className="flex flex-col items-center gap-2 flex-1">
+                          <span className="text-xs text-muted-foreground">{day.conversations}</span>
+                          <div 
+                            className="w-full bg-primary/80 rounded-t min-h-[4px]"
+                            style={{ height: `${Math.max(height, 4)}px` }}
+                          />
+                          <span className="text-xs text-muted-foreground">{day.day}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">
+                    Sem dados de uso diário
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
           {/* Recent Errors */}
-          {metrics?.recentErrors && metrics.recentErrors.length > 0 && (
+          {metrics?.recent_errors && metrics.recent_errors.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
@@ -232,7 +371,7 @@ export function OikAIPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {metrics.recentErrors.map((error, index) => (
+                  {metrics.recent_errors.map((error, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-destructive/5 rounded-lg">
                       <div className="flex items-center gap-3">
                         <span className="text-xs text-muted-foreground">{error.timestamp}</span>
@@ -256,10 +395,19 @@ export function OikAIPage() {
                 <Zap className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {(metrics?.tokensUsed || 0 / 1000000).toFixed(2)}M
-                </div>
-                <p className="text-xs text-muted-foreground">Este mês</p>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-24" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">
+                      {metrics?.tokens_used 
+                        ? `${(metrics.tokens_used / 1_000_000).toFixed(2)}M`
+                        : "0"
+                      }
+                    </div>
+                    <p className="text-xs text-muted-foreground">Últimos {periodDays} dias</p>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -269,10 +417,16 @@ export function OikAIPage() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  ${metrics?.costEstimate.toFixed(2)}
-                </div>
-                <p className="text-xs text-muted-foreground">Este mês</p>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-20" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">
+                      ${estimateCost(metrics?.tokens_used ?? 0)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Últimos {periodDays} dias</p>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -290,99 +444,170 @@ export function OikAIPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Projeção de Custos</CardTitle>
-              <CardDescription>Baseado no uso atual</CardDescription>
+              <CardTitle className="text-base">Detalhamento de Tokens</CardTitle>
+              <CardDescription>Consumo por tipo nos últimos {periodDays} dias</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Custo médio por conversa</span>
-                  <span className="font-medium">$0.01</span>
+              {isLoading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-full" />
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Tokens médios por conversa</span>
-                  <span className="font-medium">~1,950</span>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Tokens de entrada (prompts)</span>
+                    <span className="font-medium">
+                      {metrics?.tokens_in?.toLocaleString() ?? 0}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Tokens de saída (respostas)</span>
+                    <span className="font-medium">
+                      {metrics?.tokens_out?.toLocaleString() ?? 0}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t pt-4">
+                    <span className="text-sm font-medium">Total</span>
+                    <span className="font-bold">
+                      {metrics?.tokens_used?.toLocaleString() ?? 0}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Projeção mensal (30 dias)</span>
-                  <span className="font-medium text-primary">$37.50</span>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
+
+          {hasData && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Projeção de Custos</CardTitle>
+                <CardDescription>Baseado no uso atual</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Custo médio por conversa</span>
+                    <span className="font-medium">
+                      ${metrics?.total_conversations && metrics.total_conversations > 0
+                        ? (parseFloat(estimateCost(metrics?.tokens_used ?? 0)) / metrics.total_conversations).toFixed(4)
+                        : "0.00"
+                      }
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Tokens médios por conversa</span>
+                    <span className="font-medium">
+                      ~{metrics?.total_conversations && metrics.total_conversations > 0
+                        ? Math.round((metrics?.tokens_used ?? 0) / metrics.total_conversations).toLocaleString()
+                        : "0"
+                      }
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Projeção mensal (30 dias)</span>
+                    <span className="font-medium text-primary">
+                      ${periodDays > 0
+                        ? (parseFloat(estimateCost(metrics?.tokens_used ?? 0)) * (30 / periodDays)).toFixed(2)
+                        : "0.00"
+                      }
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Insights Tab */}
         <TabsContent value="insights" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Análise de Comportamento</CardTitle>
-              <CardDescription>Padrões identificados nas interações</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <h4 className="font-medium mb-2">🎯 Temas Predominantes</h4>
-                <div className="flex flex-wrap gap-2">
-                    <Badge>Orçamento</Badge>
-                    <Badge>Economia</Badge>
-                    <Badge>Reserva de Emergência</Badge>
-                    <Badge>Dívidas</Badge>
-                    <Badge>Investimentos</Badge>
-                    <Badge variant="outline">Maternidade</Badge>
-                    <Badge variant="outline">Conflitos Familiares</Badge>
-                  </div>
-                </div>
+          {!hasData ? (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertTitle>Insights em desenvolvimento</AlertTitle>
+              <AlertDescription>
+                Os insights de comportamento serão gerados automaticamente conforme os usuários 
+                interagirem com o assistente. Volte em breve!
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Análise de Comportamento</CardTitle>
+                  <CardDescription>Padrões identificados nas interações (em desenvolvimento)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <h4 className="font-medium mb-2">📊 Resumo do Período</h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Conversas</span>
+                          <span className="text-muted-foreground">{metrics?.total_conversations ?? 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Usuários únicos</span>
+                          <span className="text-muted-foreground">{metrics?.active_users ?? 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Tempo médio p50</span>
+                          <span className="text-muted-foreground">{formatResponseTime(metrics?.response_p50_ms)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Taxa de satisfação</span>
+                          <span className="text-muted-foreground">
+                            {metrics?.satisfaction_rate ? `${metrics.satisfaction_rate}%` : "—"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <h4 className="font-medium mb-2">👤 Perfis Comportamentais Detectados</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex justify-between"><span>Guardião</span><span className="text-muted-foreground">28%</span></div>
-                    <div className="flex justify-between"><span>Planejador</span><span className="text-muted-foreground">22%</span></div>
-                    <div className="flex justify-between"><span>Ansioso</span><span className="text-muted-foreground">18%</span></div>
-                    <div className="flex justify-between"><span>Protetor Familiar</span><span className="text-muted-foreground">15%</span></div>
-                    <div className="flex justify-between"><span>Realizador</span><span className="text-muted-foreground">9%</span></div>
-                    <div className="flex justify-between"><span>Livre</span><span className="text-muted-foreground">5%</span></div>
-                    <div className="flex justify-between"><span>Evitador</span><span className="text-muted-foreground">3%</span></div>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <h4 className="font-medium mb-2">🎯 Próximos Passos</h4>
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        <li>• Análise de perfis comportamentais (em breve)</li>
+                        <li>• Detecção de temas predominantes (em breve)</li>
+                        <li>• Oportunidades de melhoria (em breve)</li>
+                      </ul>
+                    </div>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <h4 className="font-medium mb-2">💡 Oportunidades</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• Conteúdo específico para perfis Ansiosos (18%)</li>
-                    <li>• Expandir orientações sobre conflitos familiares</li>
-                    <li>• Módulo de planejamento para maternidade</li>
-                    <li>• Simuladores interativos de orçamento</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Feedback dos Usuários</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="flex items-center gap-4 p-4 bg-green-500/10 rounded-lg">
-                  <ThumbsUp className="h-8 w-8 text-green-500" />
-                  <div>
-                    <div className="text-2xl font-bold text-green-600">94%</div>
-                    <p className="text-sm text-muted-foreground">Respostas úteis</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 p-4 bg-destructive/10 rounded-lg">
-                  <ThumbsDown className="h-8 w-8 text-destructive" />
-                  <div>
-                    <div className="text-2xl font-bold text-destructive">6%</div>
-                    <p className="text-sm text-muted-foreground">Precisam melhorar</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Feedback dos Usuários</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {metrics?.satisfaction_rate && metrics.satisfaction_rate > 0 ? (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="flex items-center gap-4 p-4 bg-green-500/10 rounded-lg">
+                        <ThumbsUp className="h-8 w-8 text-green-500" />
+                        <div>
+                          <div className="text-2xl font-bold text-green-600">{metrics.satisfaction_rate}%</div>
+                          <p className="text-sm text-muted-foreground">Respostas úteis</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 p-4 bg-destructive/10 rounded-lg">
+                        <ThumbsDown className="h-8 w-8 text-destructive" />
+                        <div>
+                          <div className="text-2xl font-bold text-destructive">{100 - metrics.satisfaction_rate}%</div>
+                          <p className="text-sm text-muted-foreground">Precisam melhorar</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <ThumbsUp className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                      <p>Ainda não há feedback dos usuários</p>
+                      <p className="text-sm">Os dados aparecerão conforme os usuários avaliarem as respostas</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
         </TabsContent>
 
         {/* Config Tab */}
@@ -397,7 +622,7 @@ export function OikAIPage() {
                 <div className="flex items-center justify-between p-4 border rounded-lg mb-2">
                   <div>
                     <h4 className="font-medium">Versão do Prompt</h4>
-                    <p className="text-sm text-muted-foreground">v4.0.0 - Metodologia Safastway</p>
+                    <p className="text-sm text-muted-foreground">v7.0.0 - Metodologia Safastway</p>
                   </div>
                   <Badge className="bg-green-500">Atual</Badge>
                 </div>
@@ -413,23 +638,21 @@ export function OikAIPage() {
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <h4 className="font-medium">Temperature</h4>
-                    <p className="text-sm text-muted-foreground">0.7 (Balanceado)</p>
+                    <p className="text-sm text-muted-foreground">0.7 (balanceado)</p>
                   </div>
-                  <Badge variant="outline">Padrão</Badge>
                 </div>
 
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <h4 className="font-medium">Max Tokens</h4>
-                    <p className="text-sm text-muted-foreground">2,048 tokens por resposta</p>
+                    <p className="text-sm text-muted-foreground">2.048 tokens por resposta</p>
                   </div>
-                  <Badge variant="outline">Padrão</Badge>
                 </div>
 
                 <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
                     <h4 className="font-medium">Streaming</h4>
-                    <p className="text-sm text-muted-foreground">Habilitado (SSE)</p>
+                    <p className="text-sm text-muted-foreground">Habilitado (resposta progressiva)</p>
                   </div>
                   <Badge className="bg-green-500">Ativo</Badge>
                 </div>
@@ -439,39 +662,20 @@ export function OikAIPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Prompt Base
-              </CardTitle>
-              <CardDescription>Personalidade e regras do assistente</CardDescription>
+              <CardTitle className="text-base">Base de Conhecimento</CardTitle>
+              <CardDescription>Materiais incluídos no prompt do sistema</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Estrutura de Raciocínio em 4 Etapas:
-                </p>
-                <ol className="text-sm space-y-1 list-decimal list-inside mb-4">
-                  <li><strong>Contexto</strong> - Composição familiar, fase de vida, eventos recentes</li>
-                  <li><strong>Diagnóstico</strong> - Ansiedade, conflitos, padrões comportamentais</li>
-                  <li><strong>Estrutura Financeira</strong> - Fluxo de caixa, dívidas, reservas</li>
-                  <li><strong>Decisão Guiada</strong> - Cenários, consequências, caminhos</li>
-                </ol>
-                
-                <p className="text-sm text-muted-foreground mb-2">
-                  7 Perfis Comportamentais:
-                </p>
-                <div className="flex flex-wrap gap-1 mb-4">
-                  <Badge variant="outline" className="text-xs">Guardião</Badge>
-                  <Badge variant="outline" className="text-xs">Livre</Badge>
-                  <Badge variant="outline" className="text-xs">Planejador</Badge>
-                  <Badge variant="outline" className="text-xs">Realizador</Badge>
-                  <Badge variant="outline" className="text-xs">Evitador</Badge>
-                  <Badge variant="outline" className="text-xs">Ansioso</Badge>
-                  <Badge variant="outline" className="text-xs">Protetor Familiar</Badge>
+              <div className="grid gap-2 text-sm">
+                <div className="p-2 bg-muted/50 rounded">📘 Planejamento Financeiro Pessoal – Jornada Completa</div>
+                <div className="p-2 bg-muted/50 rounded">📘 Vida Financeira em 8 Passos</div>
+                <div className="p-2 bg-muted/50 rounded">📘 Princípios do Equilíbrio Financeiro Familiar</div>
+                <div className="p-2 bg-muted/50 rounded">📘 Guia para Vencer a Ansiedade Financeira</div>
+                <div className="p-2 bg-muted/50 rounded">📘 Brigas por Causa do Dinheiro</div>
+                <div className="p-2 bg-muted/50 rounded">📘 Módulos CFP® 01-08 (Técnicos)</div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  Total: 20 materiais Safastway integrados
                 </div>
-                <Button variant="outline" size="sm" className="mt-4">
-                  Ver Documentação Completa
-                </Button>
               </div>
             </CardContent>
           </Card>
