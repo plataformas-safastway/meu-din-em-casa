@@ -1,11 +1,17 @@
 /**
  * useSensitiveProfile - Hook to manage sensitive personal data (LGPD)
  * 
- * Sensitive data is stored in family_member_private table with restricted RLS:
- * - Users can only read/write their own data
+ * Sensitive data is stored in family_member_private table with:
+ * - At-rest encryption using pgcrypto (AES-256)
+ * - Restricted RLS: Users can only read/write their own data
  * - Family owners can read (but not write) data of family members
  * 
- * Fields: cpf, birth_date, phone_e164, phone_country, profession
+ * Fields (encrypted): cpf, phone_e164
+ * Fields (plaintext): birth_date, phone_country, profession
+ * 
+ * IMPORTANT: Use RPC functions for decrypted access:
+ * - get_my_sensitive_private() - Own data
+ * - get_family_member_sensitive(family_member_id) - Owner access
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -35,7 +41,7 @@ export interface SensitiveProfileUpdate {
 }
 
 /**
- * Fetch the current user's sensitive profile data
+ * Fetch the current user's sensitive profile data (decrypted via RPC)
  */
 export function useSensitiveProfile() {
   const { user, familyMember } = useAuth();
@@ -45,18 +51,42 @@ export function useSensitiveProfile() {
     queryFn: async (): Promise<SensitiveProfileData | null> => {
       if (!user?.id || !familyMember?.id) return null;
 
-      const { data, error } = await supabase
+      // Fetch encrypted fields via secure RPC
+      const { data: decryptedData, error: rpcError } = await supabase
+        .rpc("get_my_sensitive_private");
+
+      if (rpcError) {
+        console.error("[useSensitiveProfile] RPC error:", rpcError);
+        // If encryption key not configured, return null gracefully
+        if (rpcError.message?.includes("Encryption key")) {
+          console.warn("[useSensitiveProfile] Encryption key not configured");
+          return null;
+        }
+        throw rpcError;
+      }
+
+      // Fetch non-encrypted fields directly
+      const { data: privateRecord, error: recordError } = await supabase
         .from("family_member_private")
-        .select("*")
+        .select("id, family_member_id, user_id, birth_date, phone_country, profession, created_at, updated_at")
         .eq("family_member_id", familyMember.id)
         .maybeSingle();
 
-      if (error) {
-        console.error("[useSensitiveProfile] Error fetching:", error);
-        throw error;
+      if (recordError) {
+        console.error("[useSensitiveProfile] Error fetching record:", recordError);
+        throw recordError;
       }
 
-      return data;
+      if (!privateRecord) return null;
+
+      // Merge decrypted fields with record
+      const decrypted = decryptedData?.[0] || { cpf: null, phone_e164: null };
+      
+      return {
+        ...privateRecord,
+        cpf: decrypted.cpf,
+        phone_e164: decrypted.phone_e164,
+      } as SensitiveProfileData;
     },
     enabled: !!user?.id && !!familyMember?.id,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -64,7 +94,7 @@ export function useSensitiveProfile() {
 }
 
 /**
- * Fetch sensitive data for a specific family member (owner access)
+ * Fetch sensitive data for a specific family member (owner access via RPC)
  */
 export function useFamilyMemberSensitiveProfile(familyMemberId: string | null) {
   const { user } = useAuth();
@@ -74,19 +104,37 @@ export function useFamilyMemberSensitiveProfile(familyMemberId: string | null) {
     queryFn: async (): Promise<SensitiveProfileData | null> => {
       if (!familyMemberId) return null;
 
-      const { data, error } = await supabase
-        .from("family_member_private")
-        .select("*")
-        .eq("family_member_id", familyMemberId)
-        .maybeSingle();
+      // Fetch decrypted data via secure RPC
+      const { data: decryptedData, error: rpcError } = await supabase
+        .rpc("get_family_member_sensitive", { p_family_member_id: familyMemberId });
 
-      if (error) {
+      if (rpcError) {
         // RLS will block if user doesn't have permission
-        console.error("[useFamilyMemberSensitiveProfile] Error:", error);
+        console.error("[useFamilyMemberSensitiveProfile] RPC error:", rpcError);
         return null;
       }
 
-      return data;
+      // Fetch non-encrypted fields directly
+      const { data: privateRecord, error: recordError } = await supabase
+        .from("family_member_private")
+        .select("id, family_member_id, user_id, birth_date, phone_country, profession, created_at, updated_at")
+        .eq("family_member_id", familyMemberId)
+        .maybeSingle();
+
+      if (recordError) {
+        console.error("[useFamilyMemberSensitiveProfile] Error:", recordError);
+        return null;
+      }
+
+      if (!privateRecord) return null;
+
+      const decrypted = decryptedData?.[0] || { cpf: null, phone_e164: null };
+
+      return {
+        ...privateRecord,
+        cpf: decrypted.cpf,
+        phone_e164: decrypted.phone_e164,
+      } as SensitiveProfileData;
     },
     enabled: !!user?.id && !!familyMemberId,
     staleTime: 1000 * 60 * 5,
@@ -95,6 +143,7 @@ export function useFamilyMemberSensitiveProfile(familyMemberId: string | null) {
 
 /**
  * Update or create sensitive profile data
+ * Note: Writes go to plaintext columns, trigger auto-encrypts
  */
 export function useUpdateSensitiveProfile() {
   const queryClient = useQueryClient();
@@ -114,7 +163,7 @@ export function useUpdateSensitiveProfile() {
         .maybeSingle();
 
       if (existing) {
-        // Update existing record
+        // Update existing record - trigger will auto-encrypt cpf/phone_e164
         const { data, error } = await supabase
           .from("family_member_private")
           .update({
@@ -128,7 +177,7 @@ export function useUpdateSensitiveProfile() {
         if (error) throw error;
         return data;
       } else {
-        // Insert new record
+        // Insert new record - trigger will auto-encrypt cpf/phone_e164
         const { data, error } = await supabase
           .from("family_member_private")
           .insert({
@@ -174,7 +223,7 @@ export function useUpdateCpf() {
 }
 
 /**
- * Check if current user has CPF registered
+ * Check if current user has CPF registered (uses RPC for decrypted check)
  */
 export function useHasCpf(): { hasCpf: boolean; isLoading: boolean; cpf: string | null } {
   const { data, isLoading } = useSensitiveProfile();
