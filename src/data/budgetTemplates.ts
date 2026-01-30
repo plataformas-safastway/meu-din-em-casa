@@ -631,3 +631,44 @@ export function getSubcategoryDistribution(
 export function formatBandLabel(band: IncomeBand | SubBand): string {
   return band.label;
 }
+
+/**
+ * Get the index of an income band for fixed-value calculations
+ * @param bandId - The income band ID
+ * @returns The zero-based index of the band (0 for first band, 1 for second, etc.)
+ */
+export function getIncomeBandIndex(bandId: string): number {
+  const index = INCOME_BANDS.findIndex(b => b.id === bandId);
+  return index >= 0 ? index : 0;
+}
+
+/**
+ * Calculate fixed Financial Expenses (Despesas Financeiras) value based on income band.
+ * 
+ * This is a FIXED value that does NOT scale with income percentage.
+ * It represents average real costs like:
+ * - Bank account maintenance fees
+ * - Credit card annual fees
+ * - Basic banking packages
+ * 
+ * Formula: R$ 45 (base) + (band_index × R$ 50)
+ * 
+ * Band 0 (Até R$ 5.000): R$ 45
+ * Band 1 (R$ 5.001 – R$ 8.000): R$ 95
+ * Band 2 (R$ 8.001 – R$ 15.000): R$ 145
+ * Band 3 (R$ 15.001 – R$ 30.000): R$ 195
+ * Band 4 (R$ 30.001 – R$ 50.000): R$ 245
+ * Band 5 (R$ 50.001 – R$ 80.000): R$ 295
+ * Band 6 (R$ 80.001 – R$ 120.000): R$ 345
+ * Band 7 (Acima de R$ 120.000): R$ 395
+ * 
+ * @param bandId - The income band ID
+ * @returns The fixed value in BRL for Despesas Financeiras
+ */
+export function calculateFixedFinancialExpenses(bandId: string): number {
+  const BASE_VALUE = 45;
+  const INCREMENT_PER_BAND = 50;
+  const bandIndex = getIncomeBandIndex(bandId);
+  
+  return BASE_VALUE + (bandIndex * INCREMENT_PER_BAND);
+}

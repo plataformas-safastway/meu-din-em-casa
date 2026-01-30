@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Sparkles, AlertCircle, Check, Loader2, Info } from "lucide-react";
+import { ArrowLeft, Sparkles, AlertCircle, Check, Loader2, Info, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import { 
@@ -14,6 +15,7 @@ import {
   BASE_PERCENTAGES,
   PREFIX_CONFIG,
   type PrefixConfig,
+  calculateFixedFinancialExpenses,
 } from "@/data/budgetTemplates";
 import { 
   type OnboardingData,
@@ -102,6 +104,35 @@ export function BudgetProposalScreen({
       if (p.conditionalOn === 'has_dependents' && !data.hasDependents) return false;
       return true;
     });
+
+    // ========== FIXED FINANCIAL EXPENSES LOGIC ==========
+    // For questionnaire-based budgets, DF (Despesas Financeiras) uses a FIXED value
+    // instead of a percentage of income. This represents real average banking costs.
+    const fixedDFAmount = calculateFixedFinancialExpenses(data.incomeBandId);
+    const fixedDFPercentage = (fixedDFAmount / data.incomeAnchorValue) * 100;
+    
+    // Calculate the difference from the percentage-based DF
+    const originalDFPercentage = (adjustedPercents['DF'] || 0) * 100;
+    const dfPercentageDifference = originalDFPercentage - fixedDFPercentage;
+    
+    // Reallocate the difference to IF (Independência Financeira)
+    // This ensures the total remains at 100%
+    if (dfPercentageDifference > 0) {
+      adjustedPercents['DF'] = fixedDFPercentage / 100;
+      adjustedPercents['IF'] = (adjustedPercents['IF'] || 0) + (dfPercentageDifference / 100);
+    } else {
+      // If fixed value is higher than percentage, just use fixed value
+      // (rare case for very low income bands)
+      adjustedPercents['DF'] = fixedDFPercentage / 100;
+    }
+
+    // Re-normalize after DF adjustment to ensure sum = 100%
+    const totalAfterDF = Object.values(adjustedPercents).reduce((a, b) => a + b, 0);
+    if (Math.abs(totalAfterDF - 1) > 0.001) {
+      Object.keys(adjustedPercents).forEach(k => {
+        adjustedPercents[k] = adjustedPercents[k] / totalAfterDF;
+      });
+    }
 
     // Create budget items
     const items: BudgetItem[] = budgetablePrefixes
@@ -250,44 +281,60 @@ export function BudgetProposalScreen({
 
       {/* Budget list */}
       <main className="flex-1 overflow-y-auto p-4 space-y-3">
-        {budgets.map((item, index) => {
-          const category = getCategoryById(item.categoryId);
-          const isIF = item.prefixCode === 'IF';
-          
-          return (
-            <motion.div
-              key={item.prefixCode}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.03 }}
-            >
-              <Card className={cn(
-                "overflow-hidden transition-all",
-                editingPrefix === item.prefixCode && "ring-2 ring-primary",
-                isIF && "bg-primary/5 border-primary/30"
-              )}>
-                <CardContent className="p-4 space-y-3">
-                  {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{category?.icon || '📦'}</span>
-                      <div>
-                        <p className="font-medium text-sm">{item.prefixName}</p>
-                        {isIF && (
-                          <Badge variant="outline" className="text-xs mt-0.5">
-                            Saldo do plano
-                          </Badge>
-                        )}
+        <TooltipProvider>
+          {budgets.map((item, index) => {
+            const category = getCategoryById(item.categoryId);
+            const isIF = item.prefixCode === 'IF';
+            const isDF = item.prefixCode === 'DF';
+            
+            return (
+              <motion.div
+                key={item.prefixCode}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03 }}
+              >
+                <Card className={cn(
+                  "overflow-hidden transition-all",
+                  editingPrefix === item.prefixCode && "ring-2 ring-primary",
+                  isIF && "bg-primary/5 border-primary/30"
+                )}>
+                  <CardContent className="p-4 space-y-3">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{category?.icon || '📦'}</span>
+                        <div>
+                          <div className="flex items-center gap-1">
+                            <p className="font-medium text-sm">{item.prefixName}</p>
+                            {isDF && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <HelpCircle className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[250px]">
+                                  <p className="text-xs">
+                                    Este valor é uma estimativa média de custos bancários (manutenção de conta, anuidade de cartão) e pode ser ajustado.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                          {isIF && (
+                            <Badge variant="outline" className="text-xs mt-0.5">
+                              Saldo do plano
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">{formatCurrency(item.amount)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.percentage.toFixed(1)}%
+                          {item.isEdited && <span className="text-primary ml-1">✎</span>}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold">{formatCurrency(item.amount)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.percentage.toFixed(1)}%
-                        {item.isEdited && <span className="text-primary ml-1">✎</span>}
-                      </p>
-                    </div>
-                  </div>
 
                   {/* Slider (except for IF) */}
                   {!isIF && (
@@ -311,6 +358,7 @@ export function BudgetProposalScreen({
             </motion.div>
           );
         })}
+        </TooltipProvider>
       </main>
 
       {/* Footer */}
