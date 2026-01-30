@@ -2021,6 +2021,53 @@ export type Database = {
           },
         ]
       }
+      family_member_private: {
+        Row: {
+          birth_date: string | null
+          cpf: string | null
+          created_at: string
+          family_member_id: string
+          id: string
+          phone_country: string | null
+          phone_e164: string | null
+          profession: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          birth_date?: string | null
+          cpf?: string | null
+          created_at?: string
+          family_member_id: string
+          id?: string
+          phone_country?: string | null
+          phone_e164?: string | null
+          profession?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          birth_date?: string | null
+          cpf?: string | null
+          created_at?: string
+          family_member_id?: string
+          id?: string
+          phone_country?: string | null
+          phone_e164?: string | null
+          profession?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_member_private_family_member_id_fkey"
+            columns: ["family_member_id"]
+            isOneToOne: true
+            referencedRelation: "family_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       family_members: {
         Row: {
           added_at: string | null
