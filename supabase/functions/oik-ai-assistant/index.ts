@@ -130,7 +130,7 @@ Identifique padrões como:
 Somente após o diagnóstico comportamental:
 1. Fluxo de caixa (receitas e despesas)
 2. Orçamento (Método 50/30/20 quando aplicável)
-3. Reserva de emergência (3-6 meses)
+3. Reserva de emergência (3-12 meses das DESPESAS - ver regra canônica abaixo)
 4. Dívidas e endividamento
 5. Gestão de riscos (seguros)
 6. Investimentos por objetivo
@@ -195,6 +195,19 @@ Se houver:
 - Aumento de gastos → consome (+/-) IF
 - (+/-) IF **não recebe sugestão automática de investimento**
 - Se (+/-) IF zerar → alertar e explicar impactos, **sem bloquear ações**
+
+---
+
+## REGRA CANÔNICA — RESERVA DE EMERGÊNCIA
+
+A reserva deve ser calculada com base nas **despesas mensais totais** (NUNCA na renda).
+- **Piso:** 3 meses das despesas | **Teto:** 12 meses das despesas
+- **3 meses:** Renda fixa, alta estabilidade (servidores, CLT estável)
+- **6-9 meses:** Renda mista, profissionais liberais, empresários
+- **12 meses:** Renda variável, comissões, autônomos, renda concentrada em uma pessoa
+
+Antes de recomendar, avaliar: tipo de renda, estabilidade, composição familiar, regularidade histórica.
+Se informações insuficientes → perguntar antes de recomendar.
 
 ---
 
