@@ -12,14 +12,34 @@ export interface SaveOnboardingInput {
   budgets: BudgetItem[];
 }
 
+/**
+ * CRITICAL RULE: Onboarding NEVER creates a family automatically.
+ * 
+ * This hook operates within an existing family context:
+ * - If user has an active family (from AuthContext), use it
+ * - If user has no family, throw an error (family must be created explicitly beforehand)
+ * 
+ * Family creation is ONLY allowed via explicit user action (CTA/button)
+ * in a dedicated family creation flow, NOT during onboarding steps.
+ */
 export function useOnboardingWizard() {
-  const { user, refreshFamily } = useAuth();
+  const { user, family, refreshFamily } = useAuth();
   const queryClient = useQueryClient();
 
-  // Save all onboarding data and create budgets
+  // Save all onboarding data and create budgets within EXISTING family context
   const saveOnboarding = useMutation({
     mutationFn: async ({ data, budgets }: SaveOnboardingInput) => {
-      if (!user?.id) throw new Error("No user");
+      if (!user?.id) throw new Error("Usuário não autenticado");
+
+      // CRITICAL: Must have an active family context
+      // Onboarding NEVER creates family - it must already exist
+      if (!family?.id) {
+        console.error("[useOnboardingWizard] BLOCKED: No active family context");
+        throw new Error("Nenhuma família ativa. Crie ou selecione uma família antes de continuar.");
+      }
+
+      const familyId = family.id;
+      console.log("[useOnboardingWizard] Using existing family context:", familyId);
 
       // Get the name from session storage (set during signup)
       const displayName = sessionStorage.getItem("onboarding_name") || "Usuário";
@@ -28,43 +48,12 @@ export function useOnboardingWizard() {
       const band = getBandById(data.incomeBandId);
       const subBand = band?.subBands.find(sb => sb.midpoint === data.incomeAnchorValue);
 
-      // 1. Create family via edge function (this also creates family member)
-      const familyData = {
-        name: `Família ${displayName.split(' ')[0]}`,
-        membersCount: data.hasDependents ? 3 : (data.householdStructure === 'couple_no_kids' ? 2 : 1),
-        incomeRange: data.incomeBandId,
-        primaryObjective: data.budgetMode,
-        displayName: displayName,
-        // Extended onboarding data
-        incomeAnchorValue: data.incomeAnchorValue,
-        incomeSubband: subBand?.id || null,
-        incomeType: data.incomeType,
-        financialStage: data.financialStage,
-        budgetMode: data.budgetMode,
-        householdStructure: data.householdStructure,
-        hasPets: data.hasPets,
-        hasDependents: data.hasDependents,
-        nonMonthlyPlanningLevel: data.nonMonthlyPlanningLevel,
-      };
-
-      const { data: resp, error: familyError } = await supabase.functions.invoke('create-family', {
-        body: familyData,
-      });
-
-      if (familyError) {
-        console.error("Error creating family:", familyError);
-        throw new Error("Erro ao criar família");
-      }
-
-      const familyId = (resp as any)?.familyId;
-      if (!familyId) {
-        throw new Error("Família não criada");
-      }
-
-      // 2. Update family with extended onboarding data
+      // 1. Update family with extended onboarding data (NOT create)
       const { error: updateError } = await supabase
         .from("families")
         .update({
+          income_range: data.incomeBandId,
+          primary_objective: data.budgetMode,
           income_anchor_value: data.incomeAnchorValue,
           income_subband: subBand?.id || null,
           income_type: data.incomeType,
@@ -79,6 +68,21 @@ export function useOnboardingWizard() {
 
       if (updateError) {
         console.error("Error updating family:", updateError);
+        throw new Error("Erro ao atualizar dados da família");
+      }
+
+      // 2. Update family member display name if needed
+      const { error: memberError } = await supabase
+        .from("family_members")
+        .update({
+          display_name: displayName,
+        })
+        .eq("family_id", familyId)
+        .eq("user_id", user.id);
+
+      if (memberError) {
+        console.error("Error updating family member:", memberError);
+        // Non-critical, continue
       }
 
       // 3. Log onboarding responses (for analytics, no sensitive data)
@@ -163,6 +167,7 @@ export function useOnboardingWizard() {
         metadata: {
           budget_mode: data.budgetMode,
           budgets_created: budgetsCreated,
+          used_existing_family: true, // Mark that we used existing family
         },
       });
 
@@ -179,6 +184,7 @@ export function useOnboardingWizard() {
       queryClient.invalidateQueries({ queryKey: ["family"] });
       queryClient.invalidateQueries({ queryKey: ["onboarding"] });
       queryClient.invalidateQueries({ queryKey: ["budget-template-application"] });
+      queryClient.invalidateQueries({ queryKey: ["app-authorization-onboarding"] });
       toast.success(`Orçamento criado com ${result.budgetsCreated} categorias!`);
     },
     onError: (error: any) => {

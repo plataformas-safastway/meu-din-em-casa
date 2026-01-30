@@ -47,6 +47,8 @@ export function AppAuthGate({
     hasCompletedOnboarding,
     hasAppAccess,
     isLoading,
+    onboardingStatus,
+    familyId,
   } = useAppAuthorization();
 
   // Debug logging
@@ -58,8 +60,10 @@ export function AppAuthGate({
       isAuthenticated,
       hasConsumerProfile,
       hasCompletedOnboarding,
+      onboardingStatus,
       hasAppAccess,
       requireOnboardingComplete,
+      familyId,
     });
   }, [
     location.pathname,
@@ -68,8 +72,10 @@ export function AppAuthGate({
     isAuthenticated,
     hasConsumerProfile,
     hasCompletedOnboarding,
+    onboardingStatus,
     hasAppAccess,
     requireOnboardingComplete,
+    familyId,
   ]);
 
   // RULE 1: Never redirect during auth transition or route restoration
