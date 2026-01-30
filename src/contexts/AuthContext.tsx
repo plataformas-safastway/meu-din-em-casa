@@ -428,7 +428,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    console.log('[Auth] signOut called - marking intentional logout');
+    console.log('[Auth] signOut called - HARD LOGOUT: requiring manual re-authentication');
     
     // CRITICAL: Mark this as intentional so onAuthStateChange doesn't ignore it
     isIntentionalLogoutRef.current = true;
@@ -450,22 +450,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfileStatus('unknown');
     setUserContext(null);
     
-    // Clear login form drafts so email field is clean on next login
+    // HARD LOGOUT: Set flag requiring manual login
+    // This flag blocks ALL auto-login behavior until user manually authenticates
     try {
+      localStorage.setItem('oik:logout_required', 'true');
       localStorage.removeItem('oik_draft_login_form_email');
       // Signal to LoginPage to clear form if it's mounted
       sessionStorage.setItem('oik:just_logged_out', 'true');
+      console.log('[Auth] logout_required flag SET - auto-login blocked until manual login');
     } catch (e) {
-      console.warn('[Auth] Failed to clear login draft:', e);
+      console.warn('[Auth] Failed to set logout flags:', e);
     }
     
     try {
-      await supabase.auth.signOut();
-      console.log('[Auth] signOut completed successfully');
+      // Use global scope to invalidate all sessions (including other tabs/devices)
+      await supabase.auth.signOut({ scope: 'global' });
+      console.log('[Auth] signOut completed successfully (global scope)');
     } catch (error) {
-      console.error('[Auth] signOut error:', error);
+      // Even if signOut fails, the local state is already cleared
+      // and logout_required flag is set - user MUST login manually
+      console.error('[Auth] signOut error (continuing anyway - local state cleared):', error);
     } finally {
-      // Reset the flag after a delay to allow for any pending auth events
+      // Reset the intentional flag after a delay to allow for any pending auth events
       setTimeout(() => {
         isIntentionalLogoutRef.current = false;
       }, 2000);

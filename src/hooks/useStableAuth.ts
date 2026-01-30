@@ -407,11 +407,27 @@ export function useStableAuth() {
   // NEW: Separate loading from overlay decision
   const isVerifying = isAuthTransition && !globalIsSoftResume;
 
+  // ============================================================
+  // HARD LOGOUT CHECK - BLOCKS ALL AUTO-LOGIN
+  // ============================================================
+  // If user explicitly logged out, treat as if no session exists
+  // This forces manual re-authentication even if Supabase has a valid token
+  let logoutRequired = false;
+  try {
+    logoutRequired = localStorage.getItem('oik:logout_required') === 'true';
+  } catch {
+    // localStorage may not be available
+  }
+  // ============================================================
+
   // CRITICAL: Consider session valid if:
   // 1. We have a session now, OR
   // 2. We're in transition AND we had a session before hiding
-  const hasValidSession = auth.session !== null || 
-                          (isAuthTransition && lastValidSessionRef.current);
+  // BUT: If logout_required is true, session is NEVER valid
+  const hasValidSession = !logoutRequired && (
+    auth.session !== null || 
+    (isAuthTransition && lastValidSessionRef.current)
+  );
 
   // Log when shouldRedirectToLogin would be true
   const shouldRedirectToLogin = !isLoading && !hasValidSession && auth.bootstrapStatus === 'ready' && !isAuthTransition;
@@ -420,6 +436,7 @@ export function useStableAuth() {
     console.warn('[StableAuth] shouldRedirectToLogin=true', {
       isLoading,
       hasValidSession,
+      logoutRequired,
       bootstrapStatus: auth.bootstrapStatus,
       isAuthTransition,
       hasSession: !!auth.session,
@@ -435,6 +452,8 @@ export function useStableAuth() {
     hasValidSession,
     isAuthTransition,
     shouldRedirectToLogin,
+    // HARD LOGOUT: Exposed for components that need to check
+    logoutRequired,
     // NEW: Fine-grained overlay control
     shouldShowSessionOverlay: shouldShowOverlay,
     isSoftResume: globalIsSoftResume,

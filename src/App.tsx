@@ -520,6 +520,20 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
   
+  // ============================================================
+  // HARD LOGOUT CHECK - BLOCKS ALL AUTO-LOGIN
+  // ============================================================
+  // If user explicitly logged out, NEVER auto-redirect even if session exists
+  // User MUST manually authenticate again
+  const logoutRequired = localStorage.getItem('oik:logout_required') === 'true';
+  
+  if (logoutRequired) {
+    // Treat as if user is not authenticated - show login page
+    console.log('[PublicRoute] logout_required=true - blocking auto-redirect, requiring manual login');
+    return <>{children}</>;
+  }
+  // ============================================================
+  
   // IMPORTANT: Do NOT block the public/login UI when user is logged out.
   // After logout, profileStatus can remain 'unknown' and would otherwise cause an infinite spinner.
   const shouldBlockForAuthChecks = !!user && (
