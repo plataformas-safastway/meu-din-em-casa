@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, Wifi, BookOpen, LayoutDashboard, Wallet, Brain, Calculator, FolderTree } from "lucide-react";
+import { ArrowLeft, User, Bell, Shield, Download, HelpCircle, LogOut, ChevronRight, Users, Building2, Upload, Wifi, BookOpen, LayoutDashboard, Wallet, Brain, Calculator, FolderTree, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { toast } from "sonner";
 import { EducationPreferences } from "@/components/onboarding";
 import { BudgetSetupSheet } from "@/components/budget";
 import { AccountingRegimeSettings } from "@/components/settings";
+import { EmailPreferencesSettings } from "@/components/settings/EmailPreferencesSettings";
 
 type NavigationSource = 'home_onboarding' | 'settings' | 'dashboard' | 'default';
 
@@ -25,6 +25,7 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
   const [showEducationPrefs, setShowEducationPrefs] = useState(false);
   const [showBudgetSetup, setShowBudgetSetup] = useState(false);
   const [showAccountingRegime, setShowAccountingRegime] = useState(false);
+  const [showEmailPreferences, setShowEmailPreferences] = useState(false);
 
   // Navigate with 'settings' as the source context for proper back button behavior
   const navigateToTab = (tab: string) => {
@@ -73,6 +74,9 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
       case "accounting-regime":
         setShowAccountingRegime(!showAccountingRegime);
         break;
+      case "notifications":
+        setShowEmailPreferences(!showEmailPreferences);
+        break;
       default:
         break;
     }
@@ -91,7 +95,7 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
         { id: "family", label: "Minha Família", icon: Users, action: "navigate" },
         { id: "banks", label: "Bancos e Cartões", icon: Building2, action: "navigate" },
         { id: "openfinance", label: "Open Finance", icon: Wifi, action: "navigate" },
-        { id: "notifications", label: "Notificações", icon: Bell, action: "toggle", enabled: true },
+        { id: "notifications", label: "Notificações por E-mail", icon: Mail, action: "component" },
       ],
     },
     {
@@ -167,8 +171,8 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
                   <div
                     key={item.id}
                     className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => item.action !== 'toggle' && handleAction(item.id)}
-                    role={item.action !== 'toggle' ? 'button' : undefined}
+                    onClick={() => handleAction(item.id)}
+                    role="button"
                   >
                     <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
                       <Icon className="w-5 h-5 text-muted-foreground" />
@@ -176,15 +180,16 @@ export function SettingsPage({ onBack, onNavigate, onNavigateWithSource }: Setti
                     <span className="flex-1 font-medium text-foreground">
                       {item.label}
                     </span>
-                    {item.action === 'toggle' ? (
-                      <Switch defaultChecked={item.enabled} />
-                    ) : (
-                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                    )}
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
                   </div>
                 );
               })}
             </div>
+            {section.title === "Conta" && showEmailPreferences && (
+              <div className="p-4 border-t border-border/30 bg-card">
+                <EmailPreferencesSettings />
+              </div>
+            )}
             {section.title === "Suporte" && showEducationPrefs && (
               <div className="p-4 border-t border-border/30">
                 <EducationPreferences />
