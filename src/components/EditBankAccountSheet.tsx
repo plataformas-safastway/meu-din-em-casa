@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useBanks, useUpdateBankAccount } from "@/hooks/useBankData";
+import { useUpdateBankAccount } from "@/hooks/useBankData";
+import { useFinancialInstitutions, institutionTypeLabels, type FinancialInstitution } from "@/hooks/useFinancialInstitutions";
 import { toast } from "sonner";
-import { Loader2, ChevronDown, Lock, Users, User } from "lucide-react";
+import { Loader2, ChevronDown, Lock, Users, User, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface EditBankAccountSheetProps {
@@ -32,7 +33,7 @@ interface EditBankAccountSheetProps {
 }
 
 export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAccountSheetProps) {
-  const [bankId, setBankId] = useState("");
+  const [institutionId, setInstitutionId] = useState("");
   const [customBank, setCustomBank] = useState("");
   const [accountType, setAccountType] = useState("checking");
   const [nickname, setNickname] = useState("");
@@ -50,12 +51,15 @@ export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAc
   const [accountNumber, setAccountNumber] = useState("");
   const [accountDigit, setAccountDigit] = useState("");
   
-  const { data: banks = [] } = useBanks();
+  const { data: institutions = [], isLoading: loadingInstitutions } = useFinancialInstitutions(true);
   const updateAccount = useUpdateBankAccount();
+
+  // Get selected institution for display
+  const selectedInstitution = institutions.find(i => i.id === institutionId);
 
   useEffect(() => {
     if (account && open) {
-      setBankId(account.bank_id || "other");
+      setInstitutionId(account.bank_id || "other");
       setCustomBank(account.custom_bank_name || "");
       setAccountType(account.account_type);
       setNickname(account.nickname);
@@ -111,8 +115,8 @@ export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAc
       
       await updateAccount.mutateAsync({
         id: account.id,
-        bank_id: bankId !== "other" ? bankId : undefined,
-        custom_bank_name: bankId === "other" ? customBank : undefined,
+        bank_id: institutionId !== "other" ? institutionId : undefined,
+        custom_bank_name: institutionId === "other" ? customBank : undefined,
         account_type: accountType,
         nickname,
         initial_balance: balance ? parseFloat(balance.replace(",", ".")) : undefined,
@@ -148,6 +152,18 @@ export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAc
     }
   };
 
+  // Group institutions by type
+  const groupedInstitutions = institutions.reduce((acc, inst) => {
+    const type = inst.type;
+    if (!acc[type]) acc[type] = [];
+    acc[type].push(inst);
+    return acc;
+  }, {} as Record<string, FinancialInstitution[]>);
+
+  const typeOrder: Array<keyof typeof institutionTypeLabels> = [
+    'retail_bank', 'digital_bank', 'investment_bank', 'cooperative', 'international'
+  ];
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl overflow-y-auto">
@@ -156,25 +172,82 @@ export function EditBankAccountSheet({ open, onOpenChange, account }: EditBankAc
           <SheetDescription>Atualize os dados da sua conta</SheetDescription>
         </SheetHeader>
         <form onSubmit={handleSubmit} className="space-y-5 mt-6 pb-6">
-          {/* Bank Selection */}
+          {/* Institution Selection with Logos */}
           <div className="space-y-2">
-            <Label>Banco</Label>
-            <Select value={bankId} onValueChange={setBankId}>
-              <SelectTrigger className="h-12">
-                <SelectValue placeholder="Selecione um banco" />
+            <Label>Banco ou Instituição</Label>
+            <Select value={institutionId} onValueChange={setInstitutionId}>
+              <SelectTrigger className="h-14">
+                <SelectValue placeholder="Selecione uma instituição">
+                  {selectedInstitution && (
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={selectedInstitution.logo_url} 
+                        alt={selectedInstitution.name}
+                        className="w-6 h-6 object-contain rounded"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                      <span>{selectedInstitution.name}</span>
+                      {selectedInstitution.code && (
+                        <span className="text-muted-foreground text-xs">({selectedInstitution.code})</span>
+                      )}
+                    </div>
+                  )}
+                </SelectValue>
               </SelectTrigger>
-              <SelectContent>
-                {banks.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                ))}
-                <SelectItem value="other">Outro banco</SelectItem>
+              <SelectContent className="max-h-[300px]">
+                {loadingInstitutions ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                ) : (
+                  <>
+                    {typeOrder.map(type => {
+                      const items = groupedInstitutions[type];
+                      if (!items?.length) return null;
+                      
+                      return (
+                        <div key={type}>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                            {institutionTypeLabels[type]}
+                          </div>
+                          {items.map(inst => (
+                            <SelectItem key={inst.id} value={inst.id}>
+                              <div className="flex items-center gap-3">
+                                <img 
+                                  src={inst.logo_url} 
+                                  alt={inst.name}
+                                  className="w-5 h-5 object-contain rounded"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                                <span>{inst.name}</span>
+                                {inst.code && (
+                                  <span className="text-muted-foreground text-xs">({inst.code})</span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </div>
+                      );
+                    })}
+                    <SelectItem value="other">
+                      <div className="flex items-center gap-3">
+                        <Building2 className="w-5 h-5 text-muted-foreground" />
+                        <span>Outra instituição</span>
+                      </div>
+                    </SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>
           
-          {bankId === "other" && (
+          {institutionId === "other" && (
             <div className="space-y-2">
-              <Label>Nome do banco</Label>
+              <Label>Nome da instituição</Label>
               <Input 
                 value={customBank} 
                 onChange={(e) => setCustomBank(e.target.value)} 

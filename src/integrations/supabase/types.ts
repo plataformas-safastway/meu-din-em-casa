@@ -392,6 +392,7 @@ export type Database = {
           family_id: string
           id: string
           initial_balance: number | null
+          institution_id: string | null
           is_active: boolean
           nickname: string
           ownership_type:
@@ -413,6 +414,7 @@ export type Database = {
           family_id: string
           id?: string
           initial_balance?: number | null
+          institution_id?: string | null
           is_active?: boolean
           nickname: string
           ownership_type?:
@@ -434,6 +436,7 @@ export type Database = {
           family_id?: string
           id?: string
           initial_balance?: number | null
+          institution_id?: string | null
           is_active?: boolean
           nickname?: string
           ownership_type?:
@@ -456,6 +459,13 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_accounts_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "financial_institutions"
             referencedColumns: ["id"]
           },
         ]
@@ -683,6 +693,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      card_brands: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          logo_url: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          logo_url: string
+          name: string
+          slug: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          logo_url?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
       }
       cashflow_forecasts: {
         Row: {
@@ -1101,6 +1138,7 @@ export type Database = {
           bank_account_id: string | null
           bank_id: string | null
           brand: Database["public"]["Enums"]["card_brand"]
+          brand_id: string | null
           card_holder: string | null
           card_name: string
           card_type: Database["public"]["Enums"]["card_type"]
@@ -1120,6 +1158,7 @@ export type Database = {
           bank_account_id?: string | null
           bank_id?: string | null
           brand?: Database["public"]["Enums"]["card_brand"]
+          brand_id?: string | null
           card_holder?: string | null
           card_name: string
           card_type?: Database["public"]["Enums"]["card_type"]
@@ -1139,6 +1178,7 @@ export type Database = {
           bank_account_id?: string | null
           bank_id?: string | null
           brand?: Database["public"]["Enums"]["card_brand"]
+          brand_id?: string | null
           card_holder?: string | null
           card_name?: string
           card_type?: Database["public"]["Enums"]["card_type"]
@@ -1167,6 +1207,13 @@ export type Database = {
             columns: ["bank_id"]
             isOneToOne: false
             referencedRelation: "banks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_cards_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "card_brands"
             referencedColumns: ["id"]
           },
           {
@@ -2421,6 +2468,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      financial_institutions: {
+        Row: {
+          active: boolean
+          code: string | null
+          created_at: string
+          id: string
+          logo_url: string
+          name: string
+          show_manual: boolean
+          type: Database["public"]["Enums"]["institution_type"]
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          id?: string
+          logo_url: string
+          name: string
+          show_manual?: boolean
+          type?: Database["public"]["Enums"]["institution_type"]
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string
+          name?: string
+          show_manual?: boolean
+          type?: Database["public"]["Enums"]["institution_type"]
+          updated_at?: string
+        }
+        Relationships: []
       }
       financial_metrics_cache: {
         Row: {
@@ -6859,6 +6942,12 @@ export type Database = {
       import_file_type: "ofx" | "xls" | "xlsx" | "pdf"
       import_status: "pending" | "processing" | "completed" | "failed"
       installment_status: "POSTED" | "PLANNED" | "RECONCILED" | "CANCELLED"
+      institution_type:
+        | "retail_bank"
+        | "digital_bank"
+        | "investment_bank"
+        | "cooperative"
+        | "international"
       integration_provider:
         | "OPEN_FINANCE"
         | "ACQUIRER"
@@ -7101,6 +7190,13 @@ export const Constants = {
       import_file_type: ["ofx", "xls", "xlsx", "pdf"],
       import_status: ["pending", "processing", "completed", "failed"],
       installment_status: ["POSTED", "PLANNED", "RECONCILED", "CANCELLED"],
+      institution_type: [
+        "retail_bank",
+        "digital_bank",
+        "investment_bank",
+        "cooperative",
+        "international",
+      ],
       integration_provider: [
         "OPEN_FINANCE",
         "ACQUIRER",

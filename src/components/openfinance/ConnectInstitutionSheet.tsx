@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { usePluggyInstitutions, useCreateConnection, useStartConsentFlow, PluggyInstitution } from "@/hooks/useOpenFinance";
+import { useFinancialInstitutions, institutionTypeLabels } from "@/hooks/useFinancialInstitutions";
 import { Search, Building2, Loader2, ChevronRight, Shield, Eye, CreditCard, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,6 +31,7 @@ export function ConnectInstitutionSheet({ open, onOpenChange }: ConnectInstituti
   const [selectedScopes, setSelectedScopes] = useState<string[]>(['accounts', 'transactions', 'credit_cards']);
 
   const { data: institutionsData, isLoading } = usePluggyInstitutions();
+  const { data: localInstitutions = [] } = useFinancialInstitutions(false);
   const createConnectionMutation = useCreateConnection();
   const startConsentMutation = useStartConsentFlow();
 
@@ -36,10 +39,21 @@ export function ConnectInstitutionSheet({ open, onOpenChange }: ConnectInstituti
     if (!institutionsData?.connectors) return [];
     
     const searchLower = search.toLowerCase();
-    return institutionsData.connectors.filter(inst => 
-      inst.name.toLowerCase().includes(searchLower)
-    );
-  }, [institutionsData, search]);
+    return institutionsData.connectors
+      .filter(inst => inst.name.toLowerCase().includes(searchLower))
+      .map(inst => {
+        // Try to find matching local institution for logo
+        const localMatch = localInstitutions.find(
+          li => li.name.toLowerCase().includes(inst.name.toLowerCase()) || 
+                (li.code && inst.name.includes(li.code))
+        );
+        return {
+          ...inst,
+          enrichedLogoUrl: localMatch?.logo_url || inst.imageUrl,
+          institutionType: localMatch?.type,
+        };
+      });
+  }, [institutionsData, search, localInstitutions]);
 
   const handleSelectInstitution = (institution: PluggyInstitution) => {
     setSelectedInstitution(institution);
@@ -159,20 +173,30 @@ export function ConnectInstitutionSheet({ open, onOpenChange }: ConnectInstituti
                       className="w-full flex items-center gap-4 p-4 rounded-xl bg-card border border-border/30 hover:border-primary/30 transition-colors text-left"
                       onClick={() => handleSelectInstitution(institution)}
                     >
-                      {institution.imageUrl ? (
+                      {institution.enrichedLogoUrl ? (
                         <img 
-                          src={institution.imageUrl} 
+                          src={institution.enrichedLogoUrl} 
                           alt={institution.name}
-                          className="w-10 h-10 rounded-lg object-contain bg-white p-1"
+                          className="w-10 h-10 rounded-lg object-contain bg-white p-1 border border-border/50"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                          }}
                         />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Building2 className="w-5 h-5 text-primary" />
-                        </div>
-                      )}
+                      ) : null}
+                      <div className={`w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center ${institution.enrichedLogoUrl ? 'hidden' : ''}`}>
+                        <Building2 className="w-5 h-5 text-primary" />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium truncate">{institution.name}</h3>
-                        <p className="text-sm text-muted-foreground capitalize">{institution.type}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-muted-foreground capitalize">{institution.type}</p>
+                          {institution.institutionType && (
+                            <Badge variant="outline" className="text-xs">
+                              {institutionTypeLabels[institution.institutionType]}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       <ChevronRight className="w-5 h-5 text-muted-foreground" />
                     </button>

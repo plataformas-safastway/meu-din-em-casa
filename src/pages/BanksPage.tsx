@@ -11,6 +11,7 @@ import { EditBankAccountSheet } from "@/components/EditBankAccountSheet";
 import { EditCreditCardSheet } from "@/components/EditCreditCardSheet";
 import { AddPixKeySheet } from "@/components/AddPixKeySheet";
 import { useBankAccounts, useCreditCards, useDeleteBankAccount, useDeleteCreditCard, usePixKeys, useDeletePixKey } from "@/hooks/useBankData";
+import { useFinancialInstitutions, useCardBrands } from "@/hooks/useFinancialInstitutions";
 import { formatCurrency } from "@/lib/formatters";
 import { formatBankAccountLabel, formatCreditCardLabel, formatTitleholders } from "@/lib/bankAccountLabel";
 import { toast } from "sonner";
@@ -43,9 +44,30 @@ export function BanksPage({ onBack }: BanksPageProps) {
   const { data: bankAccounts = [], isLoading: loadingAccounts } = useBankAccounts();
   const { data: creditCards = [], isLoading: loadingCards } = useCreditCards();
   const { data: pixKeys = [] } = usePixKeys();
+  const { data: institutions = [] } = useFinancialInstitutions(false);
+  const { data: cardBrands = [] } = useCardBrands();
   const deleteAccount = useDeleteBankAccount();
   const deleteCard = useDeleteCreditCard();
   const deletePixKey = useDeletePixKey();
+
+  // Helper to get institution logo
+  const getInstitutionLogo = (bankId?: string | null, bankName?: string | null) => {
+    if (bankId) {
+      const inst = institutions.find(i => i.id === bankId);
+      if (inst) return inst.logo_url;
+    }
+    if (bankName) {
+      const inst = institutions.find(i => i.name.toLowerCase().includes(bankName.toLowerCase()));
+      if (inst) return inst.logo_url;
+    }
+    return null;
+  };
+
+  // Helper to get card brand logo
+  const getCardBrandLogo = (brandSlug: string) => {
+    const brand = cardBrands.find(b => b.slug === brandSlug);
+    return brand?.logo_url || null;
+  };
 
   const toggleAccountExpand = (id: string) => {
     const newSet = new Set(expandedAccounts);
@@ -180,7 +202,24 @@ export function BanksPage({ onBack }: BanksPageProps) {
                         <div className="p-4">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-3 flex-1">
-                              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                              {(() => {
+                                const logoUrl = getInstitutionLogo(account.bank_id, account.banks?.name);
+                                return logoUrl ? (
+                                  <img 
+                                    src={logoUrl} 
+                                    alt={account.banks?.name || 'Banco'} 
+                                    className="w-10 h-10 rounded-lg object-contain bg-white p-1 border border-border"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                      e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                    }}
+                                  />
+                                ) : null;
+                              })()}
+                              <div className={cn(
+                                "w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center",
+                                getInstitutionLogo(account.bank_id, account.banks?.name) && "hidden"
+                              )}>
                                 <Building2 className="w-5 h-5 text-primary" />
                               </div>
                               <div className="flex-1 min-w-0">
@@ -364,8 +403,37 @@ export function BanksPage({ onBack }: BanksPageProps) {
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
-                            <CreditCard className="w-5 h-5 text-white" />
+                          <div className="relative">
+                            {/* Bank Logo */}
+                            {(() => {
+                              const logoUrl = getInstitutionLogo(card.bank_id, card.banks?.name);
+                              return logoUrl ? (
+                                <img 
+                                  src={logoUrl} 
+                                  alt={card.banks?.name || 'Banco'} 
+                                  className="w-10 h-10 rounded-lg object-contain bg-white p-1 border border-border"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
+                                  <CreditCard className="w-5 h-5 text-white" />
+                                </div>
+                              );
+                            })()}
+                            {/* Brand Badge */}
+                            {(() => {
+                              const brandLogo = getCardBrandLogo(card.brand);
+                              return brandLogo ? (
+                                <img 
+                                  src={brandLogo} 
+                                  alt={card.brand} 
+                                  className="absolute -bottom-1 -right-1 w-5 h-3 object-contain bg-white rounded border border-border"
+                                />
+                              ) : null;
+                            })()}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
