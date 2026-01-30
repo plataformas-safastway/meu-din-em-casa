@@ -10,6 +10,8 @@ export interface ChatMessage {
 }
 
 export interface FamilyContext {
+  familyId?: string;
+  userId?: string;
   familyName?: string;
   incomeRange?: string;
   membersCount?: number;

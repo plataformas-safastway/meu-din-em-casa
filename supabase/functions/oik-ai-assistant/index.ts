@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -341,14 +342,118 @@ Ajudar o usuário a:
 > *"Finanças nunca foram o problema.*
 > *O problema foi transformar algo simples em algo assustador."*`;
 
+// Helper to create Supabase client with service role
+function getSupabaseClient() {
+  return createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    { auth: { persistSession: false } }
+  );
+}
+
+// Log AI metrics to database
+async function logAIMetrics(params: {
+  conversationId: string;
+  familyId?: string;
+  userId?: string;
+  userContent: string;
+  assistantContent: string;
+  responseMs: number;
+  tokensIn?: number;
+  tokensOut?: number;
+}) {
+  try {
+    const supabase = getSupabaseClient();
+    
+    // Insert user message
+    await supabase.from('ai_messages').insert({
+      conversation_id: params.conversationId,
+      role: 'user',
+      content: params.userContent,
+      tokens_in: params.tokensIn,
+    });
+    
+    // Insert assistant message with response time
+    await supabase.from('ai_messages').insert({
+      conversation_id: params.conversationId,
+      role: 'assistant',
+      content: params.assistantContent,
+      response_ms: params.responseMs,
+      tokens_out: params.tokensOut,
+    });
+    
+    console.log(`[OIK AI] Logged metrics for conversation ${params.conversationId}`);
+  } catch (error) {
+    console.error('[OIK AI] Error logging metrics:', error);
+    // Don't throw - logging should not block the response
+  }
+}
+
+// Log AI errors to database
+async function logAIError(params: {
+  familyId?: string;
+  userId?: string;
+  errorCode: string;
+  errorMessage: string;
+  severity?: string;
+  route?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  try {
+    const supabase = getSupabaseClient();
+    
+    await supabase.from('ai_error_events').insert({
+      family_id: params.familyId || null,
+      user_id: params.userId || null,
+      error_code: params.errorCode,
+      error_message: params.errorMessage,
+      severity: params.severity || 'error',
+      route: params.route || '/ai/chat',
+      metadata: params.metadata || null,
+    });
+    
+    console.log(`[OIK AI] Logged error: ${params.errorCode}`);
+  } catch (error) {
+    console.error('[OIK AI] Error logging error event:', error);
+  }
+}
+
+// Create or get conversation
+async function getOrCreateConversation(familyId: string, userId: string): Promise<string> {
+  const supabase = getSupabaseClient();
+  
+  // For simplicity, create a new conversation each time
+  // In a real app, you might want to continue existing conversations
+  const { data, error } = await supabase
+    .from('ai_conversations')
+    .insert({
+      family_id: familyId,
+      user_id: userId,
+    })
+    .select('id')
+    .single();
+  
+  if (error) {
+    console.error('[OIK AI] Error creating conversation:', error);
+    throw error;
+  }
+  
+  return data.id;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let conversationId: string | undefined;
+  let familyId: string | undefined;
+  let userId: string | undefined;
+
   try {
-    const { messages, familyContext, stream = true } = await req.json();
+    const { messages, familyContext, stream = true, trackMetrics = true } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(
@@ -360,10 +465,28 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       console.error("LOVABLE_API_KEY not configured");
+      await logAIError({
+        errorCode: 'CONFIG_ERROR',
+        errorMessage: 'LOVABLE_API_KEY not configured',
+        severity: 'critical',
+      });
       return new Response(
         JSON.stringify({ error: "AI service not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Extract user/family context for metrics
+    familyId = familyContext?.familyId;
+    userId = familyContext?.userId;
+
+    // Create conversation for tracking if we have context
+    if (trackMetrics && familyId && userId) {
+      try {
+        conversationId = await getOrCreateConversation(familyId, userId);
+      } catch (e) {
+        console.error('[OIK AI] Failed to create conversation, continuing without tracking:', e);
+      }
     }
 
     // Build context-aware system prompt
@@ -455,6 +578,17 @@ serve(async (req) => {
       const errorText = await response.text();
       console.error("AI Gateway error:", response.status, errorText);
 
+      const errorCode = response.status === 429 ? 'RATE_LIMIT' : 
+                       response.status === 402 ? 'CREDITS_EXHAUSTED' : 'GATEWAY_ERROR';
+      
+      await logAIError({
+        familyId,
+        userId,
+        errorCode,
+        errorMessage: errorText || `HTTP ${response.status}`,
+        severity: response.status === 429 ? 'warning' : 'error',
+      });
+
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: "Limite de requisições atingido. Aguarde um momento e tente novamente." }),
@@ -476,17 +610,114 @@ serve(async (req) => {
     }
 
     if (stream) {
-      return new Response(response.body, {
+      // For streaming, we need to collect the response to log metrics
+      // We'll use a TransformStream to pass through and collect
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No response body");
+      }
+
+      let fullContent = "";
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+
+      const transformStream = new TransformStream({
+        async transform(chunk, controller) {
+          controller.enqueue(chunk);
+          
+          // Try to extract content for logging
+          const text = decoder.decode(chunk, { stream: true });
+          const lines = text.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+              try {
+                const json = JSON.parse(line.slice(6));
+                const content = json.choices?.[0]?.delta?.content;
+                if (content) {
+                  fullContent += content;
+                }
+              } catch {
+                // Ignore parse errors
+              }
+            }
+          }
+        },
+        async flush() {
+          // Log metrics after stream completes
+          const responseMs = Date.now() - startTime;
+          if (conversationId && messages.length > 0) {
+            const lastUserMessage = messages.filter((m: { role: string }) => m.role === 'user').pop();
+            if (lastUserMessage) {
+              await logAIMetrics({
+                conversationId,
+                familyId,
+                userId,
+                userContent: lastUserMessage.content,
+                assistantContent: fullContent,
+                responseMs,
+                // Token counts would need to come from the API response
+                // For now, estimate based on content length
+                tokensIn: Math.ceil(lastUserMessage.content.length / 4),
+                tokensOut: Math.ceil(fullContent.length / 4),
+              });
+            }
+          }
+        }
+      });
+
+      const readable = new ReadableStream({
+        async start(controller) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            controller.enqueue(value);
+          }
+          controller.close();
+        }
+      });
+
+      const pipedStream = readable.pipeThrough(transformStream);
+
+      return new Response(pipedStream, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
       });
     } else {
       const data = await response.json();
+      
+      // Log metrics for non-streaming response
+      const responseMs = Date.now() - startTime;
+      if (conversationId && messages.length > 0) {
+        const lastUserMessage = messages.filter((m: { role: string }) => m.role === 'user').pop();
+        const assistantContent = data.choices?.[0]?.message?.content || '';
+        if (lastUserMessage) {
+          await logAIMetrics({
+            conversationId,
+            familyId,
+            userId,
+            userContent: lastUserMessage.content,
+            assistantContent,
+            responseMs,
+            tokensIn: data.usage?.prompt_tokens,
+            tokensOut: data.usage?.completion_tokens,
+          });
+        }
+      }
+      
       return new Response(JSON.stringify(data), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
   } catch (error) {
     console.error("OIK AI Assistant error:", error);
+    
+    await logAIError({
+      familyId,
+      userId,
+      errorCode: 'INTERNAL_ERROR',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      severity: 'error',
+    });
+    
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Erro desconhecido" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
