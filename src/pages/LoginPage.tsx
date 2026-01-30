@@ -60,11 +60,25 @@ export function LoginPage() {
   });
 
   // Draft persistence for email (not password for security)
-  // Uses localStorage with 5-minute effective window (cleared on successful login)
+  // Uses localStorage with 24-hour expiry (cleared on successful login)
   const { restoredDraft, wasRestored, saveDraft, clearDraft } = useDraftPersistence<{ email: string }>(
     LOGIN_DRAFT_KEY,
     { debounceMs: 500 }
   );
+
+  // Clear login form when component mounts after a logout
+  // This ensures the form is always clean on a fresh page load
+  useEffect(() => {
+    const wasLoggedOut = sessionStorage.getItem('oik:just_logged_out');
+    if (wasLoggedOut) {
+      sessionStorage.removeItem('oik:just_logged_out');
+      // Clear email draft and reset form
+      clearDraft();
+      setEmail("");
+      setPassword("");
+      console.log('[LoginPage] Form cleared after logout');
+    }
+  }, [clearDraft]);
 
   // Lifecycle tracing for debugging tab-switch resets
   useEffect(() => {
@@ -191,6 +205,9 @@ export function LoginPage() {
 
       // Clear failed attempts on successful login
       clearFailedAttempts();
+      
+      // Clear email draft on successful login (no longer needed)
+      clearDraft();
       
       logAuthStage('AUTH_USER_READY', { context: 'login_success' });
 
