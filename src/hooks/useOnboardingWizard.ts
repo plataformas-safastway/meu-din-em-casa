@@ -26,6 +26,49 @@ export function useOnboardingWizard() {
   const { user, family, refreshFamily } = useAuth();
   const queryClient = useQueryClient();
 
+  /**
+   * CRITICAL: Complete onboarding using UPSERT with ON CONFLICT (user_id)
+   * 
+   * The user_onboarding table is GLOBAL per user (user_id is UNIQUE).
+   * This function ensures the status is correctly set to 'completed'.
+   */
+  const completeOnboarding = async (userId: string, familyId: string | null): Promise<void> => {
+    const nowISO = new Date().toISOString();
+    
+    const payload = {
+      user_id: userId,
+      family_id: familyId,
+      status: 'completed' as const,
+      onboarding_wizard_completed_at: nowISO,
+      suggested_budget_generated_at: nowISO,
+      step_budget_at: nowISO,
+    };
+
+    console.log('[completeOnboarding] Upserting onboarding status:', payload);
+
+    const { data, error } = await supabase
+      .from('user_onboarding')
+      .upsert(payload, { 
+        onConflict: 'user_id',
+        ignoreDuplicates: false // Ensure update happens
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[completeOnboarding] ERROR:', {
+        payload,
+        error,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+      });
+      throw new Error(`Erro ao atualizar status do onboarding: ${error.message}`);
+    }
+
+    console.log('[completeOnboarding] SUCCESS:', { data });
+  };
+
   // Save all onboarding data and create budgets within EXISTING family context
   const saveOnboarding = useMutation({
     mutationFn: async ({ data, budgets }: SaveOnboardingInput) => {
@@ -146,16 +189,9 @@ export function useOnboardingWizard() {
         onConflict: "family_id,month_ref",
       });
 
-      // 6. Mark onboarding steps and status as complete
-      await supabase
-        .from("user_onboarding")
-        .update({
-          onboarding_wizard_completed_at: new Date().toISOString(),
-          suggested_budget_generated_at: new Date().toISOString(),
-          step_budget_at: new Date().toISOString(),
-          status: 'completed', // CRITICAL: Mark onboarding as complete for authorization
-        })
-        .eq("user_id", user.id);
+      // 6. CRITICAL: Complete onboarding using UPSERT with ON CONFLICT (user_id)
+      // This is the authoritative persistence of onboarding completion
+      await completeOnboarding(user.id, familyId);
 
       // 7. Log audit event
       await supabase.from("audit_logs").insert({
@@ -167,7 +203,7 @@ export function useOnboardingWizard() {
         metadata: {
           budget_mode: data.budgetMode,
           budgets_created: budgetsCreated,
-          used_existing_family: true, // Mark that we used existing family
+          used_existing_family: true,
         },
       });
 
@@ -179,16 +215,22 @@ export function useOnboardingWizard() {
 
       return { budgetsCreated, familyId };
     },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["budgets"] });
-      queryClient.invalidateQueries({ queryKey: ["family"] });
-      queryClient.invalidateQueries({ queryKey: ["onboarding"] });
-      queryClient.invalidateQueries({ queryKey: ["budget-template-application"] });
-      queryClient.invalidateQueries({ queryKey: ["app-authorization-onboarding"] });
+    onSuccess: async (result) => {
+      // CRITICAL: Invalidate and refetch BEFORE navigating
+      // This ensures the gate sees the updated status
+      await queryClient.invalidateQueries({ queryKey: ["app-authorization-onboarding", user?.id] });
+      await queryClient.invalidateQueries({ queryKey: ["onboarding", user?.id] });
+      await queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      await queryClient.invalidateQueries({ queryKey: ["family"] });
+      await queryClient.invalidateQueries({ queryKey: ["budget-template-application"] });
+      
+      // Force refetch to ensure fresh data before navigation
+      await queryClient.refetchQueries({ queryKey: ["app-authorization-onboarding", user?.id] });
+      
       toast.success(`Orçamento criado com ${result.budgetsCreated} categorias!`);
     },
     onError: (error: any) => {
-      console.error("Error saving onboarding:", error);
+      console.error("[useOnboardingWizard] Error saving onboarding:", error);
       toast.error(error.message || "Erro ao salvar configurações");
     },
   });
@@ -207,5 +249,6 @@ export function useOnboardingWizard() {
     saveOnboarding,
     generateAISuggestions,
     isLoading: saveOnboarding.isPending,
+    completeOnboarding, // Export for direct use if needed
   };
 }
