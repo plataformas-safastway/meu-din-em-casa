@@ -164,6 +164,7 @@ export function OnboardingFlowPage() {
   };
 
   // Handle accept budget as-is
+  // CRITICAL: Await mutation and cache invalidation before navigating
   const handleAcceptBudget = async () => {
     if (!onboardingData) return;
 
@@ -176,13 +177,24 @@ export function OnboardingFlowPage() {
       isEdited: false,
     }));
 
-    await saveOnboarding.mutateAsync({
-      data: onboardingData,
-      budgets,
-    });
+    try {
+      // Wait for the mutation to complete (includes cache invalidation)
+      await saveOnboarding.mutateAsync({
+        data: onboardingData,
+        budgets,
+      });
 
-    clearDraft();
-    navigate("/app");
+      // Clear draft only after successful save
+      clearDraft();
+      
+      // Navigate only after everything is persisted and cache is refreshed
+      console.log('[OnboardingFlowPage] Onboarding completed, navigating to /app');
+      navigate("/app");
+    } catch (error) {
+      // Error is already handled by the mutation's onError
+      // Do NOT navigate on error
+      console.error('[OnboardingFlowPage] Failed to complete onboarding:', error);
+    }
   };
 
   // Handle choose to adjust
@@ -191,16 +203,28 @@ export function OnboardingFlowPage() {
   };
 
   // Handle budget confirmation (after adjustments)
+  // CRITICAL: Await mutation and cache invalidation before navigating
   const handleBudgetConfirm = async (budgets: BudgetItem[]) => {
     if (!onboardingData) return;
 
-    await saveOnboarding.mutateAsync({
-      data: onboardingData,
-      budgets,
-    });
+    try {
+      // Wait for the mutation to complete (includes cache invalidation)
+      await saveOnboarding.mutateAsync({
+        data: onboardingData,
+        budgets,
+      });
 
-    clearDraft();
-    navigate("/app");
+      // Clear draft only after successful save
+      clearDraft();
+      
+      // Navigate only after everything is persisted and cache is refreshed
+      console.log('[OnboardingFlowPage] Onboarding completed (adjusted), navigating to /app');
+      navigate("/app");
+    } catch (error) {
+      // Error is already handled by the mutation's onError
+      // Do NOT navigate on error
+      console.error('[OnboardingFlowPage] Failed to complete onboarding:', error);
+    }
   };
 
   // Handle back from budget screens
