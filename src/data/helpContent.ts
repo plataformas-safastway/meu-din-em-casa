@@ -51,8 +51,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 30/01/2026 - Documentação Orçamento Meta e IF
-export const HELP_CENTER_VERSION = "30/01/2026 v19";
+// Última atualização: 30/01/2026 - Documentação Subcategorias do Orçamento
+export const HELP_CENTER_VERSION = "30/01/2026 v20";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -1348,8 +1348,37 @@ export const faqItems: FAQItem[] = [
     category: "transactions",
     keywords: ["categoria", "sem", "subcategoria", "vazia", "criar", "obrigatória"],
   },
-];
 
+  // ===== SUBCATEGORIAS NO ORÇAMENTO =====
+  {
+    id: "faq-47",
+    question: "Por que a soma das subcategorias precisa bater com a categoria?",
+    answer: "No OIK, as categorias formam a estrutura do orçamento e você detalha a realidade através das subcategorias. A soma dos valores das subcategorias deve sempre igualar o valor total da categoria para garantir consistência matemática. Se a soma ultrapassar, você precisa aumentar a categoria (consumindo do IF) ou reduzir os valores das subcategorias.",
+    category: "budgets",
+    keywords: ["subcategoria", "soma", "categoria", "bater", "igualar", "consistência", "orçamento", "limite"],
+  },
+  {
+    id: "faq-48",
+    question: "Como ajusto as subcategorias do orçamento?",
+    answer: "Na tela de ajuste do orçamento, cada categoria tem um botão 'Detalhar subcategorias'. Ao tocar, você pode criar, editar e excluir subcategorias. O sistema mostra em tempo real se a soma está consistente com o limite da categoria e oferece opções claras para resolver inconsistências.",
+    category: "budgets",
+    keywords: ["ajustar", "subcategoria", "orçamento", "detalhar", "criar", "editar", "gerenciar"],
+  },
+  {
+    id: "faq-49",
+    question: "O que acontece se as subcategorias ultrapassarem o limite da categoria?",
+    answer: "Se a soma das subcategorias ultrapassar o limite da categoria, o sistema bloqueia o salvamento e oferece duas opções: 1) Aumentar o limite da categoria (isso consome saldo do IF), ou 2) Reduzir os valores das subcategorias. Se o IF estiver zerado, a única opção é reduzir as subcategorias ou outras categorias.",
+    category: "budgets",
+    keywords: ["subcategoria", "ultrapassar", "limite", "exceder", "bloquear", "aumentar", "IF", "orçamento"],
+  },
+  {
+    id: "faq-50",
+    question: "Posso deixar sobra dentro da categoria?",
+    answer: "Sim! Se a soma das subcategorias for menor que o limite da categoria, isso é permitido. O sistema mostra a 'sobra' e oferece a opção de ajustar o limite da categoria para baixo, devolvendo a diferença para o IF. Isso não é obrigatório — você pode manter a folga se preferir.",
+    category: "budgets",
+    keywords: ["sobra", "categoria", "subcategoria", "menor", "permitido", "folga", "IF", "devolver"],
+  },
+];
 // =====================================================
 // LABELS DE CATEGORIA
 // =====================================================

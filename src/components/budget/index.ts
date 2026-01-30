@@ -5,3 +5,4 @@ export { BudgetSoftAlert, InlineBudgetAlert } from "./BudgetSoftAlert";
 export { BudgetMetaAdjustment, type BudgetCategoryItem, type SubcategoryBudget } from "./BudgetMetaAdjustment";
 export { BudgetMetaAcceptanceScreen } from "./BudgetMetaAcceptanceScreen";
 export { IFBalanceIndicator } from "./IFBalanceIndicator";
+export { SubcategoryBudgetSheet } from "./SubcategoryBudgetSheet";
