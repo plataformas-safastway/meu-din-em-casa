@@ -6,6 +6,7 @@
  * - IF (Independência Financeira) as the balance center
  * - Zero-sum logic: increases consume IF, decreases add to IF
  * - Blocks increases when IF = 0
+ * - Subcategory management with real-time validation
  */
 
 import { useState, useMemo, useCallback } from "react";
@@ -19,7 +20,9 @@ import {
   Lock,
   ChevronDown,
   ChevronUp,
-  Plus
+  Plus,
+  List,
+  Settings2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +42,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
 import { getCategoryById } from "@/data/categories";
 import { toast } from "sonner";
+import { SubcategoryBudgetSheet } from "./SubcategoryBudgetSheet";
 
 export interface BudgetCategoryItem {
   prefixCode: string;
@@ -80,6 +84,7 @@ export function BudgetMetaAdjustment({
 }: BudgetMetaAdjustmentProps) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [ifBlockedMessage, setIfBlockedMessage] = useState<string | null>(null);
+  const [subcategorySheetCategory, setSubcategorySheetCategory] = useState<BudgetCategoryItem | null>(null);
 
   // Find IF (Independência Financeira) item - the balance center
   const ifItem = useMemo(() => items.find(b => b.prefixCode === 'IF'), [items]);
@@ -249,6 +254,60 @@ export function BudgetMetaAdjustment({
     if (!currentItem || !ifItem) return 50;
     return Math.min(50, currentItem.percentage + ifItem.percentage);
   }, [items, ifItem]);
+
+  // Handle subcategories change from the sheet
+  const handleSubcategoriesChange = useCallback((prefixCode: string, newSubcategories: SubcategoryBudget[]) => {
+    const newItems = items.map(item => {
+      if (item.prefixCode === prefixCode) {
+        return {
+          ...item,
+          subcategories: newSubcategories,
+          isEdited: true,
+        };
+      }
+      return item;
+    });
+    onItemsChange(newItems);
+  }, [items, onItemsChange]);
+
+  // Handle category amount change from subcategory sheet (for IF integration)
+  const handleCategoryAmountChange = useCallback((prefixCode: string, newAmount: number): boolean => {
+    const currentItem = items.find(b => b.prefixCode === prefixCode);
+    if (!currentItem || !ifItem) return false;
+
+    const delta = newAmount - currentItem.amount;
+    const deltaPercentage = (delta / monthlyIncome) * 100;
+    const newIfPercentage = ifItem.percentage - deltaPercentage;
+
+    // Block if IF would go negative
+    if (newIfPercentage < 0) {
+      toast.error("Sem saldo no IF para aumentar esta categoria.");
+      return false;
+    }
+
+    // Update category and IF
+    const newItems = items.map(b => {
+      if (b.prefixCode === prefixCode) {
+        return {
+          ...b,
+          amount: newAmount,
+          percentage: (newAmount / monthlyIncome) * 100,
+          isEdited: true,
+        };
+      }
+      if (b.prefixCode === 'IF') {
+        return {
+          ...b,
+          percentage: newIfPercentage,
+          amount: Math.round(monthlyIncome * (newIfPercentage / 100)),
+        };
+      }
+      return b;
+    });
+
+    onItemsChange(newItems);
+    return true;
+  }, [items, ifItem, monthlyIncome, onItemsChange]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -436,21 +495,53 @@ export function BudgetMetaAdjustment({
                       </div>
                     )}
 
-                    {/* Subcategories expansion */}
+                    {/* Subcategory Management Button - Always show for non-IF categories */}
+                    {!isIF && !readOnly && (
+                      <div className="pt-2 space-y-2">
+                        {/* Show subcategory summary if any exist */}
+                        {hasSubcategories && (
+                          <div className="flex items-center justify-between px-2 py-1 bg-muted/30 rounded-md text-xs">
+                            <span className="text-muted-foreground">
+                              {item.subcategories!.length} subcategorias · {formatCurrency(subcategoryTotal)}
+                            </span>
+                            {subcategoryMismatch ? (
+                              <Badge variant="destructive" className="text-xs">
+                                Ajuste necessário
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs text-success border-success/50">
+                                ✓ Consistente
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Detalhar subcategorias button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start gap-2"
+                          onClick={() => setSubcategorySheetCategory(item)}
+                        >
+                          <Settings2 className="w-4 h-4" />
+                          <span className="flex-1 text-left">
+                            {hasSubcategories ? "Gerenciar subcategorias" : "Detalhar subcategorias"}
+                          </span>
+                          <List className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Subcategories preview expansion (read-only or quick view) */}
                     {hasSubcategories && !isIF && (
                       <Collapsible 
                         open={isExpanded} 
                         onOpenChange={() => setExpandedCategory(isExpanded ? null : item.prefixCode)}
                       >
                         <CollapsibleTrigger asChild>
-                          <Button variant="ghost" size="sm" className="w-full justify-between">
-                            <span className="text-xs text-muted-foreground">
-                              {item.subcategories!.length} subcategorias
-                              {subcategoryMismatch && (
-                                <Badge variant="destructive" className="ml-2 text-xs">
-                                  Ajuste necessário
-                                </Badge>
-                              )}
+                          <Button variant="ghost" size="sm" className="w-full justify-between text-xs">
+                            <span className="text-muted-foreground">
+                              Ver detalhes
                             </span>
                             {isExpanded ? (
                               <ChevronUp className="w-4 h-4" />
@@ -459,11 +550,11 @@ export function BudgetMetaAdjustment({
                             )}
                           </Button>
                         </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-2 space-y-2">
+                        <CollapsibleContent className="pt-2 space-y-1">
                           <Separator />
                           {item.subcategories!.map(sub => (
                             <div key={sub.id} className="flex items-center justify-between px-2 py-1">
-                              <span className="text-sm">{sub.name}</span>
+                              <span className="text-sm text-muted-foreground">{sub.name}</span>
                               <span className="text-sm font-medium">
                                 {formatCurrency(sub.amount)}
                               </span>
@@ -510,6 +601,18 @@ export function BudgetMetaAdjustment({
           O orçamento é seu guia. Você pode ajustá-lo a qualquer momento.
         </p>
       </div>
+
+      {/* Subcategory Budget Sheet */}
+      <SubcategoryBudgetSheet
+        isOpen={!!subcategorySheetCategory}
+        onClose={() => setSubcategorySheetCategory(null)}
+        category={subcategorySheetCategory}
+        ifBalance={ifItem?.amount || 0}
+        ifPercentage={ifItem?.percentage || 0}
+        monthlyIncome={monthlyIncome}
+        onSubcategoriesChange={handleSubcategoriesChange}
+        onCategoryAmountChange={handleCategoryAmountChange}
+      />
     </div>
   );
 }
