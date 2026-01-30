@@ -6730,6 +6730,7 @@ export type Database = {
         }[]
       }
       get_user_family_id: { Args: never; Returns: string }
+      get_user_family_ids: { Args: never; Returns: string[] }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -6842,6 +6843,10 @@ export type Database = {
       }
       user_belongs_to_family: {
         Args: { _family_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_can_manage_family: {
+        Args: { target_family_id: string }
         Returns: boolean
       }
       user_is_family_admin: {
