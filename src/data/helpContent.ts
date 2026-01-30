@@ -51,8 +51,8 @@ export interface FAQItem {
   keywords: string[];
 }
 
-// Última atualização: 29/01/2026 - Adição de Regime Contábil
-export const HELP_CENTER_VERSION = "29/01/2026 v18";
+// Última atualização: 30/01/2026 - Documentação Orçamento Meta e IF
+export const HELP_CENTER_VERSION = "30/01/2026 v19";
 
 // Bancos testados e compatíveis com importação
 export const SUPPORTED_BANKS = [
@@ -492,6 +492,80 @@ export const helpArticles: HelpArticle[] = [
     ],
     keywords: ["regime", "fluxo", "caixa", "competência", "registro", "contábil", "realizado", "orçamento"],
     deepLink: "settings",
+  },
+
+  // ===== ORÇAMENTO META E IF =====
+  {
+    id: "budget-meta-if",
+    title: "Orçamento Meta e o (+/-) IF",
+    category: "budgets",
+    icon: "⚖️",
+    summary: "Entenda o centro do seu planejamento financeiro: o IF (Independência Financeira)",
+    steps: [
+      {
+        title: "O que é o Orçamento Meta?",
+        description: "É o seu plano financeiro mensal gerado automaticamente após o cadastro. Ele distribui sua renda entre categorias com base no seu perfil.",
+        tip: "Você pode aceitar ou ajustar o orçamento sugerido antes de começar a usar o app.",
+      },
+      {
+        title: "O que é o (+/-) IF?",
+        description: "IF significa Independência Financeira. É a 'sobra' do seu orçamento — o valor que fica disponível para investir no seu futuro.",
+        tip: "O IF é o centro do orçamento. Todas as suas decisões de gasto impactam esse saldo.",
+      },
+      {
+        title: "Como funciona o ajuste zero-sum?",
+        description: "Se você aumentar uma categoria de despesa, o IF reduz no mesmo valor. Se reduzir uma categoria, o IF aumenta. A soma sempre é 100% da sua renda.",
+      },
+      {
+        title: "E se o IF chegar a zero?",
+        description: "O sistema bloqueia aumentos de despesas. Para gastar mais em uma categoria, você precisa reduzir outra primeiro.",
+        tip: "Isso garante que você nunca planeje gastar mais do que ganha.",
+      },
+      {
+        title: "Aceitar vs Ajustar",
+        description: "Após o cadastro, você pode aceitar o orçamento sugerido ou ajustá-lo antes de começar. Ambas as opções são válidas.",
+      },
+      {
+        title: "Posso mudar depois?",
+        description: "Sim! O orçamento é vivo e pode ser ajustado a qualquer momento. Vá em Metas > Sugestão de Orçamento para revisar.",
+      },
+    ],
+    keywords: ["orçamento", "meta", "if", "independência", "financeira", "ajuste", "zero-sum", "sobra", "investir", "reserva"],
+    deepLink: "suggested-budget",
+  },
+
+  {
+    id: "budget-adjustment-rules",
+    title: "Regras de Ajuste do Orçamento",
+    category: "budgets",
+    icon: "📏",
+    summary: "Entenda as regras que garantem um orçamento equilibrado",
+    steps: [
+      {
+        title: "Regra 1: Zero-Sum",
+        description: "O total do orçamento sempre deve ser igual a 100% da renda. Aumentos consomem IF; reduções liberam IF.",
+      },
+      {
+        title: "Regra 2: IF nunca negativo",
+        description: "O saldo IF pode ser zero, mas nunca negativo. Isso impede que você planeje gastar mais do que ganha.",
+        tip: "Se o IF está zerado, reduza outra categoria antes de aumentar uma.",
+      },
+      {
+        title: "Regra 3: Bloqueio com mensagem",
+        description: "Ao tentar aumentar uma categoria com IF zerado, você verá a mensagem: 'Para aumentar despesas, reduza outras categorias ou aumente sua renda.'",
+      },
+      {
+        title: "Regra 4: Subcategorias ≤ Categoria",
+        description: "A soma das subcategorias nunca pode ultrapassar o valor total da categoria. O sistema exigirá ajuste.",
+      },
+      {
+        title: "Regra 5: Decisão consciente",
+        description: "O OIK nunca faz ajustes automáticos silenciosos. Toda mudança requer sua confirmação explícita.",
+        tip: "Isso garante que você sempre saiba o impacto das suas decisões.",
+      },
+    ],
+    keywords: ["regras", "ajuste", "orçamento", "zero-sum", "negativo", "bloqueio", "subcategoria", "limite"],
+    deepLink: "suggested-budget",
   },
 
   // ===== PROJEÇÃO =====
@@ -1019,6 +1093,41 @@ export const faqItems: FAQItem[] = [
     answer: "Sim! Ao criar uma meta de orçamento, vocês podem escolher uma categoria específica ou uma subcategoria para um controle mais detalhado.",
     category: "budgets",
     keywords: ["meta", "subcategoria", "orçamento", "específico"],
+  },
+  {
+    id: "faq-if-meaning",
+    question: "O que é o (+/-) IF no orçamento?",
+    answer: "IF significa 'Independência Financeira'. É a sobra do seu orçamento — o valor que fica disponível para investir ou poupar. Quando você aumenta uma categoria, o IF reduz. Quando reduz, o IF aumenta. É o centro do seu planejamento.",
+    category: "budgets",
+    keywords: ["if", "independência", "financeira", "sobra", "investir", "reserva"],
+  },
+  {
+    id: "faq-if-zero",
+    question: "O que acontece se meu IF chegar a zero?",
+    answer: "Se o IF ficar zerado, você não poderá mais aumentar nenhuma categoria de despesa. Para liberar espaço, reduza o valor de outra categoria primeiro. Isso garante que você nunca planeje gastar mais do que ganha.",
+    category: "budgets",
+    keywords: ["if", "zero", "bloqueio", "aumentar", "limite", "renda"],
+  },
+  {
+    id: "faq-budget-meta-accept",
+    question: "Preciso aceitar o Orçamento Meta sugerido?",
+    answer: "Não! Após o cadastro, você pode aceitar como está ou ajustar as categorias antes de começar. Se aceitar, pode ajustar depois a qualquer momento. O orçamento é flexível e evolui com você.",
+    category: "budgets",
+    keywords: ["orçamento", "meta", "aceitar", "ajustar", "sugerido"],
+  },
+  {
+    id: "faq-budget-zero-sum",
+    question: "Por que ao aumentar uma categoria outra diminui?",
+    answer: "O OIK usa lógica 'zero-sum': o total do orçamento sempre é 100% da renda. Quando você aumenta uma categoria, esse valor vem do IF (sua reserva). Quando reduz, volta pro IF. Isso impede planejamentos irreais.",
+    category: "budgets",
+    keywords: ["zero-sum", "aumentar", "diminuir", "if", "total", "100%"],
+  },
+  {
+    id: "faq-subcategory-exceeds",
+    question: "A soma das minhas subcategorias passou do limite da categoria. E agora?",
+    answer: "Você precisa escolher: reduzir valores de subcategorias OU aumentar o limite da categoria (consumindo IF). O sistema não permite inconsistências entre categoria e subcategorias.",
+    category: "budgets",
+    keywords: ["subcategoria", "soma", "limite", "categoria", "excede"],
   },
 
   // ===== OBJETIVOS =====
