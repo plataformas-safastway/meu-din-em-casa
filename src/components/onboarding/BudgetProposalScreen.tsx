@@ -1,11 +1,13 @@
-import { useState, useEffect, useMemo } from "react";
-import { motion } from "framer-motion";
-import { ArrowLeft, Sparkles, AlertCircle, Check, Loader2, Info, HelpCircle } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Sparkles, AlertCircle, Check, Loader2, Info, HelpCircle, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/formatters";
@@ -54,6 +56,7 @@ export function BudgetProposalScreen({
   const [budgets, setBudgets] = useState<BudgetItem[]>([]);
   const [editingPrefix, setEditingPrefix] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ifBlockedMessage, setIfBlockedMessage] = useState<string | null>(null);
 
   // Calculate base budget from onboarding data
   useEffect(() => {
@@ -164,8 +167,8 @@ export function BudgetProposalScreen({
   const ifItem = budgets.find(b => b.prefixCode === 'IF');
   const ifIndex = budgets.findIndex(b => b.prefixCode === 'IF');
 
-  // Handle percentage adjustment
-  const handlePercentageChange = (prefixCode: string, newPercentage: number) => {
+  // Handle percentage adjustment with IF zero-sum logic
+  const handlePercentageChange = useCallback((prefixCode: string, newPercentage: number) => {
     if (prefixCode === 'IF') return; // IF is the buffer, can't be directly edited
 
     const currentItem = budgets.find(b => b.prefixCode === prefixCode);
@@ -174,11 +177,17 @@ export function BudgetProposalScreen({
     const delta = newPercentage - currentItem.percentage;
     const newIfPercentage = ifItem.percentage - delta;
 
-    // Prevent IF from going negative
+    // Block if trying to increase and IF would go negative
     if (newIfPercentage < 0) {
-      toast.error("Você atingiu o limite da sua renda. Para aumentar aqui, reduza outra categoria.");
+      setIfBlockedMessage(
+        "Para aumentar despesas, reduza outras categorias ou aumente sua renda."
+      );
+      setTimeout(() => setIfBlockedMessage(null), 4000);
       return;
     }
+
+    // Clear any block message
+    setIfBlockedMessage(null);
 
     // Update both values
     setBudgets(prev => prev.map(b => {
@@ -199,7 +208,14 @@ export function BudgetProposalScreen({
       }
       return b;
     }));
-  };
+  }, [budgets, ifItem, data.incomeAnchorValue]);
+
+  // Calculate max slider value for each category (current + available IF)
+  const getMaxPercentage = useCallback((prefixCode: string) => {
+    const currentItem = budgets.find(b => b.prefixCode === prefixCode);
+    if (!currentItem || !ifItem) return 50;
+    return Math.min(50, currentItem.percentage + ifItem.percentage);
+  }, [budgets, ifItem]);
 
   // Handle confirm
   const handleConfirm = async () => {
@@ -247,37 +263,81 @@ export function BudgetProposalScreen({
         )}
       </header>
 
+      {/* IF Blocked Alert */}
+      <AnimatePresence>
+        {ifBlockedMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="px-4 pt-3"
+          >
+            <Alert variant="destructive">
+              <Lock className="w-4 h-4" />
+              <AlertDescription className="text-sm">
+                {ifBlockedMessage}
+              </AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Info card */}
       <div className="px-4 py-3">
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-3 flex gap-2">
             <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
             <p className="text-xs text-muted-foreground">
-              Este orçamento foi sugerido por categorias. Você pode distribuir nas subcategorias depois.
-              O saldo de <strong>Reserva/Investimentos</strong> ajusta automaticamente quando você edita outras categorias.
+              O <strong>(+/-) IF</strong> é seu saldo de equilíbrio. Aumentar uma categoria consome IF; 
+              reduzir libera IF. <strong>Você nunca pode gastar mais do que ganha.</strong>
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Summary */}
-      <div className="px-4 py-2 flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">Renda base</p>
-          <p className="text-lg font-bold">{formatCurrency(data.incomeAnchorValue)}</p>
+      {/* Summary Bar */}
+      <div className="px-4 py-3 border-b bg-muted/30">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground">Renda base</p>
+            <p className="text-lg font-bold">{formatCurrency(data.incomeAnchorValue)}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">Alocado</p>
+            <p className={cn(
+              "text-lg font-bold",
+              Math.abs(totalPercentage - 100) < 0.5 ? "text-success" : "text-destructive"
+            )}>
+              {totalPercentage.toFixed(1)}%
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">(+/-) IF</p>
+            <p className={cn(
+              "text-lg font-bold",
+              (ifItem?.percentage || 0) > 5 ? "text-primary" : 
+              (ifItem?.percentage || 0) > 0 ? "text-warning" : "text-destructive"
+            )}>
+              {formatCurrency(ifItem?.amount || 0)}
+            </p>
+          </div>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-muted-foreground">Alocado</p>
-          <p className={cn(
-            "text-lg font-bold",
-            Math.abs(totalPercentage - 100) < 0.5 ? "text-success" : "text-destructive"
-          )}>
-            {totalPercentage.toFixed(1)}%
+        
+        {/* IF Progress indicator */}
+        <div className="mt-2">
+          <Progress 
+            value={(ifItem?.percentage || 0) * 10} 
+            className={cn(
+              "h-1.5",
+              (ifItem?.percentage || 0) <= 0 && "[&>div]:bg-destructive",
+              (ifItem?.percentage || 0) > 0 && (ifItem?.percentage || 0) < 3 && "[&>div]:bg-warning"
+            )}
+          />
+          <p className="text-xs text-muted-foreground text-center mt-1">
+            Reserva disponível: {(ifItem?.percentage || 0).toFixed(1)}%
           </p>
         </div>
       </div>
-
-      <Separator />
 
       {/* Budget list */}
       <main className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -343,14 +403,34 @@ export function BudgetProposalScreen({
                         value={[item.percentage]}
                         onValueChange={([val]) => handlePercentageChange(item.prefixCode, val)}
                         min={0}
-                        max={Math.min(50, item.percentage + (ifItem?.percentage || 0))}
+                        max={getMaxPercentage(item.prefixCode)}
                         step={0.5}
                         className="w-full"
                       />
                       <div className="flex justify-between text-xs text-muted-foreground mt-1">
                         <span>0%</span>
-                        <span>{Math.min(50, item.percentage + (ifItem?.percentage || 0)).toFixed(0)}%</span>
+                        <span>{getMaxPercentage(item.prefixCode).toFixed(0)}%</span>
                       </div>
+                    </div>
+                  )}
+                  
+                  {/* IF progress bar */}
+                  {isIF && (
+                    <div className="pt-2">
+                      <Progress 
+                        value={item.percentage * 5} 
+                        className={cn(
+                          "h-3",
+                          item.percentage <= 0 && "[&>div]:bg-destructive",
+                          item.percentage > 0 && item.percentage <= 5 && "[&>div]:bg-warning"
+                        )}
+                      />
+                      {item.percentage <= 0 && (
+                        <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          Aumento de despesas bloqueado
+                        </p>
+                      )}
                     </div>
                   )}
                 </CardContent>
