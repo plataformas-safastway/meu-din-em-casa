@@ -1632,6 +1632,162 @@ export type Database = {
           },
         ]
       }
+      email_events_queue: {
+        Row: {
+          attempts: number
+          created_at: string
+          event_type: Database["public"]["Enums"]["email_event_type"]
+          family_id: string | null
+          id: string
+          max_attempts: number
+          next_retry_at: string | null
+          payload: Json
+          processed_at: string | null
+          skip_reason: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          event_type: Database["public"]["Enums"]["email_event_type"]
+          family_id?: string | null
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          payload?: Json
+          processed_at?: string | null
+          skip_reason?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          event_type?: Database["public"]["Enums"]["email_event_type"]
+          family_id?: string | null
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          payload?: Json
+          processed_at?: string | null
+          skip_reason?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_events_queue_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_logs: {
+        Row: {
+          blocked_reason: string | null
+          category: Database["public"]["Enums"]["email_preference_category"]
+          created_at: string
+          event_type: Database["public"]["Enums"]["email_event_type"]
+          family_id: string | null
+          id: string
+          metadata: Json | null
+          provider_response: Json | null
+          recipient_email: string
+          sent_at: string | null
+          status: string
+          subject: string
+          template_id: string | null
+          user_id: string
+        }
+        Insert: {
+          blocked_reason?: string | null
+          category: Database["public"]["Enums"]["email_preference_category"]
+          created_at?: string
+          event_type: Database["public"]["Enums"]["email_event_type"]
+          family_id?: string | null
+          id?: string
+          metadata?: Json | null
+          provider_response?: Json | null
+          recipient_email: string
+          sent_at?: string | null
+          status?: string
+          subject: string
+          template_id?: string | null
+          user_id: string
+        }
+        Update: {
+          blocked_reason?: string | null
+          category?: Database["public"]["Enums"]["email_preference_category"]
+          created_at?: string
+          event_type?: Database["public"]["Enums"]["email_event_type"]
+          family_id?: string | null
+          id?: string
+          metadata?: Json | null
+          provider_response?: Json | null
+          recipient_email?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          template_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_preferences: {
+        Row: {
+          created_at: string
+          education_enabled: boolean
+          family_id: string
+          financial_enabled: boolean
+          goals_enabled: boolean
+          id: string
+          security_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          education_enabled?: boolean
+          family_id: string
+          financial_enabled?: boolean
+          goals_enabled?: boolean
+          id?: string
+          security_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          education_enabled?: boolean
+          family_id?: string
+          financial_enabled?: boolean
+          goals_enabled?: boolean
+          id?: string
+          security_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_preferences_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       executive_reports_audit: {
         Row: {
           accessed_at: string
@@ -6103,6 +6259,22 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_email_preference: {
+        Args: {
+          p_category: Database["public"]["Enums"]["email_preference_category"]
+          p_family_id: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      check_email_rate_limit: {
+        Args: {
+          p_category: Database["public"]["Enums"]["email_preference_category"]
+          p_event_type: Database["public"]["Enums"]["email_event_type"]
+          p_user_id: string
+        }
+        Returns: Json
+      }
       check_member_permission: {
         Args: { _family_id: string; _permission: string; _user_id: string }
         Returns: boolean
@@ -6136,6 +6308,10 @@ export type Database = {
       get_category_transaction_count: {
         Args: { p_category_id: string; p_family_id: string }
         Returns: number
+      }
+      get_email_category: {
+        Args: { p_event_type: Database["public"]["Enums"]["email_event_type"] }
+        Returns: Database["public"]["Enums"]["email_preference_category"]
       }
       get_engagement_metrics_report: { Args: never; Returns: Json }
       get_executive_metrics: {
@@ -6247,6 +6423,15 @@ export type Database = {
         Returns: string
       }
       mark_password_changed: { Args: { _user_id: string }; Returns: boolean }
+      queue_email_event: {
+        Args: {
+          p_event_type: Database["public"]["Enums"]["email_event_type"]
+          p_family_id: string
+          p_payload?: Json
+          p_user_id: string
+        }
+        Returns: string
+      }
       reconcile_installment: {
         Args: { p_planned_id: string; p_transaction_id: string }
         Returns: boolean
@@ -6335,6 +6520,48 @@ export type Database = {
       card_charge_type: "ONE_SHOT" | "INSTALLMENT" | "RECURRENT"
       card_type: "credit" | "debit" | "both"
       confidence_level: "HIGH" | "MEDIUM" | "LOW"
+      email_event_type:
+        | "user.account_created"
+        | "user.email_confirmed"
+        | "user.password_reset_requested"
+        | "user.password_changed"
+        | "user.login_new_device"
+        | "onboarding.completed"
+        | "onboarding.incomplete_24h"
+        | "onboarding.incomplete_72h"
+        | "budget.first_created"
+        | "budget.skipped"
+        | "family.invite_sent"
+        | "budget.category_exceeded"
+        | "budget.if_zeroed"
+        | "spending.decrease_detected"
+        | "spending.increase_detected"
+        | "spending.no_activity_7d"
+        | "goal.created"
+        | "goal.progress_25"
+        | "goal.progress_50"
+        | "goal.progress_75"
+        | "goal.completed"
+        | "goal.at_risk"
+        | "goal.abandoned"
+        | "behavior.pattern_changed"
+        | "behavior.low_activity"
+        | "behavior.month_balanced"
+        | "behavior.month_above_average"
+        | "family.invite_accepted"
+        | "family.invite_expired"
+        | "family.permission_changed"
+        | "family.member_removed"
+        | "family.sensitive_action"
+        | "education.content_released"
+        | "plan.upgraded"
+        | "plan.downgraded"
+        | "plan.payment_failed"
+      email_preference_category:
+        | "security"
+        | "financial"
+        | "goals"
+        | "education"
       expense_nature: "FIXED" | "VARIABLE" | "EVENTUAL" | "UNKNOWN"
       expense_nature_source: "USER" | "SYSTEM_RULE" | "AI_INFERENCE"
       family_role: "owner" | "member"
@@ -6532,6 +6759,50 @@ export const Constants = {
       card_charge_type: ["ONE_SHOT", "INSTALLMENT", "RECURRENT"],
       card_type: ["credit", "debit", "both"],
       confidence_level: ["HIGH", "MEDIUM", "LOW"],
+      email_event_type: [
+        "user.account_created",
+        "user.email_confirmed",
+        "user.password_reset_requested",
+        "user.password_changed",
+        "user.login_new_device",
+        "onboarding.completed",
+        "onboarding.incomplete_24h",
+        "onboarding.incomplete_72h",
+        "budget.first_created",
+        "budget.skipped",
+        "family.invite_sent",
+        "budget.category_exceeded",
+        "budget.if_zeroed",
+        "spending.decrease_detected",
+        "spending.increase_detected",
+        "spending.no_activity_7d",
+        "goal.created",
+        "goal.progress_25",
+        "goal.progress_50",
+        "goal.progress_75",
+        "goal.completed",
+        "goal.at_risk",
+        "goal.abandoned",
+        "behavior.pattern_changed",
+        "behavior.low_activity",
+        "behavior.month_balanced",
+        "behavior.month_above_average",
+        "family.invite_accepted",
+        "family.invite_expired",
+        "family.permission_changed",
+        "family.member_removed",
+        "family.sensitive_action",
+        "education.content_released",
+        "plan.upgraded",
+        "plan.downgraded",
+        "plan.payment_failed",
+      ],
+      email_preference_category: [
+        "security",
+        "financial",
+        "goals",
+        "education",
+      ],
       expense_nature: ["FIXED", "VARIABLE", "EVENTUAL", "UNKNOWN"],
       expense_nature_source: ["USER", "SYSTEM_RULE", "AI_INFERENCE"],
       family_role: ["owner", "member"],
