@@ -99,45 +99,86 @@ export function useUpdateAdminProfile() {
     mutationFn: async (updates: Partial<AdminProfileFormData>) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
+      // Prepare the update payload - only include non-empty values
+      const updatePayload: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+        updated_by: user.id,
+      };
+
+      if (updates.display_name !== undefined) {
+        updatePayload.display_name = updates.display_name;
+      }
+      if (updates.phone_country !== undefined) {
+        updatePayload.phone_country = updates.phone_country;
+      }
+      if (updates.phone_number !== undefined) {
+        // Store as null if empty, otherwise store the value
+        updatePayload.phone_number = updates.phone_number || null;
+      }
+
+      console.log("[useUpdateAdminProfile] Updating with payload:", updatePayload);
+      console.log("[useUpdateAdminProfile] User ID:", user.id);
+
       const { data, error } = await supabase
         .from("admin_users")
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-          updated_by: user.id,
-        })
+        .update(updatePayload)
         .eq("user_id", user.id)
         .select()
         .single();
 
       if (error) {
-        // Log to observability
+        // Log detailed error info to console for debugging
+        console.error("[useUpdateAdminProfile] Supabase error:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
+
+        // Log to observability with full error details
         captureEvent({
           category: 'storage',
-          name: 'admin_profile_update_failed',
+          name: 'ADMIN_PROFILE_SAVE_FAILED',
           severity: 'error',
           message: `Failed to update admin profile: ${error.message}`,
           data: {
             userId: user.id.substring(0, 8) + '...',
             errorCode: error.code,
+            errorMessage: error.message,
+            errorDetails: error.details,
+            errorHint: error.hint,
             screen: '/admin/profile',
+            route: '/admin/profile',
           },
         });
         throw error;
       }
 
+      console.log("[useUpdateAdminProfile] Update successful:", data);
       return data;
     },
     onSuccess: () => {
       toast.success("Perfil atualizado com sucesso");
       queryClient.invalidateQueries({ queryKey: ["admin-profile"] });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      // Capture exception with full context
       captureException(error, { 
         context: 'useUpdateAdminProfile',
         screen: '/admin/profile',
+        route: '/admin/profile',
+        errorCode: error?.code,
+        errorMessage: error?.message,
       });
-      toast.error("Erro ao atualizar perfil");
+      
+      // Show more specific error message when possible
+      const errorMessage = error?.code === '42501' 
+        ? "Permissão negada. Verifique suas credenciais."
+        : error?.code === '42703'
+        ? "Erro de configuração do banco de dados."
+        : "Erro ao atualizar perfil";
+      
+      toast.error(errorMessage);
     },
   });
 }
@@ -153,6 +194,8 @@ export function useUpdateAdminAvatar() {
     mutationFn: async (avatarUrl: string | null) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
+      console.log("[useUpdateAdminAvatar] Updating avatar URL:", avatarUrl);
+
       const { data, error } = await supabase
         .from("admin_users")
         .update({
@@ -165,14 +208,23 @@ export function useUpdateAdminAvatar() {
         .single();
 
       if (error) {
+        console.error("[useUpdateAdminAvatar] Error:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+        });
+
         captureEvent({
           category: 'storage',
-          name: 'admin_avatar_update_failed',
+          name: 'ADMIN_AVATAR_UPDATE_FAILED',
           severity: 'error',
           message: `Failed to update admin avatar URL: ${error.message}`,
           data: {
             userId: user.id.substring(0, 8) + '...',
             errorCode: error.code,
+            errorMessage: error.message,
+            screen: '/admin/profile',
+            route: '/admin/profile',
           },
         });
         throw error;
@@ -184,8 +236,12 @@ export function useUpdateAdminAvatar() {
       toast.success("Foto atualizada com sucesso");
       queryClient.invalidateQueries({ queryKey: ["admin-profile"] });
     },
-    onError: (error: Error) => {
-      captureException(error, { context: 'useUpdateAdminAvatar' });
+    onError: (error: any) => {
+      captureException(error, { 
+        context: 'useUpdateAdminAvatar',
+        screen: '/admin/profile',
+        route: '/admin/profile',
+      });
       toast.error("Erro ao atualizar foto");
     },
   });
@@ -208,17 +264,43 @@ export function useUploadAdminAvatar() {
       const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
       if (!ALLOWED_TYPES.includes(file.type)) {
-        throw new Error("Tipo de arquivo não permitido. Use JPG, PNG ou WebP.");
+        const validationError = new Error("Tipo de arquivo não permitido. Use JPG, PNG ou WebP.");
+        captureEvent({
+          category: 'storage',
+          name: 'ADMIN_AVATAR_VALIDATION_FAILED',
+          severity: 'warning',
+          message: 'Invalid file type for avatar upload',
+          data: {
+            userId: user.id.substring(0, 8) + '...',
+            fileType: file.type,
+            screen: '/admin/profile',
+          },
+        });
+        throw validationError;
       }
 
       if (file.size > MAX_SIZE) {
-        throw new Error("Arquivo muito grande. Máximo 5MB.");
+        const sizeError = new Error("Arquivo muito grande. Máximo 5MB.");
+        captureEvent({
+          category: 'storage',
+          name: 'ADMIN_AVATAR_VALIDATION_FAILED',
+          severity: 'warning',
+          message: 'File too large for avatar upload',
+          data: {
+            userId: user.id.substring(0, 8) + '...',
+            fileSize: file.size,
+            screen: '/admin/profile',
+          },
+        });
+        throw sizeError;
       }
 
       // Create unique path
       const timestamp = Date.now();
       const ext = file.name.split('.').pop() || 'jpg';
       const path = `admin/${user.id}/${timestamp}.${ext}`;
+
+      console.log("[useUploadAdminAvatar] Uploading to path:", path);
 
       // Upload to storage
       const { error: uploadError } = await supabase.storage
@@ -229,15 +311,20 @@ export function useUploadAdminAvatar() {
         });
 
       if (uploadError) {
+        console.error("[useUploadAdminAvatar] Storage error:", uploadError);
+        
         captureEvent({
           category: 'storage',
-          name: 'admin_avatar_upload_failed',
+          name: 'ADMIN_AVATAR_UPLOAD_FAILED',
           severity: 'error',
           message: `Storage upload failed: ${uploadError.message}`,
           data: {
             userId: user.id.substring(0, 8) + '...',
             fileSize: file.size,
             fileType: file.type,
+            errorMessage: uploadError.message,
+            screen: '/admin/profile',
+            route: '/admin/profile',
           },
         });
         throw new Error("Falha no upload da imagem");
@@ -248,13 +335,19 @@ export function useUploadAdminAvatar() {
         .from("avatars")
         .getPublicUrl(path);
 
+      console.log("[useUploadAdminAvatar] Got public URL:", publicUrl);
+
       // Update database with new URL
       await updateAvatar.mutateAsync(publicUrl);
 
       return publicUrl;
     },
-    onError: (error: Error) => {
-      captureException(error, { context: 'useUploadAdminAvatar' });
+    onError: (error: any) => {
+      captureException(error, { 
+        context: 'useUploadAdminAvatar',
+        screen: '/admin/profile',
+        route: '/admin/profile',
+      });
       toast.error(error.message || "Erro ao fazer upload da foto");
     },
   });

@@ -110,12 +110,44 @@ export function AdminProfilePage() {
   };
 
   const handlePhoneChange = (phoneE164: string, countryCode: string) => {
-    // Extract just the number part from E.164
-    const country = phoneE164 ? `+${phoneE164.match(/^\+(\d+)/)?.[1] || "55"}` : "+55";
-    const number = phoneE164.replace(/^\+\d+/, "");
+    // countryCode is like "BR", "US", etc.
+    // phoneE164 is like "+5548991123099"
     
-    profileForm.setValue("phone_country", country, { shouldDirty: true });
-    profileForm.setValue("phone_number", number, { shouldDirty: true });
+    // Map country code to phone prefix
+    const countryToPrefix: Record<string, string> = {
+      BR: "+55",
+      US: "+1",
+      PT: "+351",
+      AR: "+54",
+      UY: "+598",
+    };
+    
+    const prefix = countryToPrefix[countryCode] || "+55";
+    
+    // Extract only the local number (without country prefix)
+    // phoneE164 format: +5548991123099 → we want 48991123099
+    let localNumber = phoneE164.replace(/^\+/, ""); // Remove leading +
+    
+    // Remove the country code digits from the beginning
+    const prefixDigits = prefix.replace("+", "");
+    if (localNumber.startsWith(prefixDigits)) {
+      localNumber = localNumber.slice(prefixDigits.length);
+    }
+    
+    profileForm.setValue("phone_country", prefix, { shouldDirty: true });
+    profileForm.setValue("phone_number", localNumber || null, { shouldDirty: true });
+  };
+
+  // Helper to convert phone prefix to country code
+  const getCountryCodeFromPrefix = (prefix: string | null | undefined): string => {
+    const prefixToCountry: Record<string, string> = {
+      "+55": "BR",
+      "+1": "US",
+      "+351": "PT",
+      "+54": "AR",
+      "+598": "UY",
+    };
+    return prefixToCountry[prefix || "+55"] || "BR";
   };
 
   const handleAvatarClick = () => {
@@ -268,7 +300,7 @@ export function AdminProfilePage() {
                   <FormLabel>Telefone</FormLabel>
                   <PhoneInput
                     value={profile?.phone_number ? `${profile.phone_country || "+55"}${profile.phone_number}` : ""}
-                    countryCode={profile?.phone_country?.replace("+", "") === "55" ? "BR" : "BR"}
+                    countryCode={getCountryCodeFromPrefix(profile?.phone_country)}
                     onChange={handlePhoneChange}
                   />
                 </div>
