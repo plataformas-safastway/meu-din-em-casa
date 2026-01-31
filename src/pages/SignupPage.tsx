@@ -16,7 +16,7 @@ import { validatePassword } from "@/lib/passwordValidation";
 import { useDraftPersistence } from "@/hooks/useDraftPersistence";
 import { DraftRestoredToast } from "@/components/ui/draft-restored-toast";
 import { supabase } from "@/integrations/supabase/client";
-import oikMarca from "@/assets/oik-marca.png";
+import oikSymbol from "@/assets/oik-symbol.svg";
 
 /**
  * SignupPage - Consumer-Only Signup
@@ -271,10 +271,10 @@ export function SignupPage() {
         {/* Content */}
         <main className="flex-1 flex flex-col justify-center px-6 pb-8">
           <div className="max-w-sm mx-auto w-full space-y-6">
-            {/* Logo */}
+            {/* Símbolo */}
             <div className="text-center">
               <div className="flex justify-center mb-6">
-                <img src={oikMarca} alt="Oik" className="h-10 object-contain opacity-80" />
+                <img src={oikSymbol} alt="Oik" className="w-10 h-10 object-contain" />
               </div>
             </div>
 
@@ -374,10 +374,10 @@ export function SignupPage() {
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           className="max-w-sm mx-auto w-full"
         >
-          {/* Logo + Header */}
+          {/* Símbolo + Header */}
           <div className="text-center mb-10">
             <div className="flex justify-center mb-6">
-              <img src={oikMarca} alt="Oik" className="h-10 object-contain opacity-80" />
+              <img src={oikSymbol} alt="Oik" className="w-10 h-10 object-contain" />
             </div>
             <h1 className="text-2xl font-semibold text-foreground mb-2 tracking-tight">
               Criar sua conta

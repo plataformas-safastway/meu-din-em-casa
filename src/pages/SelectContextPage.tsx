@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCanAccessAppFromDashboard } from "@/hooks/useAppAuthorization";
 import { AppAccessDeniedModal } from "@/components/admin/AppAccessDeniedModal";
-import oikMarca from "@/assets/oik-marca.png";
+import oikSymbol from "@/assets/oik-symbol.svg";
 
 export function SelectContextPage() {
   const navigate = useNavigate();
@@ -66,9 +66,9 @@ export function SelectContextPage() {
             <div className="text-center space-y-4">
               <div className="flex justify-center">
                 <img 
-                  src={oikMarca} 
+                  src={oikSymbol} 
                   alt="Oik" 
-                  className="h-16 sm:h-20 object-contain drop-shadow-sm"
+                  className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
                 />
               </div>
               

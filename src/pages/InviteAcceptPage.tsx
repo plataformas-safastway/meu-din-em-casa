@@ -11,7 +11,7 @@ import { PhoneInput } from "@/components/profile/PhoneInput";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 import { validatePassword } from "@/lib/passwordValidation";
 import { toast } from "sonner";
-import oikMarca from "@/assets/oik-marca.png";
+import oikSymbol from "@/assets/oik-symbol.svg";
 
 export function InviteAcceptPage() {
   const navigate = useNavigate();
@@ -257,7 +257,7 @@ export function InviteAcceptPage() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="p-4 flex items-center justify-center">
-        <img src={oikMarca} alt="OIK" className="h-8 object-contain opacity-80" />
+        <img src={oikSymbol} alt="OIK" className="w-8 h-8 object-contain" />
       </header>
 
       {/* Content */}
