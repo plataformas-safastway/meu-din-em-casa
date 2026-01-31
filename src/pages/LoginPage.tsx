@@ -348,10 +348,13 @@ export function LoginPage() {
     setLoading(false);
   };
 
-  // Forgot Password View
+  // Forgot Password View - Flat Design
   if (mode === "forgot") {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+      <div 
+        className="min-h-screen flex flex-col items-center justify-center px-6"
+        style={{ backgroundColor: '#F7F7F5', fontFamily: 'Inter, system-ui, sans-serif' }}
+      >
         <div className="w-full max-w-sm space-y-8">
           {/* Símbolo */}
           <div className="flex justify-center">
@@ -359,10 +362,16 @@ export function LoginPage() {
           </div>
 
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+            <h1 
+              className="text-2xl tracking-tight"
+              style={{ color: '#2E2E2E', fontWeight: 600 }}
+            >
               Recuperar acesso
             </h1>
-            <p className="text-muted-foreground text-sm">
+            <p 
+              className="text-sm"
+              style={{ color: '#6B7280', fontWeight: 400 }}
+            >
               Enviaremos um link para seu e-mail
             </p>
           </div>
@@ -374,14 +383,19 @@ export function LoginPage() {
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
+                className="h-12 rounded-lg bg-white border placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-[#0F3D33] focus-visible:border-[#0F3D33]"
+                style={{ borderColor: '#E0E0E0' }}
                 autoComplete="email"
                 required
               />
 
               <Button 
                 type="submit" 
-                className="w-full h-12 rounded-xl font-medium transition-all duration-300"
+                className="w-full h-12 rounded-lg font-medium transition-colors"
+                style={{ 
+                  backgroundColor: loading ? '#1A5A4A' : '#0F3D33',
+                  color: '#FFFFFF'
+                }}
                 disabled={loading}
               >
                 {loading ? (
@@ -393,12 +407,13 @@ export function LoginPage() {
             </form>
           ) : (
             <div className="text-center space-y-4">
-              <p className="text-sm text-muted-foreground">
-                E-mail enviado para <span className="text-foreground font-medium">{email}</span>
+              <p className="text-sm" style={{ color: '#6B7280' }}>
+                E-mail enviado para <span style={{ color: '#2E2E2E', fontWeight: 500 }}>{email}</span>
               </p>
               <Button 
                 variant="outline"
-                className="w-full h-12 rounded-xl"
+                className="w-full h-12 rounded-lg border transition-colors"
+                style={{ borderColor: '#E0E0E0', color: '#2E2E2E' }}
                 onClick={() => {
                   setEmailSent(false);
                   setEmail("");
@@ -415,7 +430,8 @@ export function LoginPage() {
               setMode("login");
               setEmailSent(false);
             }}
-            className="block w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+            className="block w-full text-center text-sm transition-colors"
+            style={{ color: '#6B7280' }}
           >
             Voltar
           </button>
@@ -424,10 +440,13 @@ export function LoginPage() {
     );
   }
 
-  // Reset Password View
+  // Reset Password View - Flat Design
   if (mode === "reset") {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+      <div 
+        className="min-h-screen flex flex-col items-center justify-center px-6"
+        style={{ backgroundColor: '#F7F7F5', fontFamily: 'Inter, system-ui, sans-serif' }}
+      >
         <div className="w-full max-w-sm space-y-8">
           {/* Símbolo */}
           <div className="flex justify-center">
@@ -435,10 +454,16 @@ export function LoginPage() {
           </div>
 
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+            <h1 
+              className="text-2xl tracking-tight"
+              style={{ color: '#2E2E2E', fontWeight: 600 }}
+            >
               Nova senha
             </h1>
-            <p className="text-muted-foreground text-sm">
+            <p 
+              className="text-sm"
+              style={{ color: '#6B7280', fontWeight: 400 }}
+            >
               Escolha uma senha segura
             </p>
           </div>
@@ -452,14 +477,16 @@ export function LoginPage() {
                     placeholder="Nova senha"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="h-12 pr-10 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
+                    className="h-12 pr-10 rounded-lg bg-white border placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-[#0F3D33] focus-visible:border-[#0F3D33]"
+                    style={{ borderColor: '#E0E0E0' }}
                     autoComplete="new-password"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                    style={{ color: '#9CA3AF' }}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -472,14 +499,19 @@ export function LoginPage() {
                 placeholder="Confirmar senha"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="h-12 rounded-xl bg-secondary/50 border-0 focus-visible:ring-1"
+                className="h-12 rounded-lg bg-white border placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-[#0F3D33] focus-visible:border-[#0F3D33]"
+                style={{ borderColor: '#E0E0E0' }}
                 autoComplete="new-password"
                 required
               />
 
               <Button 
                 type="submit" 
-                className="w-full h-12 rounded-xl font-medium transition-all duration-300"
+                className="w-full h-12 rounded-lg font-medium transition-colors"
+                style={{ 
+                  backgroundColor: loading ? '#1A5A4A' : '#0F3D33',
+                  color: '#FFFFFF'
+                }}
                 disabled={loading}
               >
                 {loading ? (
@@ -491,11 +523,15 @@ export function LoginPage() {
             </form>
           ) : (
             <div className="text-center space-y-4">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm" style={{ color: '#6B7280' }}>
                 Senha alterada com sucesso
               </p>
               <Button 
-                className="w-full h-12 rounded-xl font-medium"
+                className="w-full h-12 rounded-lg font-medium transition-colors"
+                style={{ 
+                  backgroundColor: '#0F3D33',
+                  color: '#FFFFFF'
+                }}
                 onClick={() => {
                   setMode("login");
                   setPasswordReset(false);
@@ -510,44 +546,50 @@ export function LoginPage() {
     );
   }
 
-  // Main Login View - OIK PREMIUM
+  // Main Login View - OIK Silencioso e Acolhedor
   return (
-    <div className="min-h-screen relative flex flex-col overflow-hidden">
-      {/* Subtle gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-primary/5" />
-      
-      {/* Organic shape accent */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/3 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
-
+    <div 
+      className="min-h-screen flex flex-col overflow-hidden"
+      style={{ backgroundColor: '#F7F7F5', fontFamily: 'Inter, system-ui, sans-serif' }}
+    >
       {/* Main Content - Centered */}
-      <main className="relative flex-1 flex flex-col items-center justify-center px-6 z-10">
+      <main className="flex-1 flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-sm space-y-10">
-          {/* Brand Block - More prominence */}
-          <div className="text-center space-y-6">
+          {/* Brand Block - Símbolo centralizado */}
+          <div className="text-center space-y-8">
             <div className="flex justify-center">
               <img 
                 src={oikSymbol} 
                 alt="Oik" 
-                className="w-20 h-20 sm:w-24 sm:h-24 object-contain"
+                className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
               />
             </div>
             
-            {/* Slogan in 2 lines with more presence */}
-            <div className="space-y-1">
-              <p className="text-lg text-foreground/80 font-medium tracking-wide">
+            {/* Slogan - 2 linhas com hierarquia visual */}
+            <div className="space-y-1.5">
+              <p 
+                className="text-lg leading-relaxed"
+                style={{ color: '#2E2E2E', fontWeight: 600 }}
+              >
                 Você não precisa amar planilhas.
               </p>
-              <p className="text-lg text-muted-foreground font-normal tracking-wide">
+              <p 
+                className="text-lg leading-relaxed"
+                style={{ color: '#5A5A5A', fontWeight: 400 }}
+              >
                 Só precisa saber onde está pisando.
               </p>
             </div>
           </div>
 
-          {/* Login Form - Premium inputs */}
+          {/* Login Form - Visual limpo */}
           <form onSubmit={handleLogin} className="space-y-5">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-foreground">
+            <div className="space-y-1.5">
+              <label 
+                htmlFor="email" 
+                className="text-sm block"
+                style={{ color: '#2E2E2E', fontWeight: 500 }}
+              >
                 E-mail
               </label>
               <Input
@@ -556,14 +598,19 @@ export function LoginPage() {
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12 rounded-xl bg-secondary/40 border border-border/50 placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary/50 transition-all duration-300"
+                className="h-12 rounded-lg bg-white border placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-[#0F3D33] focus-visible:border-[#0F3D33] transition-colors"
+                style={{ borderColor: '#E0E0E0', fontFamily: 'Inter, system-ui, sans-serif' }}
                 autoComplete="email"
                 required
               />
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-foreground">
+            <div className="space-y-1.5">
+              <label 
+                htmlFor="password" 
+                className="text-sm block"
+                style={{ color: '#2E2E2E', fontWeight: 500 }}
+              >
                 Senha
               </label>
               <div className="relative">
@@ -573,14 +620,16 @@ export function LoginPage() {
                   placeholder="••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 pr-12 rounded-xl bg-secondary/40 border border-border/50 placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary/50 transition-all duration-300"
+                  className="h-12 pr-12 rounded-lg bg-white border placeholder:text-gray-400 focus-visible:ring-1 focus-visible:ring-[#0F3D33] focus-visible:border-[#0F3D33] transition-colors"
+                  style={{ borderColor: '#E0E0E0', fontFamily: 'Inter, system-ui, sans-serif' }}
                   autoComplete="current-password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors duration-300 p-1"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-1 transition-colors"
+                  style={{ color: '#9CA3AF' }}
                   aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -590,7 +639,10 @@ export function LoginPage() {
 
             {/* Error message display */}
             {loginError && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+              <div 
+                className="flex items-center gap-2 p-3 rounded-lg text-sm"
+                style={{ backgroundColor: '#FEF2F2', borderColor: '#FECACA', color: '#DC2626' }}
+              >
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{loginError}</span>
               </div>
@@ -598,7 +650,10 @@ export function LoginPage() {
 
             {/* Turnstile error display */}
             {turnstileError && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+              <div 
+                className="flex items-center gap-2 p-3 rounded-lg text-sm"
+                style={{ backgroundColor: '#FEF2F2', borderColor: '#FECACA', color: '#DC2626' }}
+              >
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{turnstileError}</span>
               </div>
@@ -606,8 +661,11 @@ export function LoginPage() {
 
             {/* Security challenge indicator (when required) */}
             {requiresChallenge && isTurnstileConfigured() && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50 text-muted-foreground text-sm">
-                <ShieldCheck className="w-4 h-4 flex-shrink-0 text-primary" />
+              <div 
+                className="flex items-center gap-2 p-3 rounded-lg text-sm"
+                style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}
+              >
+                <ShieldCheck className="w-4 h-4 flex-shrink-0" style={{ color: '#0F3D33' }} />
                 <span>Verificação de segurança ativa</span>
               </div>
             )}
@@ -619,11 +677,16 @@ export function LoginPage() {
               aria-hidden="true"
             />
 
-            <div className="pt-3 space-y-4">
-              {/* Premium Button with gradient and shadow */}
+            <div className="pt-4 space-y-5">
+              {/* Botão Principal - Flat, sem gradiente, sem sombra pesada */}
               <Button 
                 type="submit" 
-                className="w-full h-12 font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/90 hover:from-primary/95 hover:to-primary/85 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/25 active:scale-[0.98] transition-all duration-300"
+                className="w-full h-12 font-semibold rounded-lg transition-colors"
+                style={{ 
+                  backgroundColor: loading || verifyingTurnstile ? '#1A5A4A' : '#0F3D33',
+                  color: '#FFFFFF',
+                  fontFamily: 'Inter, system-ui, sans-serif'
+                }}
                 disabled={loading || verifyingTurnstile || (requiresChallenge && isTurnstileConfigured() && !turnstileToken && turnstileLoading)}
               >
                 {loading || verifyingTurnstile ? (
@@ -633,25 +696,30 @@ export function LoginPage() {
                 )}
               </Button>
               
-              {/* Emotional microcopy */}
-              <p className="text-center text-sm text-muted-foreground/70 font-light">
+              {/* Texto de apoio - discreto */}
+              <p 
+                className="text-center text-sm leading-relaxed"
+                style={{ color: '#9CA3AF', fontWeight: 400 }}
+              >
                 Organizar a vida financeira pode ser mais leve.
               </p>
             </div>
           </form>
 
-          {/* Secondary Actions */}
+          {/* Links Secundários - Visual leve */}
           <div className="flex items-center justify-between text-sm pt-2">
             <Link 
               to="/signup" 
-              className="text-muted-foreground hover:text-primary transition-colors duration-300 font-medium"
+              className="transition-colors"
+              style={{ color: '#6B7280', fontWeight: 500 }}
             >
               Criar conta
             </Link>
             <button
               type="button"
               onClick={() => setMode("forgot")}
-              className="text-muted-foreground hover:text-primary transition-colors duration-300"
+              className="transition-colors"
+              style={{ color: '#6B7280', fontWeight: 400 }}
             >
               Esqueci a senha
             </button>
@@ -659,20 +727,25 @@ export function LoginPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="relative pb-8 px-6 text-center z-10">
-        <p className="text-xs text-muted-foreground/50 leading-relaxed">
+      {/* Footer - Texto pequeno, baixo contraste */}
+      <footer className="pb-8 px-6 text-center">
+        <p 
+          className="text-xs leading-relaxed"
+          style={{ color: '#B0B0B0' }}
+        >
           Ao continuar, você concorda com os{" "}
           <Link 
             to="/termos" 
-            className="underline underline-offset-2 hover:text-muted-foreground transition-colors duration-300"
+            className="underline underline-offset-2 transition-colors hover:opacity-80"
+            style={{ color: '#B0B0B0' }}
           >
             Termos
           </Link>
           {" e "}
           <Link 
             to="/privacidade" 
-            className="underline underline-offset-2 hover:text-muted-foreground transition-colors duration-300"
+            className="underline underline-offset-2 transition-colors hover:opacity-80"
+            style={{ color: '#B0B0B0' }}
           >
             Privacidade
           </Link>
