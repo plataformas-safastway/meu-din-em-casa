@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserFamilies, useSwitchFamily } from "@/hooks/useMultiFamily";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import oikMarca from "@/assets/oik-marca.png";
+import oikSymbol from "@/assets/oik-symbol.svg";
 import { cn } from "@/lib/utils";
 
 export function SelectFamilyPage() {
@@ -81,7 +81,7 @@ export function SelectFamilyPage() {
           <div className="w-full max-w-md space-y-8">
             <div className="text-center space-y-4">
               <div className="flex justify-center">
-                <img src={oikMarca} alt="Oik" className="h-16 sm:h-20 object-contain drop-shadow-sm" />
+                <img src={oikSymbol} alt="Oik" className="w-16 h-16 sm:w-20 sm:h-20 object-contain" />
               </div>
               
               <div className="space-y-2">
@@ -184,9 +184,9 @@ export function SelectFamilyPage() {
           <div className="text-center space-y-4">
             <div className="flex justify-center">
               <img 
-                src={oikMarca} 
+                src={oikSymbol} 
                 alt="Oik" 
-                className="h-16 sm:h-20 object-contain drop-shadow-sm"
+                className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
               />
             </div>
             

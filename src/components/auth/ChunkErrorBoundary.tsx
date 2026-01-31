@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import oikMarca from '@/assets/oik-marca.png';
+import oikSymbol from '@/assets/oik-symbol.svg';
 import { isChunkError, handleChunkError, forceRefresh } from '@/lib/chunkErrorHandler';
 import { captureEvent, addBreadcrumb } from '@/lib/observability';
 
@@ -88,9 +88,9 @@ export class ChunkErrorBoundary extends React.Component<
       return (
         <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
           <div className="w-full max-w-sm space-y-8 text-center">
-            {/* Logo */}
+            {/* Símbolo */}
             <div className="flex justify-center">
-              <img src={oikMarca} alt="Oik" className="h-12 object-contain opacity-90" />
+              <img src={oikSymbol} alt="Oik" className="w-12 h-12 object-contain" />
             </div>
 
             {/* Warning Icon */}

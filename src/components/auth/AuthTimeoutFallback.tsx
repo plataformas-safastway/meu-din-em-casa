@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { clearRouteResumeState } from '@/lib/routeResumeGuard';
 import { logAuthStage } from '@/lib/authDebug';
 import { addBreadcrumb } from '@/lib/observability';
-import oikMarca from '@/assets/oik-marca.png';
+import oikSymbol from '@/assets/oik-symbol.svg';
 
 interface AuthTimeoutFallbackProps {
   onRetry: () => void;
@@ -132,9 +132,9 @@ export function AuthTimeoutFallback({
         style={{ touchAction: 'none' }}
       >
         <div className="bg-background border border-border rounded-2xl shadow-xl p-6 max-w-sm mx-4 space-y-5">
-          {/* Logo */}
+          {/* Símbolo */}
           <div className="flex justify-center">
-            <img src={oikMarca} alt="Oik" className="h-8 object-contain opacity-80" />
+            <img src={oikSymbol} alt="Oik" className="w-8 h-8 object-contain" />
           </div>
 
           {/* Icon */}
@@ -217,9 +217,9 @@ export function AuthTimeoutFallback({
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm space-y-8 text-center">
-        {/* Logo */}
+        {/* Símbolo */}
         <div className="flex justify-center">
-          <img src={oikMarca} alt="Oik" className="h-12 object-contain opacity-90" />
+          <img src={oikSymbol} alt="Oik" className="w-12 h-12 object-contain" />
         </div>
 
         {/* Error Icon */}

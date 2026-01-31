@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
-import oikMarca from "@/assets/oik-marca.png";
+import oikSymbol from "@/assets/oik-symbol.svg";
 
 export function AppAccessBlockedPage() {
   const navigate = useNavigate();
@@ -61,9 +61,9 @@ export function AppAccessBlockedPage() {
           <div className="text-center">
             <div className="flex justify-center mb-6">
               <img 
-                src={oikMarca} 
+                src={oikSymbol} 
                 alt="Oik" 
-                className="h-12 sm:h-14 object-contain opacity-50"
+                className="w-12 h-12 sm:w-14 sm:h-14 object-contain opacity-50"
               />
             </div>
           </div>

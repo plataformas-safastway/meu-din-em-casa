@@ -11,7 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import oikMarca from "@/assets/oik-marca.png";
+import oikSymbol from "@/assets/oik-symbol.svg";
 
 interface HeaderProps {
   userName?: string;
@@ -76,9 +76,9 @@ export function Header({ userName, onSettingsClick, onNotificationsClick }: Head
             {/* Left: Brand + Greeting */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <img 
-                src={oikMarca} 
+                src={oikSymbol} 
                 alt="Oik" 
-                className="h-7 object-contain flex-shrink-0"
+                className="w-7 h-7 object-contain flex-shrink-0"
               />
               
               {/* Greeting - responsive */}

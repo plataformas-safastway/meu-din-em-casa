@@ -14,7 +14,7 @@ import { useDraftPersistence } from "@/hooks/useDraftPersistence";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { isTurnstileConfigured } from "@/lib/turnstile/config";
 import { recordFailedAttempt, clearFailedAttempts } from "@/lib/turnstile/riskAssessment";
-import oikMarca from "@/assets/oik-marca.png";
+import oikSymbol from "@/assets/oik-symbol.svg";
 
 type Mode = "login" | "forgot" | "reset";
 
@@ -353,9 +353,9 @@ export function LoginPage() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-sm space-y-8">
-          {/* Logo */}
+          {/* Símbolo */}
           <div className="flex justify-center">
-            <img src={oikMarca} alt="Oik" className="h-12 object-contain opacity-90" />
+            <img src={oikSymbol} alt="Oik" className="w-12 h-12 object-contain" />
           </div>
 
           <div className="text-center space-y-2">
@@ -429,9 +429,9 @@ export function LoginPage() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-sm space-y-8">
-          {/* Logo */}
+          {/* Símbolo */}
           <div className="flex justify-center">
-            <img src={oikMarca} alt="Oik" className="h-12 object-contain opacity-90" />
+            <img src={oikSymbol} alt="Oik" className="w-12 h-12 object-contain" />
           </div>
 
           <div className="text-center space-y-2">
@@ -527,9 +527,9 @@ export function LoginPage() {
           <div className="text-center space-y-6">
             <div className="flex justify-center">
               <img 
-                src={oikMarca} 
+                src={oikSymbol} 
                 alt="Oik" 
-                className="h-20 sm:h-24 object-contain drop-shadow-sm"
+                className="w-20 h-20 sm:w-24 sm:h-24 object-contain"
               />
             </div>
             
